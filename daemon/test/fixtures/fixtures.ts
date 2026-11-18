@@ -2,11 +2,11 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { setTimeout as sleep } from 'node:timers/promises';
-import type { RepoId, TaskId } from '../../src/domain/shared/id.ts';
-import type { App, Ports } from '../../src/application/ports/app.ts';
-import type { openDb } from '../../src/db/index.ts';
+import type { RepoId, TaskId } from '#domain/shared/id.ts';
+import type { App, Ports } from '#application/ports/app.ts';
+import type { openDb } from '#db/index.ts';
 
-export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '../../src/domain/shared/id.ts';
+export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '#domain/shared/id.ts';
 
 type Db = ReturnType<typeof openDb>;
 
@@ -23,7 +23,7 @@ export async function waitFor<T>(
   }
 }
 
-const real = () => import('../../src/compose.ts');
+const real = () => import('#src/compose.ts');
 
 const lazy = <T extends object>(load: (compose: Awaited<ReturnType<typeof real>>) => T): T =>
   new Proxy({} as T, {

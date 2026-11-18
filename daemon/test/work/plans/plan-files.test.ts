@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { parsePlan } from '../../../src/domain/work/plans/plan.ts';
+import { parsePlan } from '#domain/work/plans/plan.ts';
 
 const dir = join(import.meta.dirname, '../../../../docs/plans');
 const plans = readdirSync(dir).filter((f) => f.endsWith('.html'));

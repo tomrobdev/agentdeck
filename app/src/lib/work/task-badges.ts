@@ -1,13 +1,13 @@
 // What every view of a task shows besides its title: the list row, the board card, the peek and the task page header.
-import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
-import type { AutoMergeView } from '../../../../daemon/src/api/contract/landing.ts';
-import { isReview } from '../../../../daemon/src/domain/work/index.ts';
-import { plural } from '../../../../daemon/src/domain/shared/index.ts';
-import { describeMergeRequest } from '../landing/landing-wording.ts';
-import { describeLive, describeSync } from '../runs/run-wording.ts';
-import { describeWait } from './work-wording.ts';
-import type { Tone as ChipTone } from '../shared/tone.ts';
-import { needsOf, questionOf } from '../shared/wire.ts';
+import type { TaskSummary } from '#daemon/api/contract/work.ts';
+import type { AutoMergeView } from '#daemon/api/contract/landing.ts';
+import { isReview } from '#daemon/domain/work/index.ts';
+import { plural } from '#daemon/domain/shared/index.ts';
+import { describeMergeRequest } from '#lib/landing/landing-wording.ts';
+import { describeLive, describeSync } from '#lib/runs/run-wording.ts';
+import { describeWait } from '#lib/work/work-wording.ts';
+import type { Tone as ChipTone } from '#lib/shared/tone.ts';
+import { needsOf, questionOf } from '#lib/shared/wire.ts';
 
 export type Tone = 'muted' | 'accent' | 'done' | 'blocked' | 'failed';
 

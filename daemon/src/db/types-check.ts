@@ -1,22 +1,13 @@
 // Tables against their domain types, as Drizzle infers each row from tables.ts, so a column added to one and not the other fails `pnpm typecheck`.
-import type { PlannerOutcome, PlannerRun } from '../domain/proposals/index.ts';
-import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
-import type { PrState } from '../domain/landing/index.ts';
-import type { Review, ReviewComment } from '../domain/landing/index.ts';
-import type { RunKind, RunOutcome } from '../domain/runs/index.ts';
-import type { TaskEventRow, TaskEventType } from '../domain/work/index.ts';
-import type { TaskStatus } from '../domain/work/index.ts';
-import type { LinkKind } from '../domain/work/index.ts';
-import type {
-  BlockedState,
-  CancelledState,
-  DoneState,
-  FailedState,
-  StateFields,
-  Task,
-  TaskSource,
-  TaskState,
-} from '../domain/work/index.ts';
+import type { PlannerOutcome, PlannerRun } from '#domain/proposals/index.ts';
+import type { MergeMethod, PrMode } from '#domain/repos/index.ts';
+import type { PrState } from '#domain/landing/index.ts';
+import type { Review, ReviewComment } from '#domain/landing/index.ts';
+import type { RunKind, RunOutcome } from '#domain/runs/index.ts';
+import type { TaskEventRow, TaskEventType } from '#domain/work/index.ts';
+import type { TaskStatus } from '#domain/work/index.ts';
+import type { LinkKind } from '#domain/work/index.ts';
+import type { BlockedState, CancelledState, DoneState, FailedState, StateFields, Task, TaskSource, TaskState } from '#domain/work/index.ts';
 import type {
   CheckoutColumn,
   LegacyTaskColumn,
@@ -28,8 +19,8 @@ import type {
   toRun,
   toTask,
   toTaskSummary,
-} from './mappers.ts';
-import type { plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, tasks } from './tables.ts';
+} from '#db/mappers.ts';
+import type { plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, tasks } from '#db/tables.ts';
 
 type FoldedColumn = PrColumn | CheckoutColumn | PlanColumn | StateColumn;
 

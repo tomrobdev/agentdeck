@@ -1,8 +1,8 @@
 // Operations: the daemon, its status, settings and notifications, and the change stream.
-import type { PlannerRunId, RepoId, TaskId } from '../../domain/shared/index.ts';
-import type { AttentionWhy, HeadlineState, NotifyKind, RepoReviewDue } from '../../domain/operations/index.ts';
-import type { TaskStatus } from '../../domain/work/index.ts';
-import type { QueueWait } from './work.ts';
+import type { PlannerRunId, RepoId, TaskId } from '#domain/shared/index.ts';
+import type { AttentionWhy, HeadlineState, NotifyKind, RepoReviewDue } from '#domain/operations/index.ts';
+import type { TaskStatus } from '#domain/work/index.ts';
+import type { QueueWait } from '#api/contract/work.ts';
 
 export interface UsageWindow {
   window: string;

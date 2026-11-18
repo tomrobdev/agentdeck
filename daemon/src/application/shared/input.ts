@@ -1,8 +1,8 @@
 // What a use case needs to read a request: ActionError and the rules that raise it, finding the task or repo a person named (the one place these messages are worded), and checks on the fields of a request body.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import type { Task } from '../../domain/work/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { Task } from '#domain/work/index.ts';
 
 export type ActionErrorKind = 'invalid' | 'not_found' | 'conflict' | 'upstream';
 

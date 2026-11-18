@@ -1,6 +1,7 @@
 // Restarting the daemon without losing work: stop claiming, wait for the runs to end, restart, then put pause back.
-import type { App } from '../ports/app.ts';
-import { type Activity, restartWait } from '../../domain/operations/index.ts';
+import type { App } from '#application/ports/app.ts';
+import { type Activity, restartWait, restartWaiting } from '#domain/operations/index.ts';
+import { ActionError } from '#application/shared/input.ts';
 
 export function runningActivity(app: App): Activity {
   return {
@@ -24,7 +25,10 @@ export interface RestartDeps {
 export async function gracefulRestart(app: App, deps: RestartDeps): Promise<{ waited: boolean }> {
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const pollMs = deps.pollMs ?? 2000;
-  const wasPaused = app.isPaused();
+  const left = app.restartPauseAt();
+  if (restartWaiting(left, Date.now()))
+    throw new ActionError('another `agentdeck restart` is waiting for the running work to finish', undefined, 'conflict');
+  const wasPaused = left === null && app.isPaused();
   app.setPaused(true);
   let waited = false;
   try {
@@ -32,6 +36,7 @@ export async function gracefulRestart(app: App, deps: RestartDeps): Promise<{ wa
     let last: string | null = null;
     while (idle < 2) {
       if (deps.aborted?.()) throw new Error('interrupted; nothing was restarted');
+      app.setRestartPauseAt(Date.now());
       const wait = restartWait(runningActivity(app));
       if (!wait) {
         idle++;
@@ -47,6 +52,15 @@ export async function gracefulRestart(app: App, deps: RestartDeps): Promise<{ wa
     await deps.restart();
   } finally {
     app.setPaused(wasPaused);
+    app.setRestartPauseAt(null);
   }
   return { waited };
+}
+
+export function releaseRestartPause(app: App, now: number): boolean {
+  const left = app.restartPauseAt();
+  if (left === null || restartWaiting(left, now)) return false;
+  app.setPaused(false);
+  app.setRestartPauseAt(null);
+  return true;
 }

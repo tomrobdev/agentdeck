@@ -1,23 +1,24 @@
 // Key-value settings: pause flag, budget, concurrency, notification, planner and model options.
 import { eq } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
-import { DEFAULTS } from '../../config.ts';
-import { DEFAULT_REVIEW_DUE, NOTIFY_KINDS, type NotifyKind, type NotifySettings, type ReviewDue } from '../../domain/operations/index.ts';
-import type { RepoId } from '../../domain/shared/index.ts';
-import type { PlannerSettings } from '../../domain/proposals/index.ts';
-import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '../../domain/runs/index.ts';
-import { DEFAULT_MODEL } from '../../domain/work/index.ts';
-import type { Settings } from '../../domain/operations/index.ts';
-import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../../domain/capacity/index.ts';
-import type { Orm } from '../orm.ts';
-import { atomically } from '../sql.ts';
-import { settings } from '../tables.ts';
+import { DEFAULTS } from '#src/config.ts';
+import { DEFAULT_REVIEW_DUE, NOTIFY_KINDS, type NotifyKind, type NotifySettings, type ReviewDue } from '#domain/operations/index.ts';
+import type { RepoId } from '#domain/shared/index.ts';
+import type { PlannerSettings } from '#domain/proposals/index.ts';
+import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '#domain/runs/index.ts';
+import { DEFAULT_MODEL } from '#domain/work/index.ts';
+import type { Settings } from '#domain/operations/index.ts';
+import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '#domain/capacity/index.ts';
+import type { Orm } from '#db/orm.ts';
+import { atomically } from '#db/sql.ts';
+import { settings } from '#db/tables.ts';
 
 export const SETTING_DEFAULTS = {
   paused: '1',
   rate_limited_until: '0',
   pr_check_requested: '0',
   app_seen_at: '0',
+  restart_pause_at: '0',
   reload_on_change: '0',
   max_concurrent: String(DEFAULTS.maxConcurrent),
   notify_desktop: '1',
@@ -110,6 +111,8 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
       atomically(db, () => set('review_due_told', JSON.stringify({ ...json<Record<string, number>>('review_due_told', {}), [repo]: at }))),
     isPaused: (): boolean => get('paused') === '1',
     setPaused: (paused: boolean): void => set('paused', paused ? '1' : '0'),
+    restartPauseAt: (): number | null => Number(get('restart_pause_at')) || null,
+    setRestartPauseAt: (at: number | null): void => set('restart_pause_at', String(at ?? 0)),
     rateLimitedUntil: (): number | null => Number(get('rate_limited_until')) || null,
     setRateLimitedUntil: (until: number): void => set('rate_limited_until', String(until)),
     reloadOnChange: (): boolean => get('reload_on_change') === '1',

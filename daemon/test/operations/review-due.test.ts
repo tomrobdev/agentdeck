@@ -9,15 +9,15 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-review-due-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { reviewDue, remindReviewDue, reviewDueNotification, DEFAULT_REVIEW_DUE } = await import('../../src/domain/operations/index.ts');
-const { checkReviews } = await import('../../src/domain/operations/review-due.ts');
-const { judgeHealth } = await import('../../src/domain/operations/health.ts');
-const { headline } = await import('../../src/domain/operations/headline.ts');
-const { checkReviewsDue } = await import('../../src/application/operations/review-due.ts');
-const { daemonHealth, getSettings, status, updateSettings } = await import('../../src/application/actions.ts');
-const { daemonCommands } = await import('../../src/cli/operations/daemon.ts');
-const { openDb } = await import('../fixtures/open-db.ts');
-const { asRepoId } = await import('../fixtures/fixtures.ts');
+const { reviewDue, remindReviewDue, reviewDueNotification, DEFAULT_REVIEW_DUE } = await import('#domain/operations/index.ts');
+const { checkReviews } = await import('#domain/operations/review-due.ts');
+const { judgeHealth } = await import('#domain/operations/health.ts');
+const { headline } = await import('#domain/operations/headline.ts');
+const { checkReviewsDue } = await import('#application/operations/review-due.ts');
+const { daemonHealth, getSettings, status, updateSettings } = await import('#application/actions.ts');
+const { daemonCommands } = await import('#cli/operations/daemon.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { asRepoId } = await import('#test/fixtures/fixtures.ts');
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.parse('2026-11-08T12:00:00Z');

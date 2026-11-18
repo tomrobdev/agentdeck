@@ -1,7 +1,7 @@
 // The review run of a done task: claude reads the task's changes against its Goal, Definition of done and linked plan steps with read-only tools, and answers with a summary and findings.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type { PromptPlan } from '../../domain/runs/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PromptPlan } from '#domain/runs/index.ts';
 import {
   REVIEW_DENIED_TOOLS,
   REVIEW_MAX_TURNS,
@@ -13,12 +13,12 @@ import {
   reviewSchemaArgs,
   reviewSystemPrompt,
   reviewable,
-} from '../../domain/runs/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { errorMessage } from '../../domain/shared/index.ts';
-import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
-import { planForRun } from '../work/plans.ts';
-import { settle } from '../landing/settle.ts';
+} from '#domain/runs/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
+import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
+import { planForRun } from '#application/work/plans.ts';
+import { settle } from '#application/landing/settle.ts';
 
 export interface ReviewReport {
   outcome: 'clean' | 'retried' | 'left' | 'garbage' | 'stale' | 'failed' | 'rate_limited' | 'cancelled';
@@ -101,12 +101,12 @@ async function runOpened(app: App, target: ReviewTarget, opened: OpenedRun): Pro
     tools: REVIEW_TOOLS,
     disallowed: REVIEW_DENIED_TOOLS,
     args: reviewSchemaArgs(),
-    cancelled: () => app.getTask(task.id)?.status !== 'done',
+    cancelled: () => !reviewStillWanted(app.getTask(task.id)),
   });
 
   const { end, fields } = ran;
   if (end.kind === 'cancelled') {
-    await endTaskRun(app, opened, 'cancelled', 'the task is no longer done', fields);
+    await endTaskRun(app, opened, 'cancelled', 'the task is no longer waiting for a review', fields);
     return { outcome: 'cancelled' };
   }
   if (end.kind === 'rate_limited' || end.kind === 'failed') {
@@ -129,6 +129,8 @@ async function runOpened(app: App, target: ReviewTarget, opened: OpenedRun): Pro
   }
 }
 
+const reviewStillWanted = (task: Task | undefined): boolean => task?.status === 'done' && task.pr?.state !== 'merged';
+
 const reviewLogText = ({ record, retry }: ReviewOutcome): string =>
   record.kind === 'comment'
     ? `Clean: no finding blocks (${record.comments.length} comment(s))`
@@ -139,7 +141,7 @@ const reviewLogText = ({ record, retry }: ReviewOutcome): string =>
 async function settleReview(app: App, id: TaskId, target: ReviewTarget, { record, retry }: ReviewOutcome): Promise<ReviewReport> {
   if (retry) {
     if (!(await settle(app, id, { type: 'review_retry' }, { reason: retry }))) return { outcome: 'stale' };
-  } else if (app.getTask(id)?.status !== 'done') {
+  } else if (!reviewStillWanted(app.getTask(id))) {
     return { outcome: 'stale' };
   }
   const review = app.addRunReview(id, record.kind, record.body, { head_commit: target.head, diff_hash: target.diffHash });

@@ -1,9 +1,9 @@
 // What the task store's files share: a domain write's changes as columns, and the guards on a task's PR.
 import { and, eq } from 'drizzle-orm';
-import { stored } from '../../domain/shared/index.ts';
-import type { TaskChanges } from '../../domain/work/index.ts';
-import { NOW_SQL } from '../sql.ts';
-import { tasks } from '../tables.ts';
+import { stored } from '#domain/shared/index.ts';
+import type { TaskChanges } from '#domain/work/index.ts';
+import { NOW_SQL } from '#db/sql.ts';
+import { tasks } from '#db/tables.ts';
 
 export const prOpen = eq(tasks.pr_state, 'open');
 export const inReview = and(eq(tasks.status, 'done'), prOpen);

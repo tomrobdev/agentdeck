@@ -1,5 +1,5 @@
-import type { TaskSummary } from '../../../../../daemon/src/api/contract/work.ts';
-import { isReview } from '../../../../../daemon/src/domain/work/index.ts';
+import type { TaskSummary } from '#daemon/api/contract/work.ts';
+import { isReview } from '#daemon/domain/work/index.ts';
 
 export function nextInReview(order: TaskSummary[], currentId: number): TaskSummary | null {
   const eligible = (t: TaskSummary) => t.id !== currentId && isReview(t) && !t.merge_request;

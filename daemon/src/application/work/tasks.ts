@@ -1,15 +1,15 @@
 // Use cases for tasks: add, edit, list them and remove their worktrees.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';
-import { planOwnerOf } from '../../domain/work/index.ts';
-import { type ModelSource, newTaskModel } from '../../domain/work/index.ts';
-import { EDITABLE_STATUSES, type Task, WORKTREE_REMOVABLE_STATUSES, defaultTitle } from '../../domain/work/index.ts';
-import { refuseWhileSyncing } from './checkout-locks.ts';
-import { newLinks } from './links.ts';
-import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../shared/input.ts';
-import { checkFollowers } from './plans.ts';
-import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '#domain/work/index.ts';
+import { planOwnerOf } from '#domain/work/index.ts';
+import { type ModelSource, newTaskModel } from '#domain/work/index.ts';
+import { EDITABLE_STATUSES, type Task, WORKTREE_REMOVABLE_STATUSES, defaultTitle } from '#domain/work/index.ts';
+import { refuseWhileSyncing } from '#application/work/checkout-locks.ts';
+import { newLinks } from '#application/work/links.ts';
+import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '#application/shared/input.ts';
+import { checkFollowers } from '#application/work/plans.ts';
+import { checkPlanLink, planRequest, stepList } from '#application/work/plan-link.ts';
 
 export async function addTask(
   app: App,
@@ -144,6 +144,8 @@ export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch
   const worktree = t.checkout?.worktree;
   if (!worktree) throw new ActionError('task has no worktree');
   refuseWhileSyncing(app, id);
+  if (app.runsForTask(id).some((r) => !r.ended_at))
+    throw new ActionError(`#${id} has a run going in its worktree; try again when it has ended`, undefined, 'conflict');
   await app.workspace.removeCheckout(requireTaskRepo(app, t), { worktree });
   app.setCheckout(t.id, { worktree: null });
   return { branch: t.checkout?.branch ?? null };

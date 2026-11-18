@@ -7,12 +7,12 @@ export {
   buildResumePrompt,
   claudeArgs,
   workerSystemPrompt,
-} from './prompt.ts';
-export type { PromptPlan } from './prompt.ts';
-export { escalation, escalationReason, escalationSince } from './escalate.ts';
-export { resolveOutcome } from './resolve.ts';
-export { conflictReason, syncResultOf, syncSummary } from './sync.ts';
-export type { SyncResult } from './sync.ts';
+} from '#domain/runs/prompt.ts';
+export type { PromptPlan } from '#domain/runs/prompt.ts';
+export { escalation, escalationReason, escalationSince } from '#domain/runs/escalate.ts';
+export { resolveOutcome } from '#domain/runs/resolve.ts';
+export { conflictReason, syncResultOf, syncSummary } from '#domain/runs/sync.ts';
+export type { SyncResult } from '#domain/runs/sync.ts';
 export {
   DEFAULT_REVIEW_MODEL,
   DEFAULT_SUPPORT_MODEL,
@@ -23,8 +23,8 @@ export {
   resumableSession,
   resumeMaxTurns,
   runModel,
-} from './run.ts';
-export type { Outcome, PidRun, Run, RunKind, RunOutcome, RunningTaskRun } from './run.ts';
+} from '#domain/runs/run.ts';
+export type { Outcome, PidRun, Run, RunKind, RunOutcome, RunningTaskRun } from '#domain/runs/run.ts';
 export {
   classifyRun,
   firstDenial,
@@ -35,15 +35,15 @@ export {
   runOutcome,
   withTurnUsage,
   setupFailedReason,
-} from './run-result.ts';
-export type { ClaudeResult, ClaudeRun, RunClass, UsageWindow, WorkerResult } from './run-result.ts';
-export { START_LIVE, liveView, nextLive, syncView } from './translate/live.ts';
-export type { LiveView, SyncView } from './translate/live.ts';
-export { CHANGE_MAX, costText, parseLogLine } from './translate/log.ts';
-export type { LogEntry } from './translate/log.ts';
-export { isTestCommand, runSummary } from './translate/summary.ts';
-export type { RunEnd, RunSummary, SummaryContext } from './translate/summary.ts';
-export { normalizeNetwork, settingsPath, workerSettings } from './translate/sandbox.ts';
+} from '#domain/runs/run-result.ts';
+export type { ClaudeResult, ClaudeRun, RunClass, UsageWindow, WorkerResult } from '#domain/runs/run-result.ts';
+export { START_LIVE, liveView, nextLive, syncView } from '#domain/runs/translate/live.ts';
+export type { LiveView, SyncView } from '#domain/runs/translate/live.ts';
+export { CHANGE_MAX, costText, parseLogLine } from '#domain/runs/translate/log.ts';
+export type { LogEntry } from '#domain/runs/translate/log.ts';
+export { isTestCommand, runSummary } from '#domain/runs/translate/summary.ts';
+export type { RunEnd, RunSummary, SummaryContext } from '#domain/runs/translate/summary.ts';
+export { normalizeNetwork, settingsPath, workerSettings } from '#domain/runs/translate/sandbox.ts';
 export {
   REVIEW_DENIED_TOOLS,
   REVIEW_MAX_TURNS,
@@ -54,8 +54,8 @@ export {
   reviewSchemaArgs,
   reviewSystemPrompt,
   reviewable,
-} from './review.ts';
-export type { ReviewOutcome } from './review.ts';
+} from '#domain/runs/review.ts';
+export type { ReviewOutcome } from '#domain/runs/review.ts';
 export {
   VERIFY_DENIED_TOOLS,
   VERIFY_MAX_TURNS,
@@ -69,7 +69,14 @@ export {
   verifyRefusal,
   verifySchemaArgs,
   verifySystemPrompt,
-} from './verify.ts';
-export type { ClaimVerdict, VerifyFinding, VerifyView } from './verify.ts';
-export { UNBLOCK_MAX_TURNS, buildUnblockPrompt, parseUnblock, unblockDecision, unblockSystemPrompt, unblockable } from './unblock.ts';
-export type { UnblockDecision } from './unblock.ts';
+} from '#domain/runs/verify.ts';
+export type { ClaimVerdict, VerifyFinding, VerifyView } from '#domain/runs/verify.ts';
+export {
+  UNBLOCK_MAX_TURNS,
+  buildUnblockPrompt,
+  parseUnblock,
+  unblockDecision,
+  unblockSystemPrompt,
+  unblockable,
+} from '#domain/runs/unblock.ts';
+export type { UnblockDecision } from '#domain/runs/unblock.ts';

@@ -4,21 +4,21 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
-import { asTaskId, testApp } from '../../fixtures/fixtures.ts';
+import type { TaskId } from '#domain/shared/id.ts';
+import { asTaskId, testApp } from '#test/fixtures/fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settle-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { closePullRequest } = await import('../../../src/application/landing/merge/merge.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-const { openPullRequest } = await import('../../../src/application/landing/pull-request/open-pr.ts');
-const { parsePrDetails } = await import('../../../src/domain/landing/merge/merge.ts');
-const { finalNotification } = await import('../../../src/domain/operations/notification.ts');
-const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
+const { openDb } = await import('#db/index.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { closePullRequest } = await import('#application/landing/merge/merge.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+const { openPullRequest } = await import('#application/landing/pull-request/open-pr.ts');
+const { parsePrDetails } = await import('#domain/landing/merge/merge.ts');
+const { finalNotification } = await import('#domain/operations/notification.ts');
+const { MAX_RESTARTS } = await import('#domain/work/lifecycle/lifecycle.ts');
 
 function setup(pr_mode: 'off' | 'ready' = 'off') {
   const db = testApp(openDb(':memory:'));

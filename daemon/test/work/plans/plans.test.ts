@@ -1,6 +1,6 @@
 // Plans: the format's parser, naming, the step merge, the store, and linking tasks to plans from the CLI and the API.
 import assert from 'node:assert/strict';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
+import { asTaskId } from '#domain/shared/id.ts';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
@@ -13,11 +13,11 @@ process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { isOwnPlanName, mergePlanSteps, parsePlan, planAfterRun, planFileName, planProgress, planSlug } =
-  await import('../../../src/domain/work/plans/plan.ts');
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { startApi } = await import('../../../src/api/server.ts');
-const { attachPlan } = await import('../../../src/application/work/plans.ts');
-const { editTask, addTask } = await import('../../../src/application/actions.ts');
+  await import('#domain/work/plans/plan.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startApi } = await import('#api/server.ts');
+const { attachPlan } = await import('#application/work/plans.ts');
+const { editTask, addTask } = await import('#application/actions.ts');
 
 const PLAN = `<!doctype html>
 <html lang="en" data-agentdeck-plan="1">

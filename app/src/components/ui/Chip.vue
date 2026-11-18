@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Tone, statusTone } from '../../lib/shared/tone';
+import { type Tone, statusTone } from '#lib/shared/tone.ts';
 
 const props = withDefaults(
   defineProps<{

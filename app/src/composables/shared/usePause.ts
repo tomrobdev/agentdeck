@@ -1,9 +1,9 @@
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { liveStatusQuery, operationsApi } from '../../api/operations';
-import { reposApi } from '../../api/repos';
-import type { Status } from '../../api/types';
-import { type Actions, trackPending, useActions } from './useActions';
+import { liveStatusQuery, operationsApi } from '#api/operations.ts';
+import { reposApi } from '#api/repos.ts';
+import type { Status } from '#api/types.ts';
+import { type Actions, trackPending, useActions } from '#composables/shared/useActions.ts';
 
 export function usePause(actions: Actions = useActions()) {
   const statusQ = useQuery(liveStatusQuery());

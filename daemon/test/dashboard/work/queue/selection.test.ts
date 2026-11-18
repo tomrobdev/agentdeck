@@ -1,7 +1,7 @@
 // Moving the queue's selection with the arrow keys.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { stepSelection } from '../../../../../app/src/lib/work/queue/selection.ts';
+import { stepSelection } from '#app/lib/work/queue/selection.ts';
 
 test('a move goes one row, and stops at the ends', () => {
   assert.equal(stepSelection([1, 2, 3], 2, 1), 3);

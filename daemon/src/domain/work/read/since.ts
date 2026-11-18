@@ -1,6 +1,6 @@
 // Where the Changes tab can show a task's changes from, besides the base: the head a person's last review read, or the end of an earlier attempt.
-import { sqliteMs } from '../../shared/index.ts';
-import type { Commit } from './files.ts';
+import { sqliteMs } from '#domain/shared/index.ts';
+import type { Commit } from '#domain/work/read/files.ts';
 
 export type SinceKind = 'review' | 'attempt';
 

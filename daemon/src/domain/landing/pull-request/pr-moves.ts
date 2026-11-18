@@ -1,5 +1,5 @@
 // How a task's pull request moves from state to state: the rule table of what the daemon and the PR refresh report.
-import { PR_STATES, type PrState } from './pr.ts';
+import { PR_STATES, type PrState } from '#domain/landing/pull-request/pr.ts';
 
 /** What happened to a PR: opened, merged or closed on GitHub, seen open again after it closed, or it could not be opened. */
 export type PrMove = 'opened' | 'merged' | 'closed' | 'reopened' | 'open_failed';

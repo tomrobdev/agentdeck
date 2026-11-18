@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/vue-query';
 import { invoke } from '@tauri-apps/api/core';
-import { ApiError, OfflineError } from './api-error';
-import type { ApiErrorBody } from './types';
+import { ApiError, OfflineError } from '#api/api-error.ts';
+import type { ApiErrorBody } from '#api/types.ts';
 
 export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 

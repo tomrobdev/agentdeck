@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { landingApi } from '../../api/landing';
-import type { ShownComment } from '../../composables/landing/useReviews';
-import { useAction } from '../../composables/shared/useActions';
-import Chip from '../ui/Chip.vue';
+import { landingApi } from '#api/landing.ts';
+import type { ShownComment } from '#composables/landing/useReviews.ts';
+import { useAction } from '#composables/shared/useActions.ts';
+import Chip from '#components/ui/Chip.vue';
 
 const props = defineProps<{ comment: ShownComment; outdated?: boolean }>();
 const { pending, run } = useAction();

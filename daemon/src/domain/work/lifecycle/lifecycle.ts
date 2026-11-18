@@ -1,10 +1,10 @@
 // The task state machine, as data.
-import type { TaskId } from '../../shared/index.ts';
-import type { PullRequest } from '../../landing/index.ts';
-import type { TaskEventType } from './history.ts';
-import type { Needs } from '../task/needs.ts';
-import { type TaskCore, type TaskState, attemptsLeft, stopReasonOf } from '../task/task.ts';
-import { type TaskChanges, statusChangePrChanges } from './task-writes.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PullRequest } from '#domain/landing/index.ts';
+import type { TaskEventType } from '#domain/work/lifecycle/history.ts';
+import type { Needs } from '#domain/work/task/needs.ts';
+import { type TaskCore, type TaskState, attemptsLeft, stopReasonOf } from '#domain/work/task/task.ts';
+import { type TaskChanges, statusChangePrChanges } from '#domain/work/lifecycle/task-writes.ts';
 
 export type TaskStatus =
   | 'proposed' // suggested by the planner, waiting for approval
@@ -238,6 +238,7 @@ export function transition(task: TransitionTask, event: TaskEvent, opts: Transit
   const cause = ruleKey(event, task);
   const to = RULES[cause][task.status];
   if (!to) return null;
+  if (event.type === 'review_retry' && task.pr?.state === 'merged') return null;
   const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
   const domainEvent: DomainEvent = {
     type: domainEventType(cause, to),
@@ -256,7 +257,7 @@ export function transition(task: TransitionTask, event: TaskEvent, opts: Transit
   const given = Math.max(task.attempts - 1, 0);
   if (event.type === 'claim') counters.attempts = task.attempts + 1;
   else if (event.type === 'retry' || event.type === 'review_retry') {
-    counters.max_attempts = task.attempts + 1;
+    counters.max_attempts = Math.max(task.max_attempts, task.attempts + 1);
     counters.restarts = 0;
   } else if (event.type === 'unblock_retry') counters.restarts = 0;
   else if (event.type === 'rate_limited' || environment) counters.attempts = given;

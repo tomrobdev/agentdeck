@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { TaskSummary } from '../../../api/types';
-import { useHotkeys } from '../../../composables/shared/useHotkeys';
-import { FILTER_STATES } from '../../../../../daemon/src/domain/work/index.ts';
-import { type Filters, hasFilters } from '../../../lib/work/task-view';
-import Chip from '../../ui/Chip.vue';
-import Menu from '../../ui/menu/Menu.vue';
-import MenuCheckboxItem from '../../ui/menu/MenuCheckboxItem.vue';
-import MenuLabel from '../../ui/menu/MenuLabel.vue';
-import MenuRadioGroup from '../../ui/menu/MenuRadioGroup.vue';
-import MenuRadioItem from '../../ui/menu/MenuRadioItem.vue';
+import type { TaskSummary } from '#api/types.ts';
+import { useHotkeys } from '#composables/shared/useHotkeys.ts';
+import { FILTER_STATES } from '#daemon/domain/work/index.ts';
+import { type Filters, hasFilters } from '#lib/work/task-view.ts';
+import Chip from '#components/ui/Chip.vue';
+import Menu from '#components/ui/menu/Menu.vue';
+import MenuCheckboxItem from '#components/ui/menu/MenuCheckboxItem.vue';
+import MenuLabel from '#components/ui/menu/MenuLabel.vue';
+import MenuRadioGroup from '#components/ui/menu/MenuRadioGroup.vue';
+import MenuRadioItem from '#components/ui/menu/MenuRadioItem.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const filters = defineModel<Filters>({ required: true });

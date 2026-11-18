@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type RunHeader, clock } from '../../lib/runs/run-live';
-import Progress from '../ui/status/Progress.vue';
-import Switch from '../ui/form/Switch.vue';
+import { type RunHeader, clock } from '#lib/runs/run-live.ts';
+import Progress from '#components/ui/status/Progress.vue';
+import Switch from '#components/ui/form/Switch.vue';
 
 const props = defineProps<{ header: RunHeader; following: boolean }>();
 const emit = defineEmits<{ follow: [on: boolean] }>();

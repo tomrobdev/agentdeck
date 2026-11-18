@@ -1,7 +1,7 @@
 // Pull requests: fix checks, open, close, merge (now, requested or automatic).
-import * as actions from '../../../application/actions.ts';
-import type { TaskId } from '../../../domain/shared/index.ts';
-import type { TaskDetail } from '../../contract/work.ts';
+import * as actions from '#application/actions.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { TaskDetail } from '#api/contract/work.ts';
 import type {
   AutoMergeResult,
   CancelMergeRequestResult,
@@ -11,9 +11,9 @@ import type {
   OpenPrResult,
   RequestMergeResult,
   RequestMergesResult,
-} from '../../contract/landing.ts';
-import { type ApiContext, type Route, idsField, route, taskIdParam } from '../../http.ts';
-import * as wire from '../../wire.ts';
+} from '#api/contract/landing.ts';
+import { type ApiContext, type Route, idsField, route, taskIdParam } from '#api/http.ts';
+import * as wire from '#api/wire.ts';
 
 export function routes({ db }: ApiContext): Route[] {
   const detail = (id: TaskId) => wire.taskDetail(db, id);

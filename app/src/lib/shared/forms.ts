@@ -1,12 +1,8 @@
-import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../../api/types';
-import {
-  DEFAULT_AUTO_MERGE_SKIP,
-  DEFAULT_CODE_COMMENT_MAX_LINES,
-  DEFAULT_CODE_COMMENT_MAX_PERCENT,
-} from '../../../../daemon/src/domain/landing/index.ts';
-import { parseToolRules } from '../../../../daemon/src/domain/repos/index.ts';
-import { parseTextList, textList } from '../../../../daemon/src/domain/shared/index.ts';
-import { MODELS } from '../../../../daemon/src/domain/work/index.ts';
+import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '#api/types.ts';
+import { DEFAULT_AUTO_MERGE_SKIP, DEFAULT_CODE_COMMENT_MAX_LINES, DEFAULT_CODE_COMMENT_MAX_PERCENT } from '#daemon/domain/landing/index.ts';
+import { parseToolRules } from '#daemon/domain/repos/index.ts';
+import { parseTextList, textList } from '#daemon/domain/shared/index.ts';
+import { MODELS } from '#daemon/domain/work/index.ts';
 
 export type RepoForm = {
   goals: string;

@@ -1,6 +1,6 @@
-import type { TaskSummary } from '../../../../../daemon/src/api/contract/work.ts';
-import { type PersonEvent, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
-import { type StatusGroup, statusGroup } from '../../../../../daemon/src/domain/work/index.ts';
+import type { TaskSummary } from '#daemon/api/contract/work.ts';
+import { type PersonEvent, personEvents } from '#daemon/domain/work/index.ts';
+import { type StatusGroup, statusGroup } from '#daemon/domain/work/index.ts';
 
 export type BoardMove = PersonEvent | 'merge';
 export function boardMove(t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state'>, to: StatusGroup): BoardMove | null {

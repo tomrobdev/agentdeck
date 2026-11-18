@@ -1,5 +1,5 @@
 // Asks a running daemon about itself over its HTTP API.
-import type { DaemonState } from '../../domain/operations/index.ts';
+import type { DaemonState } from '#domain/operations/index.ts';
 
 export async function fetchDaemonState(port: number, timeoutMs = 3000): Promise<DaemonState | null> {
   try {

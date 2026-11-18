@@ -6,14 +6,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { waitFor } from '../fixtures/fixtures.ts';
+import { waitFor } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-wake-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { startApi } = await import('../../src/api/server.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startApi } = await import('#api/server.ts');
 
 const repoPath = join(home, 'demo');
 mkdirSync(repoPath);
@@ -27,7 +27,12 @@ git('commit', '-q', '-m', 'init');
 
 const db = openDb(join(home, 'test.db'));
 const events: string[] = [];
-const server = await startApi({ db, token: null, port: 0, scheduler: { wake: () => events.push('wake'), track: (p) => p } });
+const server = await startApi({
+  db,
+  token: null,
+  port: 0,
+  scheduler: { wake: () => events.push('wake'), track: (p) => p, request: () => () => {} },
+});
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
 after(() => {

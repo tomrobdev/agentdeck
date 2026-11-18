@@ -3,17 +3,17 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type SQLiteTable, getTableConfig } from 'drizzle-orm/sqlite-core';
 import ts from 'typescript';
-import { SETTING_DEFAULTS } from '../../src/db/operations/settings.ts';
-import { LAYERS, layerOf, mayImport } from './layers.ts';
-import * as tables from '../../src/db/tables.ts';
-import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/work/lifecycle/lifecycle.ts';
-import { dashboardBody, dashboardReference } from './dashboard-layout.ts';
-import { adapterUse, contextMap } from './graphs.ts';
-import { modelsBody, stateMachinesBody, useCasesBody } from './model-docs.ts';
-import { COVERAGE_FLOORS, progress } from './progress.ts';
-import { UNCHECKED } from './rules.ts';
-import { readStrictnessOffences } from './strictness.ts';
-import { type Source, readSources } from './sources.ts';
+import { SETTING_DEFAULTS } from '#db/operations/settings.ts';
+import { LAYERS, layerOf, mayImport } from '#scripts/lib/layers.ts';
+import * as tables from '#db/tables.ts';
+import { RULES, TASK_STATUSES, type TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
+import { dashboardBody, dashboardReference } from '#scripts/lib/dashboard-layout.ts';
+import { adapterUse, contextMap } from '#scripts/lib/graphs.ts';
+import { modelsBody, stateMachinesBody, useCasesBody } from '#scripts/lib/model-docs.ts';
+import { COVERAGE_FLOORS, progress } from '#scripts/lib/progress.ts';
+import { UNCHECKED } from '#scripts/lib/rules.ts';
+import { readStrictnessOffences } from '#scripts/lib/strictness.ts';
+import { type Source, readSources } from '#scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 export const DOCS_PATH = join(import.meta.dirname, '../../../docs/architecture.md');
@@ -24,6 +24,8 @@ const SETTING_MEANINGS: Record<string, string> = {
   pr_check_requested: 'Set to 1 to have the scheduler check open pull requests on its next tick',
   app_seen_at:
     'When the desktop app last said it is running (ms since the epoch); within 90 s of it the app shows desktop notifications and osascript is skipped',
+  restart_pause_at:
+    'When an `agentdeck restart` waiting for work to end last renewed its pause (ms since the epoch); 0 for none. One not renewed for 30 s was cut off, and the next daemon start lifts its pause',
   reload_on_change: 'Restart the daemon onto new code when daemon/src changes and nothing is running',
   max_concurrent: 'Slots: how many tasks may run at once',
   notify_desktop: 'Show desktop notifications',

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DropdownMenuItemIndicator, DropdownMenuRadioItem } from 'reka-ui';
-import { MENU_ITEM } from './menu';
+import { MENU_ITEM } from '#components/ui/menu/menu.ts';
 
 const props = defineProps<{ value: string; keepOpen?: boolean }>();
 const stay = (e: Event) => props.keepOpen && e.preventDefault();

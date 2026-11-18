@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { fileSize } from '../../../lib/work/work-wording';
-import { fileQuery, treeQuery } from '../../../api/work';
-import { type FileRef, TEXT_LIMIT, type TaskDetail } from '../../../api/types';
-import { useCommits } from '../../../composables/work/files/useChanges';
-import { useCopy } from '../../../platform/native';
-import { isMarkdown as isMarkdownPath } from '../../../lib/shared/render';
+import { fileSize } from '#lib/work/work-wording.ts';
+import { fileQuery, treeQuery } from '#api/work.ts';
+import { type FileRef, TEXT_LIMIT, type TaskDetail } from '#api/types.ts';
+import { useCommits } from '#composables/work/files/useChanges.ts';
+import { useCopy } from '#platform/native.ts';
+import { isMarkdown as isMarkdownPath } from '#lib/shared/render.ts';
 import { useRouter } from 'vue-router';
-import CodeView, { type LineRange } from './CodeView.vue';
-import type { TreeNode } from '../../../lib/work/files/changed-tree';
-import FileTree from './FileTree.vue';
-import Markdown from '../../ui/Markdown.vue';
-import Chip from '../../ui/Chip.vue';
-import SegmentedControl from '../../ui/form/SegmentedControl.vue';
+import CodeView, { type LineRange } from '#components/work/files/CodeView.vue';
+import type { TreeNode } from '#lib/work/files/changed-tree.ts';
+import FileTree from '#components/work/files/FileTree.vue';
+import Markdown from '#components/ui/Markdown.vue';
+import Chip from '#components/ui/Chip.vue';
+import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
 
 const props = defineProps<{ task: TaskDetail; query: Record<string, string>; changed: Set<string> }>();
 

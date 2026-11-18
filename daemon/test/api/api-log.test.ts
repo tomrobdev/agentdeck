@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer, request } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, test } from 'node:test';
-import { BadRequest, dispatch, route } from '../../src/api/http.ts';
+import { BadRequest, dispatch, route } from '#api/http.ts';
 
 const lines: string[] = [];
 const everything: string[] = [];

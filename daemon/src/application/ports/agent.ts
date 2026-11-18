@@ -1,6 +1,6 @@
 // The Agent port: runs one claude session and reports through callbacks.
 import type { WriteStream } from 'node:fs';
-import type { ClaudeRun, UsageWindow } from '../../domain/runs/index.ts';
+import type { ClaudeRun, UsageWindow } from '#domain/runs/index.ts';
 
 export interface AgentSession {
   args: string[];

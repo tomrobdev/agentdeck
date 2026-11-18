@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { TaskSummary } from '../../../api/types';
-import { useActions } from '../../../composables/shared/useActions';
-import type { BulkAction, BulkEdit } from '../../../lib/work/queue/bulk';
-import type { BulkEditValue } from '../../../composables/work/queue/useBulkEdit';
-import { MODELS } from '../../../../../daemon/src/domain/work/index.ts';
-import { PRIORITY_LEVELS, levelPriority } from '../../../lib/work/task-view';
-import Menu from '../../ui/menu/Menu.vue';
-import MenuItem from '../../ui/menu/MenuItem.vue';
-import MenuSeparator from '../../ui/menu/MenuSeparator.vue';
-import MenuSub from '../../ui/menu/MenuSub.vue';
+import type { TaskSummary } from '#api/types.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import type { BulkAction, BulkEdit } from '#lib/work/queue/bulk.ts';
+import type { BulkEditValue } from '#composables/work/queue/useBulkEdit.ts';
+import { MODELS } from '#daemon/domain/work/index.ts';
+import { PRIORITY_LEVELS, levelPriority } from '#lib/work/task-view.ts';
+import Menu from '#components/ui/menu/Menu.vue';
+import MenuItem from '#components/ui/menu/MenuItem.vue';
+import MenuSeparator from '#components/ui/menu/MenuSeparator.vue';
+import MenuSub from '#components/ui/menu/MenuSub.vue';
 
 defineProps<{ count: number; actions: BulkAction[]; busy: boolean; others: Pick<TaskSummary, 'id' | 'title'>[] }>();
 const { flash } = useActions();

@@ -1,5 +1,5 @@
 // Task ids as a person names them in a list.
-import { type TaskId, parseId } from '../../shared/index.ts';
+import { type TaskId, parseId } from '#domain/shared/index.ts';
 
 export function parseTaskIds(value: unknown): TaskId[] | null {
   if (value === undefined || value === null || value === '') return [];

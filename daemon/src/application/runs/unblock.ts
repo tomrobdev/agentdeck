@@ -1,7 +1,7 @@
 // The unblock run of a blocked task: claude reads why the task stopped, then the daemon queues it again with the run's note or leaves it blocked with the run's question.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type { PromptPlan } from '../../domain/runs/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PromptPlan } from '#domain/runs/index.ts';
 import {
   UNBLOCK_MAX_TURNS,
   type UnblockDecision,
@@ -10,13 +10,13 @@ import {
   unblockDecision,
   unblockSystemPrompt,
   unblockable,
-} from '../../domain/runs/index.ts';
-import { latestReviewNote } from '../../domain/work/index.ts';
-import { type BlockedTask, leftoversMessage } from '../../domain/work/index.ts';
-import { errorMessage } from '../../domain/shared/index.ts';
-import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
-import { planForRun } from '../work/plans.ts';
-import { settle } from '../landing/settle.ts';
+} from '#domain/runs/index.ts';
+import { latestReviewNote } from '#domain/work/index.ts';
+import { type BlockedTask, leftoversMessage } from '#domain/work/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
+import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
+import { planForRun } from '#application/work/plans.ts';
+import { settle } from '#application/landing/settle.ts';
 
 export interface UnblockReport {
   outcome: 'retried' | 'asked' | 'stale' | 'failed' | 'rate_limited' | 'cancelled';

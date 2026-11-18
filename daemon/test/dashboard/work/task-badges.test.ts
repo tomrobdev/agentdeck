@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { TaskSummary } from '../../../src/api/contract/work.ts';
-import type { AutoMergeView } from '../../../src/api/contract/landing.ts';
-import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '../../../../app/src/lib/work/task-badges.ts';
-import { TONES, statusTone } from '../../../../app/src/lib/shared/tone.ts';
-import { asRepoId, asTaskId } from '../../fixtures/fixtures.ts';
+import type { TaskSummary } from '#api/contract/work.ts';
+import type { AutoMergeView } from '#api/contract/landing.ts';
+import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '#app/lib/work/task-badges.ts';
+import { TONES, statusTone } from '#app/lib/shared/tone.ts';
+import { asRepoId, asTaskId } from '#test/fixtures/fixtures.ts';
 
 test('the chip maps give tone names, not class strings', () => {
   for (const tone of [...Object.values(TONE_CHIP), ...Object.values(AUTO_MERGE_CHIP)]) assert.ok(TONES.includes(tone), tone);

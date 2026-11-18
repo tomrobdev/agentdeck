@@ -11,10 +11,10 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-access-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { startApi } = await import('../../src/api/server.ts');
-const { hasToken, isLocalHost } = await import('../../src/api/http.ts');
-const { apiToken, bearer } = await import('../../src/config.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startApi } = await import('#api/server.ts');
+const { hasToken, isLocalHost } = await import('#api/http.ts');
+const { apiToken, bearer } = await import('#src/config.ts');
 
 const token = 'test-token-0123456789';
 const server = await startApi({ db: openDb(join(home, 'test.db')), token, port: 0 });

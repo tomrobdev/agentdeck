@@ -5,15 +5,15 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { fakeAgent, fakeCodeHost } from '../fixtures/fakes.ts';
-import { doneTask, queuedTask, runningTask, testApp } from '../fixtures/fixtures.ts';
+import { fakeAgent, fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { doneTask, queuedTask, runningTask, testApp } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-errors-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../src/db/index.ts');
-const { startApi } = await import('../../src/api/server.ts');
+const { openDb } = await import('#db/index.ts');
+const { startApi } = await import('#api/server.ts');
 
 const host = fakeCodeHost();
 host.prDetails = async () => {

@@ -1,12 +1,12 @@
 // What failures are made of: failing checks by step, and failed or blocked runs by how they ended, per week and repo.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { countOfKept, parseChecks } from '../../src/domain/landing/pull-request/checks.ts';
-import { failureReport, failuresTable } from '../../src/domain/insights/index.ts';
-import type { StatRun } from '../../src/domain/insights/index.ts';
-import { runEndOf } from '../../src/domain/runs/index.ts';
-import { readCounts } from '../../src/db/mappers.ts';
-import { asRepoId, asTaskId } from '../../src/domain/shared/index.ts';
+import { countOfKept, parseChecks } from '#domain/landing/pull-request/checks.ts';
+import { failureReport, failuresTable } from '#domain/insights/index.ts';
+import type { StatRun } from '#domain/insights/index.ts';
+import { runEndOf } from '#domain/runs/index.ts';
+import { readCounts } from '#db/mappers.ts';
+import { asRepoId, asTaskId } from '#domain/shared/index.ts';
 
 const repo = asRepoId(1);
 const W1 = '2026-11-03 10:00:00';

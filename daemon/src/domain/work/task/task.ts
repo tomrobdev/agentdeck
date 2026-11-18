@@ -1,10 +1,10 @@
 // The task entity.
-import type { RepoId, TaskId } from '../../shared/index.ts';
-import type { PullRequest } from '../../landing/index.ts';
-import type { Checkout } from './checkout.ts';
-import type { TaskStatus } from '../lifecycle/lifecycle.ts';
-import type { Needs, UnblockQuestion } from './needs.ts';
-import type { PlanLink } from '../plans/plan-link.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { PullRequest } from '#domain/landing/index.ts';
+import type { Checkout } from '#domain/work/task/checkout.ts';
+import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
+import type { Needs, UnblockQuestion } from '#domain/work/task/needs.ts';
+import type { PlanLink } from '#domain/work/plans/plan-link.ts';
 
 /** Who made a task: a person, or the planner proposing it. */
 export type TaskSource = 'manual' | 'planner';

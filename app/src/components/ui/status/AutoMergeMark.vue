@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { AutoMergeView } from '../../../api/types';
-import { AUTO_MERGE_CHIP } from '../../../lib/work/task-badges';
-import { autoMergeTip } from '../../../lib/work/task-view';
-import Chip from '../Chip.vue';
-import Tooltip from '../Tooltip.vue';
+import type { AutoMergeView } from '#api/types.ts';
+import { AUTO_MERGE_CHIP } from '#lib/work/task-badges.ts';
+import { autoMergeTip } from '#lib/work/task-view.ts';
+import Chip from '#components/ui/Chip.vue';
+import Tooltip from '#components/ui/Tooltip.vue';
 
 defineProps<{ view?: AutoMergeView | null }>();
 </script>

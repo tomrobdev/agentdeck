@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ActionError, pilotStats } from '../../src/application/actions.ts';
-import { openDb } from '../fixtures/open-db.ts';
-import type { TaskId } from '../../src/domain/shared/id.ts';
-import type { RunOutcome } from '../../src/domain/runs/run.ts';
-import { type StatRun, measure, statsTable, wilson } from '../../src/domain/insights/stats.ts';
-import { asRepoId, asTaskId, blockedTask, doneTask, failedTask } from '../fixtures/fixtures.ts';
+import { ActionError, pilotStats } from '#application/actions.ts';
+import { openDb } from '#test/fixtures/open-db.ts';
+import type { TaskId } from '#domain/shared/id.ts';
+import type { RunOutcome } from '#domain/runs/run.ts';
+import { type StatRun, measure, statsTable, wilson } from '#domain/insights/stats.ts';
+import { asRepoId, asTaskId, blockedTask, doneTask, failedTask } from '#test/fixtures/fixtures.ts';
 
 const near = (actual: number | undefined, expected: number, eps = 1e-3) =>
   assert.ok(actual !== undefined && Math.abs(actual - expected) < eps, `${actual} is not ${expected}`);

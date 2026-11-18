@@ -1,6 +1,6 @@
 // Why a PR's checks failed: the failed step, the lines of its log that say why, and the note that sends them back to the worker.
-import { plural } from '../../shared/index.ts';
-import type { PrCheck, StoredChecks } from './checks.ts';
+import { plural } from '#domain/shared/index.ts';
+import type { PrCheck, StoredChecks } from '#domain/landing/pull-request/checks.ts';
 
 export const failingChecks = (checks: PrCheck[]): PrCheck[] => checks.filter((c) => c.state === 'fail');
 

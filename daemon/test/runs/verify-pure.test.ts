@@ -10,8 +10,8 @@ import {
   settingsPath,
   verifyLine,
   verifyRefusal,
-} from '../../src/domain/runs/index.ts';
-import { asRunId, asTaskId } from '../../src/domain/shared/id.ts';
+} from '#domain/runs/index.ts';
+import { asRunId, asTaskId } from '#domain/shared/id.ts';
 
 test('a verify line counts the claims by verdict, and says when there are none', () => {
   assert.equal(verifyLine([]), 'No claims about the code');

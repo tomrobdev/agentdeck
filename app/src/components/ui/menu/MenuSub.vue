@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DropdownMenuPortal, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from 'reka-ui';
-import { MENU_CONTENT, MENU_ITEM } from './menu';
+import { MENU_CONTENT, MENU_ITEM } from '#components/ui/menu/menu.ts';
 
 defineProps<{ label: string; disabled?: boolean }>();
 const emit = defineEmits<{ opened: [] }>();

@@ -12,13 +12,13 @@ const fake = join(import.meta.dirname, '../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const { ActionError, repoView, updateRepo } = await import('../../src/application/actions.ts');
-const { repoSettingPatch } = await import('../../src/cli/operations/settings-args.ts');
-const { DEFAULT_ALLOWED_TOOLS, parseToolRules, toolRulesSource } = await import('../../src/domain/repos/tools.ts');
-const { toolRulesError } = await import('../../src/domain/repos/rules.ts');
-const { toolchainTools } = await import('../../src/domain/repos/toolchain.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { ActionError, repoView, updateRepo } = await import('#application/actions.ts');
+const { repoSettingPatch } = await import('#cli/operations/settings-args.ts');
+const { DEFAULT_ALLOWED_TOOLS, parseToolRules, toolRulesSource } = await import('#domain/repos/tools.ts');
+const { toolRulesError } = await import('#domain/repos/rules.ts');
+const { toolchainTools } = await import('#domain/repos/toolchain.ts');
 
 test('parseToolRules: commas and lines split rules, a comma in parentheses does not, blanks and repeats go', () => {
   assert.deepEqual(parseToolRules('Read, Edit,Bash(make *)'), ['Read', 'Edit', 'Bash(make *)']);

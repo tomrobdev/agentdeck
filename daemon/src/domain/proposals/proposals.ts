@@ -1,8 +1,8 @@
 // Turning a repo's goals into task proposals: the prompt, the answer's shape, and which proposals to keep.
-import type { PlannerRunId, RepoId } from '../shared/index.ts';
-import type { Repo } from '../repos/index.ts';
-import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task, stopReasonOf } from '../work/index.ts';
-import { sqliteMs } from '../shared/index.ts';
+import type { PlannerRunId, RepoId } from '#domain/shared/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task, stopReasonOf } from '#domain/work/index.ts';
+import { sqliteMs } from '#domain/shared/index.ts';
 
 export interface PlannerSettings {
   enabled: boolean;

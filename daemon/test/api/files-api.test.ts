@@ -6,14 +6,14 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import type { TaskId } from '../../src/domain/shared/id.ts';
+import type { TaskId } from '#domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-files-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { startApi } = await import('../../src/api/server.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startApi } = await import('#api/server.ts');
 
 const db = openDb(join(home, 'test.db'));
 const server = await startApi({ db, token: null, port: 0 });

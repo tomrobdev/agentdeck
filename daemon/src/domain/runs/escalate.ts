@@ -1,7 +1,7 @@
 // Escalation: a retry after a failure a stronger model may fix runs one model up.
-import type { Needs } from '../work/index.ts';
-import { INTERRUPTED, type Run, type RunOutcome } from './run.ts';
-import { NO_CHANGE, TESTS_FAILED, TURN_LIMIT, isNoResult, isSetupFailure } from './run-result.ts';
+import type { Needs } from '#domain/work/index.ts';
+import { INTERRUPTED, type Run, type RunOutcome } from '#domain/runs/run.ts';
+import { NO_CHANGE, TESTS_FAILED, TURN_LIMIT, isNoResult, isSetupFailure } from '#domain/runs/run-result.ts';
 
 const LADDER = ['haiku', 'sonnet', 'opus'];
 

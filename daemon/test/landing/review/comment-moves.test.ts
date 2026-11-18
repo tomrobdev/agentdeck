@@ -1,13 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-  COMMENT_MOVES,
-  COMMENT_STATES,
-  commentActionError,
-  commentStatesFor,
-  nextCommentState,
-} from '../../../src/domain/landing/review/review.ts';
-import type { CommentAction, CommentState } from '../../../src/domain/landing/review/review.ts';
+import { COMMENT_MOVES, COMMENT_STATES, commentActionError, commentStatesFor, nextCommentState } from '#domain/landing/review/review.ts';
+import type { CommentAction, CommentState } from '#domain/landing/review/review.ts';
 
 const TABLE: [CommentAction, CommentState, CommentState | null][] = [
   ['answer', 'open', 'answered'],

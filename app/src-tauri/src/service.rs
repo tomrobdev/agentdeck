@@ -1,5 +1,5 @@
-//! Starts the daemon through launchd when it is down. It mirrors `restart()` in `daemon/src/adapters/macos/service.ts`, which
-//! is also where the label and the plist path come from. Installing and uninstalling the service stay with the CLI.
+//! Starts the daemon through launchd when it is down, and leaves one that is running alone (`restart()` in
+//! `daemon/src/adapters/macos/service.ts` is the one that stops it). The label and the plist path come from there. Installing and uninstalling the service stay with the CLI.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -26,7 +26,7 @@ fn launchctl_args(
     }
     let domain = format!("gui/{uid}");
     Ok(if loaded {
-        vec!["kickstart".into(), "-k".into(), format!("{domain}/{LABEL}")]
+        vec!["kickstart".into(), format!("{domain}/{LABEL}")]
     } else {
         vec!["bootstrap".into(), domain, plist.display().to_string()]
     })
@@ -105,10 +105,9 @@ mod tests {
     }
 
     #[test]
-    fn loaded_is_kickstarted() {
-        assert_eq!(
-            launchctl_args(true, true, "501", &plist()).unwrap(),
-            ["kickstart", "-k", "gui/501/dev.agentdeck.daemon"]
-        );
+    fn loaded_is_kickstarted_without_killing_a_daemon_that_is_running() {
+        let args = launchctl_args(true, true, "501", &plist()).unwrap();
+        assert_eq!(args, ["kickstart", "gui/501/dev.agentdeck.daemon"]);
+        assert!(!args.contains(&"-k".to_string()));
     }
 }

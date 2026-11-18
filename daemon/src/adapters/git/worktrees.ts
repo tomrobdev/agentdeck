@@ -1,12 +1,12 @@
 // Adapter for local git: worktrees, and committing and merging in them.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { WORKTREE_DIR } from '../../config.ts';
-import { branchName } from '../../domain/work/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { git } from './exec.ts';
-import { branchExists, refExists, startPoint } from './refs.ts';
+import { WORKTREE_DIR } from '#src/config.ts';
+import { branchName } from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { git } from '#adapters/git/exec.ts';
+import { branchExists, refExists, startPoint } from '#adapters/git/refs.ts';
 
 export async function ensureWorktree(repo: Repo, task: Task): Promise<{ branch: string; path: string }> {
   const branch = branchName(task);

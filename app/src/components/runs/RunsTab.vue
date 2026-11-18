@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
-import { MODEL_LABELS, runHint, runLabel } from '../../lib/runs/run-wording';
-import { ago, runDuration } from '../../lib/shared/time';
-import { reposQuery } from '../../api/repos';
-import type { TaskDetail } from '../../api/types';
-import { liveSource } from '../../lib/runs/run-live';
-import { RUN_KIND_ICONS, runCost } from '../../lib/runs/run-row';
-import Progress from '../ui/status/Progress.vue';
-import LogView from './LogView.vue';
-import Markdown from '../ui/Markdown.vue';
-import FinalMessage from './FinalMessage.vue';
-import RunSummaryCard from './RunSummaryCard.vue';
-import VerifyFindings from './VerifyFindings.vue';
-import { latestVerify } from '../../../../daemon/src/domain/runs/index.ts';
-import Listbox from '../ui/form/Listbox.vue';
+import { MODEL_LABELS, runHint, runLabel } from '#lib/runs/run-wording.ts';
+import { ago, runDuration } from '#lib/shared/time.ts';
+import { reposQuery } from '#api/repos.ts';
+import type { TaskDetail } from '#api/types.ts';
+import { liveSource } from '#lib/runs/run-live.ts';
+import { RUN_KIND_ICONS, runCost } from '#lib/runs/run-row.ts';
+import Progress from '#components/ui/status/Progress.vue';
+import LogView from '#components/runs/LogView.vue';
+import Markdown from '#components/ui/Markdown.vue';
+import FinalMessage from '#components/runs/FinalMessage.vue';
+import RunSummaryCard from '#components/runs/RunSummaryCard.vue';
+import VerifyFindings from '#components/runs/VerifyFindings.vue';
+import { latestVerify } from '#daemon/domain/runs/index.ts';
+import Listbox from '#components/ui/form/Listbox.vue';
 
 const props = defineProps<{ task: TaskDetail; runId: number | null; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ select: [runId: number]; path: [path: string, line: number | null] }>();

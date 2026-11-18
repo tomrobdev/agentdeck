@@ -1,12 +1,12 @@
 import { createApp } from 'vue';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
-import App from './App.vue';
-import TrayView from './components/layout/TrayView.vue';
-import './styles/themes.css';
-import './styles/style.css';
-import { initTheme } from './platform/theme';
-import { retryQuery } from './api/api-error';
-import { router } from './router';
+import App from '#src/App.vue';
+import TrayView from '#components/layout/TrayView.vue';
+import '#styles/themes.css';
+import '#styles/style.css';
+import { initTheme } from '#platform/theme.ts';
+import { retryQuery } from '#api/api-error.ts';
+import { router } from '#src/router.ts';
 
 initTheme();
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: retryQuery, refetchOnWindowFocus: true } } });

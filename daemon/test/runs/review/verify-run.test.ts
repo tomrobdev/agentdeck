@@ -4,7 +4,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import type { Run } from '../../../src/domain/runs/run.ts';
+import type { Run } from '#domain/runs/run.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-verify-run-'));
 process.env.AGENTDECK_HOME = home;
@@ -13,9 +13,9 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { rejectTask, startVerify } = await import('../../../src/application/actions.ts');
-const { ActionError } = await import('../../../src/application/shared/input.ts');
+const { openDb } = await import('#db/index.ts');
+const { rejectTask, startVerify } = await import('#application/actions.ts');
+const { ActionError } = await import('#application/shared/input.ts');
 const {
   CLAIM_VERDICTS,
   VERIFY_ANSWER_SCHEMA,
@@ -28,12 +28,12 @@ const {
   verifyLine,
   verifyRefusal,
   verifySchemaArgs,
-} = await import('../../../src/domain/runs/verify.ts');
-const { runLabel, runModel } = await import('../../../src/domain/runs/run.ts');
-const { buildPrBody } = await import('../../../src/domain/landing/pull-request/pr.ts');
-const { restartWait } = await import('../../../src/domain/operations/restart.ts');
-const { asRunId, asTaskId, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
-const { VERDICT_MARKS, sortFindings, verifyHeadline } = await import('../../../../app/src/lib/runs/verify.ts');
+} = await import('#domain/runs/verify.ts');
+const { runLabel, runModel } = await import('#domain/runs/run.ts');
+const { buildPrBody } = await import('#domain/landing/pull-request/pr.ts');
+const { restartWait } = await import('#domain/operations/restart.ts');
+const { asRunId, asTaskId, testApp, waitFor } = await import('#test/fixtures/fixtures.ts');
+const { VERDICT_MARKS, sortFindings, verifyHeadline } = await import('#app/lib/runs/verify.ts');
 
 const PROMPT = `## Goal
 Count the words in a file.

@@ -1,14 +1,14 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
-import { createWriteStream, type WriteStream } from 'node:fs';
+import { createWriteStream, openSync, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { API_TOKEN_PATH, LOG_DIR, ensureDirs } from '../../config.ts';
-import type { App } from '../ports/app.ts';
-import type { RunId } from '../../domain/shared/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { allowedTools } from '../../domain/repos/index.ts';
-import { type ClaudeResult, type ClaudeRun, type UsageWindow, START_LIVE, nextLive } from '../../domain/runs/index.ts';
-import { claudeArgs } from '../../domain/runs/index.ts';
-import { settingsPath, workerSettings } from '../../domain/runs/index.ts';
+import { API_TOKEN_PATH, LOG_DIR, ensureDirs } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import type { RunId } from '#domain/shared/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { allowedTools } from '#domain/repos/index.ts';
+import { type ClaudeResult, type ClaudeRun, type UsageWindow, START_LIVE, nextLive } from '#domain/runs/index.ts';
+import { claudeArgs } from '#domain/runs/index.ts';
+import { settingsPath, workerSettings } from '#domain/runs/index.ts';
 import {
   type Outcome,
   type Run,
@@ -21,9 +21,9 @@ import {
   runEndOf,
   runModel,
   runSummary,
-} from '../../domain/runs/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { lastLine } from '../../domain/shared/index.ts';
+} from '#domain/runs/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { lastLine } from '#domain/shared/index.ts';
 
 export function runSettings(app: App, repo: Repo, worktree: string, logPath: string): string {
   const path = settingsPath(logPath);
@@ -36,6 +36,7 @@ export interface OpenedRun {
   logPath: string;
   log: WriteStream;
   model: string;
+  closing?: Promise<void>;
   ended?: boolean;
 }
 
@@ -43,7 +44,8 @@ export function openTaskRun(app: App, task: Task, kind: RunKind, diffHash: strin
   ensureDirs();
   const name = kind === 'work' ? `attempt-${task.attempts}` : `${kind}-${Date.now()}`;
   const logPath = join(LOG_DIR, `task-${task.id}-${name}.jsonl`);
-  const log = createWriteStream(logPath, { flags: 'a' });
+  const log = createWriteStream(logPath, { fd: openSync(logPath, 'a') });
+  log.on('error', () => {});
   const model = runModel(kind, task, app.modelSettings());
   const runId = app.startRun(task.id, task.attempts, logPath, kind, model, diffHash);
   return { runId, logPath, log, model };
@@ -57,12 +59,13 @@ export async function endTaskRun(
   fields: Partial<Run> = {},
   summary?: SummaryContext,
 ): Promise<void> {
+  opened.closing ??= app.runLog.close(opened.log);
+  await opened.closing;
   if (opened.ended) return;
-  opened.ended = true;
-  await app.runLog.close(opened.log);
   const events = summary && (outcome === 'failed' || outcome === 'blocked') ? readEvents(app, opened.logPath) : [];
   const ended = events.length && summary ? runEndOf(runSummary(events, summary)) : {};
   app.finishRun(opened.runId, { ...fields, ...ended, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
+  opened.ended = true;
 }
 
 function readEvents(app: App, path: string): unknown[] {

@@ -3,16 +3,16 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Ports } from '../../src/application/ports/app.ts';
-import { testApp } from '../fixtures/fixtures.ts';
+import type { Ports } from '#application/ports/app.ts';
+import { testApp } from '#test/fixtures/fixtures.ts';
 
 process.env.AGENTDECK_HOME ??= mkdtempSync(join(tmpdir(), 'agentdeck-cli-run-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../src/db/index.ts');
-const { COMMANDS } = await import('../../src/cli/commands.ts');
-const { parseCommandLine } = await import('../../src/cli/context.ts');
-const { repoName } = await import('../../src/application/actions.ts');
+const { openDb } = await import('#db/index.ts');
+const { COMMANDS } = await import('#cli/commands.ts');
+const { parseCommandLine } = await import('#cli/context.ts');
+const { repoName } = await import('#application/actions.ts');
 
 export interface CliResult {
   out: string;

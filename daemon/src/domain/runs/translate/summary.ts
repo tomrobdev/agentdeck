@@ -1,6 +1,6 @@
 // A finished run's claude stream summed up for a person: how it spent its turns and time, how its tests went, and what it was doing when it stopped.
-import { cut, plural } from '../../shared/index.ts';
-import { fields, text } from './fields.ts';
+import { cut, plural } from '#domain/shared/index.ts';
+import { fields, text } from '#domain/runs/translate/fields.ts';
 
 /** How the run's claude ended: out of turns, on its own, on another error, or cut off before a result. */
 export type RunEnd = 'max_turns' | 'ended' | 'error' | 'cut_off';

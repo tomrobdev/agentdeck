@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-const { github, failure } = await import('../../../src/adapters/github/github.ts');
+const { github, failure } = await import('#adapters/github/github.ts');
 
 function fakeGh(script: string): void {
   const dir = mkdtempSync(join(tmpdir(), 'agentdeck-gh-'));

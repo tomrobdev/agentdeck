@@ -1,12 +1,12 @@
 // Server-Sent Events tail of a run's log for the dashboard, resumable by byte offset.
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { type ComposedApp, taskRuns } from '../application/actions.ts';
-import type { TaskId } from '../domain/shared/index.ts';
-import { parseLogLine } from '../domain/runs/index.ts';
-import { pickRun } from '../domain/runs/index.ts';
+import { type ComposedApp, taskRuns } from '#application/actions.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { parseLogLine } from '#domain/runs/index.ts';
+import { pickRun } from '#domain/runs/index.ts';
 
-import { errorText } from './http.ts';
+import { errorText } from '#api/http.ts';
 
 const LOG_POLL_MS = 500;
 const LOG_PING_MS = 25_000;

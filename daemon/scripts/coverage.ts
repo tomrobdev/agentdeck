@@ -15,8 +15,8 @@ import {
   percent,
   showPercent,
   withUnloaded,
-} from './lib/coverage.ts';
-import { COVERAGE_FLOORS } from './lib/progress.ts';
+} from '#scripts/lib/coverage.ts';
+import { COVERAGE_FLOORS } from '#scripts/lib/progress.ts';
 
 const DAEMON = join(import.meta.dirname, '..');
 const ROOT = join(DAEMON, '..');

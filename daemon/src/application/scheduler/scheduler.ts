@@ -1,23 +1,24 @@
 // The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner when a queue runs dry, opens again the PRs that failed to open, and refreshes open PRs, merging those that pass the auto-merge check.
-import { DEFAULTS } from '../../config.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { MAX_RESTARTS } from '../../domain/work/index.ts';
-import { describeWait } from '../../domain/work/index.ts';
-import { queueWait } from '../capacity/gate.ts';
-import { notifyLater } from '../operations/notifications.ts';
-import { REVIEW_CHECK_MS, checkReviewsDue } from '../operations/review-due.ts';
-import { proposeNow, plannerDue } from '../proposals/planner.ts';
-import { resolveConflicting } from '../runs/sync.ts';
-import { autoMerge } from '../landing/merge/auto-merge.ts';
-import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landing/pull-request/refresh.ts';
-import { followUpPending, hasFollowUpsToRun } from '../landing/settle.ts';
-import { retryFailedPrs } from '../landing/pull-request/open-pr.ts';
-import { nextUnblockable } from '../runs/unblock.ts';
-import { nextReviewable } from '../runs/review.ts';
-import { startReview, startUnblock, startWork } from './start-runs.ts';
-import type { App } from '../ports/app.ts';
-import type { KeepAwake } from '../ports/processes.ts';
-import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
+import { DEFAULTS } from '#src/config.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { MAX_RESTARTS } from '#domain/work/index.ts';
+import { describeWait } from '#domain/work/index.ts';
+import { queueWait } from '#application/capacity/gate.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
+import { REVIEW_CHECK_MS, checkReviewsDue } from '#application/operations/review-due.ts';
+import { releaseRestartPause } from '#application/operations/restart.ts';
+import { proposeNow, plannerDue } from '#application/proposals/planner.ts';
+import { resolveConflicting } from '#application/runs/sync.ts';
+import { autoMerge } from '#application/landing/merge/auto-merge.ts';
+import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '#application/landing/pull-request/refresh.ts';
+import { followUpPending, hasFollowUpsToRun } from '#application/landing/settle.ts';
+import { retryFailedPrs } from '#application/landing/pull-request/open-pr.ts';
+import { nextUnblockable } from '#application/runs/unblock.ts';
+import { nextReviewable } from '#application/runs/review.ts';
+import { startReview, startUnblock, startWork } from '#application/scheduler/start-runs.ts';
+import type { App } from '#application/ports/app.ts';
+import type { KeepAwake } from '#application/ports/processes.ts';
+import type { Activity, ReloadDecision } from '#domain/operations/index.ts';
 
 const REVIEW_LOOK_MS = 30_000;
 
@@ -47,10 +48,12 @@ export class Scheduler {
   private reviewIdleUntil = 0;
   private timer: NodeJS.Timeout | undefined;
   private stopped = false;
+  private draining = false;
   private drained: (() => void) | undefined;
   private lastHold: string | null = null;
   private lastReload: string | null = null;
   private proposingRuns = 0;
+  private apiRequests = 0;
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
@@ -82,6 +85,8 @@ export class Scheduler {
   run(): Promise<void> {
     const reaped = this.app.processes.reapOrphans(this.app.unfinishedPids());
     if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
+    if (releaseRestartPause(this.app, Date.now()))
+      this.opts.log('resumed: an `agentdeck restart` that never finished had left the daemon paused');
     const { requeued, failed } = this.app.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
     if (failed.length) this.opts.log(`failed ${failed.length} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
@@ -92,11 +97,25 @@ export class Scheduler {
   }
 
   stop(): void {
+    if (!this.stopped) this.clearMarksOfSyncsCutOff();
     this.stopped = true;
     clearTimeout(this.timer);
     this.awake.set(false);
     this.app.processes.stopAll();
     this.drained?.();
+  }
+
+  private clearMarksOfSyncsCutOff(): void {
+    try {
+      this.app.clearSyncMarkers();
+    } catch (err) {
+      this.opts.log(`sync marks not cleared (the next start clears them): ${err}`);
+    }
+  }
+
+  drain(): void {
+    this.draining = true;
+    clearTimeout(this.timer);
   }
 
   wake(): void {
@@ -114,6 +133,21 @@ export class Scheduler {
     if (kind === 'propose') this.proposingRuns++;
     else this.takeSlot(settled, kind);
     return p;
+  }
+
+  get requestsInFlight(): number {
+    return this.apiRequests;
+  }
+
+  request(): () => void {
+    this.apiRequests++;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.apiRequests--;
+      this.tick();
+    };
   }
 
   private takeSlot(p: Promise<unknown>, kind: 'sync' | 'verify'): void {
@@ -143,6 +177,7 @@ export class Scheduler {
       reviews: this.reviews.size,
       verifies: this.verifies.size,
       planner: this.proposingRuns,
+      requests: this.apiRequests,
     };
   }
 
@@ -151,7 +186,7 @@ export class Scheduler {
   }
 
   private tick(): void {
-    if (this.stopped) return;
+    if (this.stopped || this.draining) return;
     const watcher = this.reload;
     const reload = watcher?.check(this.activity);
     if (watcher && reload?.exit) {

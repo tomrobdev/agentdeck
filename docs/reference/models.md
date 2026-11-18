@@ -837,6 +837,7 @@ What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and w
 | `unblocks?` | `number \| undefined` | Unblock runs still going (they belong to blocked tasks, so `tasks` doesn't count them). Missing means none.           |
 | `reviews?`  | `number \| undefined` | Review runs still going (they belong to done tasks, so `tasks` doesn't count them). Missing means none.               |
 | `verifies?` | `number \| undefined` | Verify runs still going (they belong to proposed or queued tasks, so `tasks` doesn't count them). Missing means none. |
+| `requests?` | `number \| undefined` | API writes (a merge, an install, a sync) still being carried out. Missing means none.                                 |
 
 ### AttentionCandidate
 

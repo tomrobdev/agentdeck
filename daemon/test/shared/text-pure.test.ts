@@ -1,7 +1,7 @@
 // Pure tests of the shared text helpers and the stored form of a task's fields.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { lastLine, parseTextList, short, stored, textList, wholeNumberError } from '../../src/domain/shared/index.ts';
+import { lastLine, parseTextList, short, stored, textList, wholeNumberError } from '#domain/shared/index.ts';
 
 test('wholeNumberError accepts a whole number in range and names the range otherwise', () => {
   assert.equal(wholeNumberError('max', 3, 1, 5), null);

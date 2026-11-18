@@ -1,18 +1,18 @@
 // Auto-merge: the daemon merges a done task's PR on its own when it passes the auto-merge check (docs/plans/auto-merge.html), and a person turns it on or off for one task.
-import type { App } from '../../ports/app.ts';
-import type { TaskId } from '../../../domain/shared/index.ts';
-import { AUTO_MERGE_LABEL, autoMergeOn } from '../../../domain/landing/index.ts';
-import { mergeReason } from '../../../domain/work/index.ts';
-import { openPrUrl } from '../../../domain/landing/index.ts';
-import { errorMessage, present } from '../../../domain/shared/index.ts';
-import { canStart, mergeFailedNotification, mergedNotification } from '../../../domain/operations/index.ts';
-import { ActionError, object, requireTask, requireTaskRepo } from '../../shared/input.ts';
-import { notifyLater } from '../../operations/notifications.ts';
-import { isMergeLocked } from '../../work/checkout-locks.ts';
-import { ensureAutoMergeLabel } from '../pull-request/open-pr.ts';
-import { MergeFailed, mergeable, mergeOpenPr } from './merge.ts';
-import { endMergeRequest } from '../moves.ts';
-import type { ReadyPr } from '../pull-request/refresh.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { AUTO_MERGE_LABEL, autoMergeOn } from '#domain/landing/index.ts';
+import { mergeReason } from '#domain/work/index.ts';
+import { openPrUrl } from '#domain/landing/index.ts';
+import { errorMessage, present } from '#domain/shared/index.ts';
+import { canStart, mergeFailedNotification, mergedNotification } from '#domain/operations/index.ts';
+import { ActionError, object, requireTask, requireTaskRepo } from '#application/shared/input.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
+import { isMergeLocked } from '#application/work/checkout-locks.ts';
+import { ensureAutoMergeLabel } from '#application/landing/pull-request/open-pr.ts';
+import { MergeFailed, mergeable, mergeOpenPr } from '#application/landing/merge/merge.ts';
+import { endMergeRequest } from '#application/landing/moves.ts';
+import type { ReadyPr } from '#application/landing/pull-request/refresh.ts';
 
 export async function autoMerge(
   app: App,

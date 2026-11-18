@@ -1,7 +1,7 @@
 // Pausing a repo: its queued tasks stay queued but aren't claimed until someone fixes the cause.
-import type { App } from '../ports/app.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { notifyLater } from '../operations/notifications.ts';
+import type { App } from '#application/ports/app.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
 
 export function pauseRepo(app: App, repo: Pick<Repo, 'id' | 'name'>, reason: string, opts: { replace?: boolean } = {}): boolean {
   const wasPaused = !!app.getRepo(repo.id)?.paused_reason;

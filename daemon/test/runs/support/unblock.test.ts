@@ -4,10 +4,10 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
-import type { RunKind, RunOutcome } from '../../../src/domain/runs/run.ts';
-import type { Needs } from '../../../src/domain/work/task/needs.ts';
-import { type TaskState, stateFields } from '../../../src/domain/work/task/task.ts';
+import { asTaskId } from '#domain/shared/id.ts';
+import type { RunKind, RunOutcome } from '#domain/runs/run.ts';
+import type { Needs } from '#domain/work/task/needs.ts';
+import { type TaskState, stateFields } from '#domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-unblock-'));
 process.env.AGENTDECK_HOME = home;
@@ -16,17 +16,16 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { nextUnblockable, runUnblock } = await import('../../../src/application/runs/unblock.ts');
-const { updateRepo } = await import('../../../src/application/actions.ts');
-const { repoSettingPatch } = await import('../../../src/cli/operations/settings-args.ts');
-const { restartWait } = await import('../../../src/domain/operations/restart.ts');
-const { describeEvent } = await import('../../../src/domain/work/index.ts');
-const { conflictReason } = await import('../../../src/domain/runs/sync.ts');
-const { setupFailedReason } = await import('../../../src/domain/runs/run-result.ts');
-const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblockable } =
-  await import('../../../src/domain/runs/unblock.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { nextUnblockable, runUnblock } = await import('#application/runs/unblock.ts');
+const { updateRepo } = await import('#application/actions.ts');
+const { repoSettingPatch } = await import('#cli/operations/settings-args.ts');
+const { restartWait } = await import('#domain/operations/restart.ts');
+const { describeEvent } = await import('#domain/work/index.ts');
+const { conflictReason } = await import('#domain/runs/sync.ts');
+const { setupFailedReason } = await import('#domain/runs/run-result.ts');
+const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblockable } = await import('#domain/runs/unblock.ts');
 
 const ON = { auto_unblock: true };
 const blocked = (o: { needs?: Needs | null; stop_reason?: string | null } = {}) => ({

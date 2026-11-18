@@ -5,9 +5,9 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import type { Repo } from '../../src/domain/repos/repo.ts';
-import { asRepoId, testApp, waitFor } from '../fixtures/fixtures.ts';
-import { stopReasonOf } from '../../src/domain/work/task/task.ts';
+import type { Repo } from '#domain/repos/repo.ts';
+import { asRepoId, testApp, waitFor } from '#test/fixtures/fixtures.ts';
+import { stopReasonOf } from '#domain/work/task/task.ts';
 
 const REPO = asRepoId(1);
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
@@ -17,9 +17,9 @@ const fake = join(import.meta.dirname, '../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../src/db/index.ts');
-const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const { parseStatus } = await import('../../src/domain/runs/run-result.ts');
+const { openDb } = await import('#db/index.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { parseStatus } = await import('#domain/runs/run-result.ts');
 
 const repoPath = join(home, 'demo');
 const db = testApp(openDb(join(home, 'test.db')));
@@ -140,7 +140,7 @@ test('orphaned running tasks are requeued on start', () => {
 });
 
 test('a task interrupted by repeated restarts fails instead of looping', async () => {
-  const { MAX_RESTARTS } = await import('../../src/domain/work/lifecycle/lifecycle.ts');
+  const { MAX_RESTARTS } = await import('#domain/work/lifecycle/lifecycle.ts');
   const task = db.addTask({ repo_id: REPO, title: 'poison', prompt: 'x' });
   for (let i = 1; i < MAX_RESTARTS; i++) {
     db.claimNextTask();
@@ -155,7 +155,7 @@ test('a task interrupted by repeated restarts fails instead of looping', async (
 
 test('claude processes left by a dead daemon are stopped, with their children', async () => {
   const { spawn } = await import('node:child_process');
-  const { reapOrphans } = await import('../../src/adapters/process/processes.ts');
+  const { reapOrphans } = await import('#adapters/process/processes.ts');
   const alive = (pgid: number) => {
     try {
       process.kill(-pgid, 0);
@@ -181,8 +181,8 @@ test('claude processes left by a dead daemon are stopped, with their children', 
 
 test('a claude started long after its run row opened (setup, a sync) is still the run own, and is reaped', async () => {
   const { spawn } = await import('node:child_process');
-  const { ownsLiveGroup, reapOrphans } = await import('../../src/adapters/process/processes.ts');
-  const { openDb } = await import('../../src/db/index.ts');
+  const { ownsLiveGroup, reapOrphans } = await import('#adapters/process/processes.ts');
+  const { openDb } = await import('#db/index.ts');
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
   const task = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
@@ -205,7 +205,7 @@ test('a claude started long after its run row opened (setup, a sync) is still th
 });
 
 test('defaultTitle cuts at sentence or word boundary', async () => {
-  const { defaultTitle } = await import('../../src/domain/work/task/task.ts');
+  const { defaultTitle } = await import('#domain/work/task/task.ts');
   assert.equal(defaultTitle('Fix the login bug. Then add tests.'), 'Fix the login bug');
   const long = defaultTitle(
     'Add a truncate(s, n) function to src/strings.js that shortens s to at most n characters, ending with an ellipsis',
@@ -237,9 +237,9 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
 });
 
 test('repo add detects the toolchain; repos registered before detection get its rules on the fly', async () => {
-  const { addRepo } = await import('../../src/application/actions.ts');
-  const { rootInfo } = await import('../../src/adapters/git/repo-root.ts');
-  const { DEFAULT_ALLOWED_TOOLS, allowedTools } = await import('../../src/domain/repos/tools.ts');
+  const { addRepo } = await import('#application/actions.ts');
+  const { rootInfo } = await import('#adapters/git/repo-root.ts');
+  const { DEFAULT_ALLOWED_TOOLS, allowedTools } = await import('#domain/repos/tools.ts');
   const effectiveTools = (repo: Repo, dir: string) => allowedTools(repo, rootInfo(dir));
   const jsRepo = (name: string) => {
     const dir = join(home, name);
@@ -324,8 +324,8 @@ test('a failing setup blocks the task without starting claude', async () => {
 const settingsCalls = () => readFileSync(join(home, 'fake-claude-settings.log'), 'utf8').trim().split('\n');
 
 test('each run gets a sandbox settings file outside its worktree', async () => {
-  const { updateRepo } = await import('../../src/application/actions.ts');
-  const { API_TOKEN_PATH, LOG_DIR } = await import('../../src/config.ts');
+  const { updateRepo } = await import('#application/actions.ts');
+  const { API_TOKEN_PATH, LOG_DIR } = await import('#src/config.ts');
   db.setRepoPaused(REPO, null);
   assert.equal(db.getRepo(REPO)!.sandbox, true, 'sandbox is on by default');
   assert.deepEqual(db.getRepo(REPO)!.network, [], 'no hosts by default');
@@ -369,7 +369,7 @@ test('a sandbox that cannot start fails the run with claude’s reason', async (
 });
 
 test('repo network rejects things that are not host names', async () => {
-  const { ActionError, updateRepo } = await import('../../src/application/actions.ts');
+  const { ActionError, updateRepo } = await import('#application/actions.ts');
   assert.throws(() => updateRepo(db, REPO, { network: 'a.com, http://b.com/x' }), ActionError);
   assert.deepEqual(db.getRepo(REPO)!.network, []);
 });

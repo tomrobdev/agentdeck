@@ -1,11 +1,11 @@
 // Warn when a task's prompt names a repo path that won't be there when the task runs.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { linkState } from '../../domain/work/index.ts';
-import { matchPath, pathsNamedIn } from '../../domain/work/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { targetOf } from './dependencies.ts';
-import { requireTask, requireTaskRepo } from '../shared/input.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { linkState } from '#domain/work/index.ts';
+import { matchPath, pathsNamedIn } from '#domain/work/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { targetOf } from '#application/work/dependencies.ts';
+import { requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
 export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
   const task = requireTask(app, id);

@@ -1,8 +1,8 @@
 // Work's repositories: tasks, their history, their links and their plans.
-import type { RepoId, TaskId } from '../../../domain/shared/index.ts';
-import type { AutoMergeCheck, CheckCounts, MergeRequestMove, StoredChecks } from '../../../domain/landing/index.ts';
-import type { AttentionCandidate } from '../../../domain/operations/index.ts';
-import type { MergeMethod } from '../../../domain/repos/index.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { AutoMergeCheck, CheckCounts, MergeRequestMove, StoredChecks } from '#domain/landing/index.ts';
+import type { AttentionCandidate } from '#domain/operations/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
 import type {
   BlockedTask,
   Dependent,
@@ -23,7 +23,7 @@ import type {
   TaskStatus,
   TaskSummary,
   UnblockQuestion,
-} from '../../../domain/work/index.ts';
+} from '#domain/work/index.ts';
 
 export type TaskEdit = Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>> & {
   plan_task?: TaskId | null;
@@ -76,6 +76,7 @@ export interface TaskRepository {
   setCheckout(id: TaskId, fields: { branch?: string | null; worktree?: string | null }): void;
   setSyncing(id: TaskId, on: boolean): void;
   hasSyncMarker(id: TaskId): boolean;
+  clearSyncMarkers(): void;
   setAutoMerge(id: TaskId, value: boolean | null): Task | undefined;
   setAutoMergeCheck(id: TaskId, check: AutoMergeCheck | null): boolean;
   requestMerge(id: TaskId, method: MergeMethod): boolean;

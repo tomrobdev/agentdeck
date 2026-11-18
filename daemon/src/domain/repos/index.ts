@@ -8,11 +8,11 @@ export {
   isProtectedPath,
   protectedEditTarget,
   protectedEditsMessage,
-} from './protected-edits.ts';
-export { AGENTDECK_FOLDER, DEFAULT_MERGE_METHOD, MERGE_METHODS, PR_MODES, isMergeMethod, pausedReason } from './repo.ts';
-export type { MergeMethod, PrMode, Repo } from './repo.ts';
-export { goalsError, networkError, repoNameError, toolRulesError } from './rules.ts';
-export { refusedCommands } from './tool-rules.ts';
-export { detectToolchain } from './toolchain.ts';
-export { ALWAYS_DISALLOWED_TOOLS, allowedTools, parseToolRules, toolRulesSource } from './tools.ts';
-export type { ToolRulesSource } from './tools.ts';
+} from '#domain/repos/protected-edits.ts';
+export { AGENTDECK_FOLDER, DEFAULT_MERGE_METHOD, MERGE_METHODS, PR_MODES, isMergeMethod, pausedReason } from '#domain/repos/repo.ts';
+export type { MergeMethod, PrMode, Repo } from '#domain/repos/repo.ts';
+export { goalsError, networkError, repoNameError, toolRulesError } from '#domain/repos/rules.ts';
+export { refusedCommands } from '#domain/repos/tool-rules.ts';
+export { detectToolchain } from '#domain/repos/toolchain.ts';
+export { ALWAYS_DISALLOWED_TOOLS, allowedTools, parseToolRules, toolRulesSource } from '#domain/repos/tools.ts';
+export type { ToolRulesSource } from '#domain/repos/tools.ts';

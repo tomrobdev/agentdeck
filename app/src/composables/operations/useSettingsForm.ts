@@ -1,12 +1,12 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { operationsApi, serviceQuery, settingsQuery } from '../../api/operations';
-import type { Settings } from '../../api/types';
-import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/shared/forms';
-import { editorTemplate, saveEditorTemplate, saveTerminalTemplate, terminalTemplate } from '../../lib/runs/terminal';
-import { launchAtLogin, setLaunchAtLogin } from '../../platform/native';
-import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
-import { useActions } from '../shared/useActions';
+import { operationsApi, serviceQuery, settingsQuery } from '#api/operations.ts';
+import type { Settings } from '#api/types.ts';
+import { type SettingsForm, toSettingsForm, toSettingsPatch } from '#lib/shared/forms.ts';
+import { editorTemplate, saveEditorTemplate, saveTerminalTemplate, terminalTemplate } from '#lib/runs/terminal.ts';
+import { launchAtLogin, setLaunchAtLogin } from '#platform/native.ts';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
+import { useActions } from '#composables/shared/useActions.ts';
 
 export function useSettingsForm(close: () => void) {
   const { run } = useActions();

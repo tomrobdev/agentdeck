@@ -1,9 +1,9 @@
 // The live state of a repo's queue for an agent's session (`agentdeck context`): the open tasks are Work's to read, the digest around them is Operations' (`operations/digest.ts`).
-import type { App } from '../ports/app.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { OPEN_STATUSES, filterTasks, isReview, listable, stageOf } from '../../domain/work/index.ts';
-import { type LiveContext, digestContext } from '../operations/digest.ts';
-import { withViews } from './task-views.ts';
+import type { App } from '#application/ports/app.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { OPEN_STATUSES, filterTasks, isReview, listable, stageOf } from '#domain/work/index.ts';
+import { type LiveContext, digestContext } from '#application/operations/digest.ts';
+import { withViews } from '#application/work/task-views.ts';
 
 const OPEN_STATES = ['active', 'needs-you', 'proposed', 'review'];
 

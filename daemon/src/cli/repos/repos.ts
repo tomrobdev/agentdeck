@@ -1,11 +1,11 @@
 // Repo commands: register, configure and check repos, goals and the planner.
 import { readFileSync } from 'node:fs';
-import * as actions from '../../application/actions.ts';
-import type { ProposalResult } from '../../domain/proposals/index.ts';
-import { callDaemon } from '../operations/daemon-client.ts';
-import { confirm, die, fmtTask, printDoctor } from '../format.ts';
-import { repoSettingPatch } from '../operations/settings-args.ts';
-import type { Command } from '../context.ts';
+import * as actions from '#application/actions.ts';
+import type { ProposalResult } from '#domain/proposals/index.ts';
+import { callDaemon } from '#cli/operations/daemon-client.ts';
+import { confirm, die, fmtTask, printDoctor } from '#cli/format.ts';
+import { repoSettingPatch } from '#cli/operations/settings-args.ts';
+import type { Command } from '#cli/context.ts';
 
 const propose: Command = async ({ db, rest, repoName }) => {
   if (!rest[0]) die('usage: agentdeck propose <repo>');

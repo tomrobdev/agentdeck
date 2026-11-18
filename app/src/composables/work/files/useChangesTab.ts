@@ -1,19 +1,19 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { landingApi } from '../../../api/landing';
-import { changesSinceQuery } from '../../../api/work';
-import type { ChangedFile, Changes, NewReviewComment, TaskDetail } from '../../../api/types';
-import { changedTree } from '../../../lib/work/files/changed-tree';
-import { totalLines, visibleComments } from '../../../lib/work/files/changes-view';
-import { shownSince } from '../../../lib/work/files/since';
-import { openCommentOrder, stepFrom } from '../../../lib/work/queue/review-nav';
-import { loadSetting, saveSetting } from '../../../lib/shared/storage';
-import { useActions } from '../../shared/useActions';
-import { useHotkeys } from '../../shared/useHotkeys';
-import { useReviews } from '../../landing/useReviews';
-import { useFilePatches } from './useFilePatches';
-import { useFileText } from './useFileText';
-import { useViewed } from './useViewed';
+import { landingApi } from '#api/landing.ts';
+import { changesSinceQuery } from '#api/work.ts';
+import type { ChangedFile, Changes, NewReviewComment, TaskDetail } from '#api/types.ts';
+import { changedTree } from '#lib/work/files/changed-tree.ts';
+import { totalLines, visibleComments } from '#lib/work/files/changes-view.ts';
+import { shownSince } from '#lib/work/files/since.ts';
+import { openCommentOrder, stepFrom } from '#lib/work/queue/review-nav.ts';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { useHotkeys } from '#composables/shared/useHotkeys.ts';
+import { useReviews } from '#composables/landing/useReviews.ts';
+import { useFilePatches } from '#composables/work/files/useFilePatches.ts';
+import { useFileText } from '#composables/work/files/useFileText.ts';
+import { useViewed } from '#composables/work/files/useViewed.ts';
 
 export function useChangesTab(props: { task: TaskDetail; changes: Changes | null }) {
   const taskId = computed(() => props.task.id);

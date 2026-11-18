@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { MODEL_LABELS } from '../../../lib/runs/run-wording';
-import { type SettingsForm, modelChoices } from '../../../lib/shared/forms';
-import { MODELS } from '../../../../../daemon/src/domain/work/index.ts';
-import NumberInput from '../../ui/form/NumberInput.vue';
-import Switch from '../../ui/form/Switch.vue';
+import { MODEL_LABELS } from '#lib/runs/run-wording.ts';
+import { type SettingsForm, modelChoices } from '#lib/shared/forms.ts';
+import { MODELS } from '#daemon/domain/work/index.ts';
+import NumberInput from '#components/ui/form/NumberInput.vue';
+import Switch from '#components/ui/form/Switch.vue';
 
 defineProps<{ form: SettingsForm }>();
 </script>

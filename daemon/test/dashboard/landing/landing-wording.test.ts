@@ -1,7 +1,7 @@
 // How the dashboard words a pull request's path to merging.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { autoMergeLine, describeMergeRequest, describePrRetry, syncLine } from '../../../../app/src/lib/landing/landing-wording.ts';
+import { autoMergeLine, describeMergeRequest, describePrRetry, syncLine } from '#app/lib/landing/landing-wording.ts';
 
 test('auto-merge says it merges on the next refresh, waits with its reasons, or needs a person', () => {
   assert.equal(autoMergeLine({ verdict: 'merge', reasons: [] } as never), 'on; merges on the next PR refresh');

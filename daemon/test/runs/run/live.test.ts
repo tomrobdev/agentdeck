@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { START_LIVE, liveView, nextLive, syncView, toolText } from '../../../src/domain/runs/translate/live.ts';
+import { START_LIVE, liveView, nextLive, syncView, toolText } from '#domain/runs/translate/live.ts';
 
 const assistant = (id: string, ...uses: { name: string; input: unknown }[]) => ({
   type: 'assistant',

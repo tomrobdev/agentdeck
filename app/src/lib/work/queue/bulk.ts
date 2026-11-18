@@ -1,7 +1,7 @@
-import type { TaskSummary } from '../../../../../daemon/src/api/contract/work.ts';
-import { personEvents } from '../../../../../daemon/src/domain/work/index.ts';
-import { EDITABLE_STATUSES, buildsOnError, canStartMerge } from '../../../../../daemon/src/domain/work/index.ts';
-import { asTaskId } from '../../../../../daemon/src/domain/shared/index.ts';
+import type { TaskSummary } from '#daemon/api/contract/work.ts';
+import { personEvents } from '#daemon/domain/work/index.ts';
+import { EDITABLE_STATUSES, buildsOnError, canStartMerge } from '#daemon/domain/work/index.ts';
+import { asTaskId } from '#daemon/domain/shared/index.ts';
 
 export type BulkAction = 'approve' | 'reject' | 'retry' | 'merge' | 'cancel';
 export const BULK_ACTIONS: BulkAction[] = ['approve', 'reject', 'retry', 'merge', 'cancel'];

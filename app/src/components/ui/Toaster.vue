@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ToastAction, ToastClose, ToastDescription, ToastProvider, ToastRoot, ToastViewport } from 'reka-ui';
-import type { ToastItem } from '../../composables/shared/useToasts';
+import type { ToastItem } from '#composables/shared/useToasts.ts';
 
 defineProps<{ toasts: ToastItem[] }>();
 const emit = defineEmits<{ close: [id: number] }>();

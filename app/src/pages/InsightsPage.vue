@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import InsightsView from '../components/insights/InsightsView.vue';
+import InsightsView from '#components/insights/InsightsView.vue';
 </script>
 
 <template>

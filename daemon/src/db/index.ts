@@ -1,23 +1,23 @@
 // The database: the only place SQL lives.
 import { DatabaseSync } from 'node:sqlite';
-import { DB_PATH, ensureDirs } from '../config.ts';
-import { usageStore } from './capacity/usage.ts';
-import { changeStore } from './changes.ts';
-import { statsStore } from './insights/stats.ts';
-import { reviewStore } from './landing/reviews.ts';
-import { notificationStore } from './operations/notifications.ts';
-import { settingsStore } from './operations/settings.ts';
-import { makeOrm } from './orm.ts';
-import { plannerRunStore } from './proposals/planner-runs.ts';
-import { repoStore } from './repos/repos.ts';
-import { runStore } from './runs/runs.ts';
-import { migrate } from './schema.ts';
-import { planStore } from './work/plans.ts';
-import { taskEventStore } from './work/task-events.ts';
-import { taskLinkStore } from './work/task-links.ts';
-import { taskStore } from './work/tasks.ts';
+import { DB_PATH, ensureDirs } from '#src/config.ts';
+import { usageStore } from '#db/capacity/usage.ts';
+import { changeStore } from '#db/changes.ts';
+import { statsStore } from '#db/insights/stats.ts';
+import { reviewStore } from '#db/landing/reviews.ts';
+import { notificationStore } from '#db/operations/notifications.ts';
+import { settingsStore } from '#db/operations/settings.ts';
+import { makeOrm } from '#db/orm.ts';
+import { plannerRunStore } from '#db/proposals/planner-runs.ts';
+import { repoStore } from '#db/repos/repos.ts';
+import { runStore } from '#db/runs/runs.ts';
+import { migrate } from '#db/schema.ts';
+import { planStore } from '#db/work/plans.ts';
+import { taskEventStore } from '#db/work/task-events.ts';
+import { taskLinkStore } from '#db/work/task-links.ts';
+import { taskStore } from '#db/work/tasks.ts';
 
-export { MIGRATIONS, type Migration, migrate } from './schema.ts';
+export { MIGRATIONS, type Migration, migrate } from '#db/schema.ts';
 
 export type Db = ReturnType<typeof openDb>;
 

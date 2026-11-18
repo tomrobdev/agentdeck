@@ -1,18 +1,20 @@
 // Pure tests of when the daemon may restart and when a repo is due for an area review.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { RESTART_PAUSE_FRESH_MS } from '#domain/operations/restart.ts';
 import {
   offMain,
   reloadDecision,
   reloadState,
   remindReviewDue,
   restartWait,
+  restartWaiting,
   reviewDue,
   reviewDueDaysError,
   reviewDueLinesError,
   reviewDueNotification,
-} from '../../../src/domain/operations/index.ts';
-import { asRepoId } from '../../../src/domain/shared/index.ts';
+} from '#domain/operations/index.ts';
+import { asRepoId } from '#domain/shared/index.ts';
 
 const idle = { tasks: 0, planner: 0, resolves: 0 };
 const input = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: 10_000, activity: idle };
@@ -23,6 +25,11 @@ test('restartWait names what is still running, and is null when nothing is', () 
     restartWait({ tasks: 1, planner: 2, resolves: 1, unblocks: 1, reviews: 2, verifies: 1 }),
     '1 running task and 1 resolve run and 1 unblock run and 2 review runs and 1 verify run and 2 planner runs',
   );
+});
+
+test('restartWait names API requests still being carried out', () => {
+  assert.equal(restartWait({ ...idle, requests: 1 }), '1 API request');
+  assert.equal(restartWait({ ...idle, tasks: 1, requests: 2 }), '1 running task and 2 API requests');
 });
 
 test('a requested restart waits for running work, else exits at once, whatever the setting says', () => {
@@ -106,4 +113,11 @@ test('the review limits are whole numbers in range', () => {
   assert.match(reviewDueDaysError(0) ?? '', /review_due_days must be a whole number from 1 to 365/);
   assert.equal(reviewDueLinesError(3000), null);
   assert.match(reviewDueLinesError(2_000_000) ?? '', /review_due_lines/);
+});
+
+test('restartWaiting: a restart waits while its pause was renewed within RESTART_PAUSE_FRESH_MS', () => {
+  assert.equal(restartWaiting(null, 1_000_000), false, 'no restart took a pause');
+  assert.equal(restartWaiting(1_000_000, 1_000_000), true);
+  assert.equal(restartWaiting(1_000_000, 1_000_000 + RESTART_PAUSE_FRESH_MS - 1), true);
+  assert.equal(restartWaiting(1_000_000, 1_000_000 + RESTART_PAUSE_FRESH_MS), false, 'cut off: nobody renewed it');
 });

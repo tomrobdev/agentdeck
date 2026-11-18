@@ -1,8 +1,8 @@
 // What the PR refresh makes of one open PR of a done task: the check that stands, where the PR goes, and whether a person's merge request is dropped.
-import { type AutoMergeFacts, autoMergeCheck } from '../merge/auto-merge.ts';
-import { isConflicting, isMergeabilityUnknown } from '../merge/conflict.ts';
-import { mergeRequestCheck, mergeRequestPolls } from '../merge/merge-request.ts';
-import { type AutoMergeCheck, type MergeInput, type PrDetails, reasonTexts } from '../merge/merge.ts';
+import { type AutoMergeFacts, autoMergeCheck } from '#domain/landing/merge/auto-merge.ts';
+import { isConflicting, isMergeabilityUnknown } from '#domain/landing/merge/conflict.ts';
+import { mergeRequestCheck, mergeRequestPolls } from '#domain/landing/merge/merge-request.ts';
+import { type AutoMergeCheck, type MergeInput, type PrDetails, reasonTexts } from '#domain/landing/merge/merge.ts';
 
 /** Where a PR goes in a refresh's findings: it conflicts with the base, GitHub has not worked out its mergeability, it is ready to merge, or none of these. */
 export type PrPlace = 'conflicting' | 'unknown' | 'mergeable' | null;

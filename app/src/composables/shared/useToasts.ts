@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { type Flash, UNDO_MS } from './useActions';
+import { type Flash, UNDO_MS } from '#composables/shared/useActions.ts';
 
 export interface ToastItem {
   id: number;

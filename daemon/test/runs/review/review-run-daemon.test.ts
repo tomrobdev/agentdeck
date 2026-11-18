@@ -4,7 +4,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import type { RunKind, RunOutcome } from '../../../src/domain/runs/run.ts';
+import type { RunKind, RunOutcome } from '#domain/runs/run.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-review-run-'));
 process.env.AGENTDECK_HOME = home;
@@ -13,17 +13,17 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { nextReviewable, runReview } = await import('../../../src/application/runs/review.ts');
-const { syncNow, updateRepo } = await import('../../../src/application/actions.ts');
-const { restartWait } = await import('../../../src/domain/operations/restart.ts');
-const { REVIEW_NOTE, reviewOutcome, reviewable } = await import('../../../src/domain/runs/review.ts');
-const { buildPrompt } = await import('../../../src/domain/runs/prompt.ts');
-const { runLabel } = await import('../../../src/domain/runs/run.ts');
-const { REVIEW_PROMPT_INTRO } = await import('../../../src/domain/landing/review/address.ts');
-const { doneTask, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
-const { fakeCodeHost } = await import('../../fixtures/fakes.ts');
+const { openDb } = await import('#db/index.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { nextReviewable, runReview } = await import('#application/runs/review.ts');
+const { syncNow, updateRepo } = await import('#application/actions.ts');
+const { restartWait } = await import('#domain/operations/restart.ts');
+const { REVIEW_NOTE, reviewOutcome, reviewable } = await import('#domain/runs/review.ts');
+const { buildPrompt } = await import('#domain/runs/prompt.ts');
+const { runLabel } = await import('#domain/runs/run.ts');
+const { REVIEW_PROMPT_INTRO } = await import('#domain/landing/review/address.ts');
+const { doneTask, testApp, waitFor } = await import('#test/fixtures/fixtures.ts');
+const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
 const ON = { auto_review: true };
 const DONE = { status: 'done' as const, pr: { state: 'open' as const } } as never;
@@ -193,7 +193,7 @@ test('a blocking answer retries the task with the review as its note; a second b
     ],
   );
   assert.equal(t.attempts, 2);
-  assert.equal(t.max_attempts, 2, 'the retry gave one attempt on top of those used, as a person’s does');
+  assert.equal(t.max_attempts, 3, 'the retry took no attempt away');
 
   const retries = db.eventsForTask(task.id).filter((e) => e.type === 'review_retry');
   assert.equal(retries.length, 1, 'only once per task');

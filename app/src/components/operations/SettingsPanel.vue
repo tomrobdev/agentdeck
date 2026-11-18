@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { NotificationRow } from '../../api/types';
-import { useSettingsForm } from '../../composables/operations/useSettingsForm';
-import { isNative } from '../../platform/native';
-import Modal from '../ui/Modal.vue';
-import AppearanceSettings from './settings/AppearanceSettings.vue';
-import BudgetSettings from './settings/BudgetSettings.vue';
-import CommandSettings from './settings/CommandSettings.vue';
-import DaemonSettings from './settings/DaemonSettings.vue';
-import ModelSettings from './settings/ModelSettings.vue';
-import NotificationSettings from './settings/NotificationSettings.vue';
-import RecentAlerts from './settings/RecentAlerts.vue';
+import type { NotificationRow } from '#api/types.ts';
+import { useSettingsForm } from '#composables/operations/useSettingsForm.ts';
+import { isNative } from '#platform/native.ts';
+import Modal from '#components/ui/Modal.vue';
+import AppearanceSettings from '#components/operations/settings/AppearanceSettings.vue';
+import BudgetSettings from '#components/operations/settings/BudgetSettings.vue';
+import CommandSettings from '#components/operations/settings/CommandSettings.vue';
+import DaemonSettings from '#components/operations/settings/DaemonSettings.vue';
+import ModelSettings from '#components/operations/settings/ModelSettings.vue';
+import NotificationSettings from '#components/operations/settings/NotificationSettings.vue';
+import RecentAlerts from '#components/operations/settings/RecentAlerts.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
 const emit = defineEmits<{ close: [] }>();

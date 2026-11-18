@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { workApi } from '../../../api/work';
-import { MODEL_HINTS, MODEL_LABELS } from '../../../lib/runs/run-wording';
-import { settingsQuery } from '../../../api/operations';
-import type { Repo, TaskDetail } from '../../../api/types';
-import { errorMessage, textList } from '../../../../../daemon/src/domain/shared/index.ts';
-import { modelSourceText, newTaskModel } from '../../../../../daemon/src/domain/work/index.ts';
-import { modelChoices } from '../../../lib/shared/forms';
-import { useTerminal } from '../../../composables/runs/useTerminal';
-import { openPanel } from '../../../composables/shared/useShell';
-import Modal from '../../ui/Modal.vue';
-import NumberInput from '../../ui/form/NumberInput.vue';
+import { workApi } from '#api/work.ts';
+import { MODEL_HINTS, MODEL_LABELS } from '#lib/runs/run-wording.ts';
+import { settingsQuery } from '#api/operations.ts';
+import type { Repo, TaskDetail } from '#api/types.ts';
+import { errorMessage, textList } from '#daemon/domain/shared/index.ts';
+import { modelSourceText, newTaskModel } from '#daemon/domain/work/index.ts';
+import { modelChoices } from '#lib/shared/forms.ts';
+import { useTerminal } from '#composables/runs/useTerminal.ts';
+import { openPanel } from '#composables/shared/useShell.ts';
+import Modal from '#components/ui/Modal.vue';
+import NumberInput from '#components/ui/form/NumberInput.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
 const emit = defineEmits<{ close: []; created: [task: TaskDetail] }>();

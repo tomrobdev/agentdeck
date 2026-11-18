@@ -1,12 +1,12 @@
-import { NOTIFY_KINDS } from '../domain/operations/index.ts';
+import { NOTIFY_KINDS } from '#domain/operations/index.ts';
 import {
   DEFAULT_AUTO_MERGE_MAX_LINES,
   DEFAULT_AUTO_MERGE_SKIP,
   DEFAULT_CODE_COMMENT_MAX_LINES,
   DEFAULT_CODE_COMMENT_MAX_PERCENT,
   PR_OPEN_RETRIES,
-} from '../domain/landing/index.ts';
-import { MODELS } from '../domain/work/index.ts';
+} from '#domain/landing/index.ts';
+import { MODELS } from '#domain/work/index.ts';
 
 export const HELP = `agentdeck: always-on Claude Code task queue
 

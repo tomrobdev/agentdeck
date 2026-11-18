@@ -1,15 +1,15 @@
 // From a row to its domain type: the one place a store's reads of tasks, repos and runs go through, so the domain type need not equal its row.
 import { getColumns } from 'drizzle-orm';
-import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP, type MergeReason } from '../domain/landing/index.ts';
-import type { CheckCounts, StoredChecks } from '../domain/landing/index.ts';
-import { type PrFields, pullRequestOf } from '../domain/landing/index.ts';
-import { type Checkout, checkoutOf } from '../domain/work/index.ts';
-import type { Repo } from '../domain/repos/index.ts';
-import type { Run } from '../domain/runs/index.ts';
-import { type Needs, type UnblockQuestion, isNeeds } from '../domain/work/index.ts';
-import { type StateFields, type Task, type TaskState, type TaskSummary, stateFields } from '../domain/work/index.ts';
-import { parseTextList, stored } from '../domain/shared/index.ts';
-import { repos, runs, tasks } from './tables.ts';
+import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP, type MergeReason } from '#domain/landing/index.ts';
+import type { CheckCounts, StoredChecks } from '#domain/landing/index.ts';
+import { type PrFields, pullRequestOf } from '#domain/landing/index.ts';
+import { type Checkout, checkoutOf } from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { Run } from '#domain/runs/index.ts';
+import { type Needs, type UnblockQuestion, isNeeds } from '#domain/work/index.ts';
+import { type StateFields, type Task, type TaskState, type TaskSummary, stateFields } from '#domain/work/index.ts';
+import { parseTextList, stored } from '#domain/shared/index.ts';
+import { repos, runs, tasks } from '#db/tables.ts';
 
 export type LegacyTaskColumn = 'after_task' | 'plan_path';
 

@@ -1,5 +1,5 @@
 // Tells subscribers when the database changed.
-import type { App } from '../ports/app.ts';
+import type { App } from '#application/ports/app.ts';
 
 export class ChangeWatcher {
   rev = 1;

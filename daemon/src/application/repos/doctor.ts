@@ -1,11 +1,11 @@
 // Yes/no checks that a repo is ready for unattended runs.
-import type { App } from '../ports/app.ts';
-import { lastLine } from '../../domain/shared/index.ts';
-import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../../config.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { refusedCommands } from '../../domain/repos/index.ts';
-import { detectToolchain } from '../../domain/repos/index.ts';
-import { allowedTools } from '../../domain/repos/index.ts';
+import type { App } from '#application/ports/app.ts';
+import { lastLine } from '#domain/shared/index.ts';
+import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '#src/config.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { refusedCommands } from '#domain/repos/index.ts';
+import { detectToolchain } from '#domain/repos/index.ts';
+import { allowedTools } from '#domain/repos/index.ts';
 
 export interface Check {
   name: string;

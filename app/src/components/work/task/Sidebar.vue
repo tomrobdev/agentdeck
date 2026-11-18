@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { computed, nextTick } from 'vue';
-import { landingApi } from '../../../api/landing';
-import { workApi } from '../../../api/work';
-import { ago } from '../../../lib/shared/time';
-import type { TaskDetail } from '../../../api/types';
-import AutoMergeMark from '../../ui/status/AutoMergeMark.vue';
-import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '../../../platform/native';
-import { editorArgv, editorTemplate } from '../../../lib/runs/terminal';
-import { canEdit, levelOf, priorityLevel, statusLabel } from '../../../lib/work/task-view';
-import { useActions } from '../../../composables/shared/useActions';
-import { useTerminal } from '../../../composables/runs/useTerminal';
-import { useFixTask } from '../../../composables/work/useFixTask';
-import PriorityIcon from '../../ui/status/PriorityIcon.vue';
-import StatusIcon from '../../ui/status/StatusIcon.vue';
-import EditableProp from '../overview/EditableProp.vue';
-import { name, prop, row, rowButton, rowMono } from './sidebar-style';
+import { landingApi } from '#api/landing.ts';
+import { workApi } from '#api/work.ts';
+import { ago } from '#lib/shared/time.ts';
+import type { TaskDetail } from '#api/types.ts';
+import AutoMergeMark from '#components/ui/status/AutoMergeMark.vue';
+import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '#platform/native.ts';
+import { editorArgv, editorTemplate } from '#lib/runs/terminal.ts';
+import { canEdit, levelOf, priorityLevel, statusLabel } from '#lib/work/task-view.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { useTerminal } from '#composables/runs/useTerminal.ts';
+import { useFixTask } from '#composables/work/useFixTask.ts';
+import PriorityIcon from '#components/ui/status/PriorityIcon.vue';
+import StatusIcon from '#components/ui/status/StatusIcon.vue';
+import EditableProp from '#components/work/overview/EditableProp.vue';
+import { name, prop, row, rowButton, rowMono } from '#components/work/task/sidebar-style.ts';
 
 const props = defineProps<{ task: TaskDetail }>();
 const { run, flash } = useActions();

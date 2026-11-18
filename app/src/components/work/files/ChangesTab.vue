@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { ago } from '../../../lib/shared/time';
-import type { Changes, TaskDetail } from '../../../api/types';
-import { plural } from '../../../../../daemon/src/domain/shared/index.ts';
-import { useChangesTab } from '../../../composables/work/files/useChangesTab';
-import { SINCE_BASE, sinceKey, sinceLabel } from '../../../lib/work/files/since';
-import FileTree from './FileTree.vue';
-import Checkbox from '../../ui/form/Checkbox.vue';
-import Delta from '../../ui/status/Delta.vue';
-import Menu from '../../ui/menu/Menu.vue';
-import MenuRadioGroup from '../../ui/menu/MenuRadioGroup.vue';
-import MenuRadioItem from '../../ui/menu/MenuRadioItem.vue';
-import Popover from '../../ui/Popover.vue';
-import SegmentedControl from '../../ui/form/SegmentedControl.vue';
-import ChangedFileCard from './ChangedFileCard.vue';
+import { ago } from '#lib/shared/time.ts';
+import type { Changes, TaskDetail } from '#api/types.ts';
+import { plural } from '#daemon/domain/shared/index.ts';
+import { useChangesTab } from '#composables/work/files/useChangesTab.ts';
+import { SINCE_BASE, sinceKey, sinceLabel } from '#lib/work/files/since.ts';
+import FileTree from '#components/work/files/FileTree.vue';
+import Checkbox from '#components/ui/form/Checkbox.vue';
+import Delta from '#components/ui/status/Delta.vue';
+import Menu from '#components/ui/menu/Menu.vue';
+import MenuRadioGroup from '#components/ui/menu/MenuRadioGroup.vue';
+import MenuRadioItem from '#components/ui/menu/MenuRadioItem.vue';
+import Popover from '#components/ui/Popover.vue';
+import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
+import ChangedFileCard from '#components/work/files/ChangedFileCard.vue';
 
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; error: string }>();
 const emit = defineEmits<{ open: [path: string] }>();

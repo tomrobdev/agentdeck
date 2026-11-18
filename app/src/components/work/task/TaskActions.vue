@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { landingApi } from '../../../api/landing';
-import { workApi } from '../../../api/work';
-import { describePrRetry } from '../../../lib/landing/landing-wording';
-import type { MergeResult, TaskDetail } from '../../../api/types';
-import { canOpenPr, canStartMerge, isReview, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
-import { canFixChecks } from '../../../lib/work/task-view';
-import { useAction, useActions } from '../../../composables/shared/useActions';
-import { useFixTask } from '../../../composables/work/useFixTask';
-import { useOpenNext } from '../../../composables/work/queue/useOpenNext';
-import ConfirmDialog from '../../ui/ConfirmDialog.vue';
-import MarkDoneDialog from './MarkDoneDialog.vue';
-import MergeDialog from '../../landing/MergeDialog.vue';
+import { landingApi } from '#api/landing.ts';
+import { workApi } from '#api/work.ts';
+import { describePrRetry } from '#lib/landing/landing-wording.ts';
+import type { MergeResult, TaskDetail } from '#api/types.ts';
+import { canOpenPr, canStartMerge, isReview, personEvents } from '#daemon/domain/work/index.ts';
+import { canFixChecks } from '#lib/work/task-view.ts';
+import { useAction, useActions } from '#composables/shared/useActions.ts';
+import { useFixTask } from '#composables/work/useFixTask.ts';
+import { useOpenNext } from '#composables/work/queue/useOpenNext.ts';
+import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
+import MarkDoneDialog from '#components/work/task/MarkDoneDialog.vue';
+import MergeDialog from '#components/landing/MergeDialog.vue';
 
 const props = defineProps<{ task: TaskDetail }>();
 const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; review: [] }>();

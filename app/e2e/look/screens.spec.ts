@@ -1,4 +1,4 @@
-import { type Mode, expect, lowContrast, open, queueSettled, test } from '../fixtures';
+import { type Mode, expect, lowContrast, open, queueSettled, test } from '#e2e/fixtures.ts';
 
 const PAGES = [
   { name: 'queue', hash: '#/', ready: queueSettled },

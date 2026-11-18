@@ -1,7 +1,7 @@
 // parseAppUrl: where an agentdeck:// link goes. The dashboard has no test runner, so its pure helpers are tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parseAppUrl, taskUrl } from '../../../../app/src/lib/shared/app-url.ts';
+import { parseAppUrl, taskUrl } from '#app/lib/shared/app-url.ts';
 
 test('the tray window is no link from outside: an agentdeck:// URL never opens it in the main window', () => {
   assert.equal(parseAppUrl('agentdeck://tray'), null);

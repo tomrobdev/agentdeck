@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { fileQuery } from '../../../api/work';
-import { useCommits } from '../../../composables/work/files/useChanges';
-import AnchoredPanel from '../../ui/AnchoredPanel.vue';
-import CodeView from './CodeView.vue';
+import { fileQuery } from '#api/work.ts';
+import { useCommits } from '#composables/work/files/useChanges.ts';
+import AnchoredPanel from '#components/ui/AnchoredPanel.vue';
+import CodeView from '#components/work/files/CodeView.vue';
 
 const props = defineProps<{ taskId: number; root: HTMLElement | null }>();
 

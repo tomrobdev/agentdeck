@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { NotificationRow } from '../../../api/types';
-import { ago } from '../../../lib/shared/time';
-import Chip from '../../ui/Chip.vue';
+import type { NotificationRow } from '#api/types.ts';
+import { ago } from '#lib/shared/time.ts';
+import Chip from '#components/ui/Chip.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
 

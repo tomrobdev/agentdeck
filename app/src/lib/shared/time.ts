@@ -1,6 +1,6 @@
 // How the dashboard words a moment or a length of time, whatever it is the time of.
-import type { PrCheck, Run } from '../../api/types.ts';
-import { sqliteMs } from '../../../../daemon/src/domain/shared/index.ts';
+import type { PrCheck, Run } from '#api/types.ts';
+import { sqliteMs } from '#daemon/domain/shared/index.ts';
 
 export function when(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });

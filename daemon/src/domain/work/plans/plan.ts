@@ -1,6 +1,6 @@
 // A plan: an HTML document that says how a task will be done, step by step, attached to the task.
-import type { TaskId } from '../../shared/index.ts';
-import { AGENTDECK_FOLDER } from '../../repos/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { AGENTDECK_FOLDER } from '#domain/repos/index.ts';
 
 export type PlanStepStatus = 'todo' | 'doing' | 'done' | 'blocked' | 'skipped';
 export const PLAN_STEP_STATUSES: PlanStepStatus[] = ['todo', 'doing', 'done', 'blocked', 'skipped'];

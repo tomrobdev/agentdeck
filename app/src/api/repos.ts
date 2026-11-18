@@ -1,7 +1,7 @@
 // Repos: registered repos, their settings, health and archiving, and asking the planner for proposals.
 import { queryOptions } from '@tanstack/vue-query';
-import { del, get, post } from './http.ts';
-import type { DoctorReport, NewRepo, ProposalResult, Repo, RepoDeleted, RepoDeletion, RepoDetail, RepoPatch } from './types.ts';
+import { del, get, post } from '#api/http.ts';
+import type { DoctorReport, NewRepo, ProposalResult, Repo, RepoDeleted, RepoDeletion, RepoDetail, RepoPatch } from '#api/types.ts';
 
 export const reposApi = {
   repos: () => get<Repo[]>('/api/repos'),

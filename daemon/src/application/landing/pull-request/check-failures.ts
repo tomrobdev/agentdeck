@@ -1,5 +1,5 @@
 // Why a failing GitHub Actions check failed: the step the job's steps name, and what that step's log says (`failureExcerpt`).
-import type { App } from '../../ports/app.ts';
+import type { App } from '#application/ports/app.ts';
 import {
   EXCERPT_BYTES,
   type PrCheck,
@@ -10,8 +10,8 @@ import {
   notStartedMessage,
   stepUrl,
   withoutFailure,
-} from '../../../domain/landing/index.ts';
-import { errorMessage } from '../../../domain/shared/index.ts';
+} from '#domain/landing/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
 
 export async function readFailure(app: App, cwd: string, check: PrCheck, bytes = EXCERPT_BYTES): Promise<PrCheck> {
   const run = actionsRun(check.url);

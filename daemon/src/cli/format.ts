@@ -1,14 +1,14 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { createInterface } from 'node:readline/promises';
-import { type ComposedApp, type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
-import { type TaskId, asTaskId, cut, oneLine } from '../domain/shared/index.ts';
-import type { AutoMergeView } from '../domain/landing/index.ts';
-import type { ChecksSummary } from '../domain/landing/index.ts';
-import type { TaskStatus } from '../domain/work/index.ts';
-import { type ProposalCheck, parseTaskIds, proposalCheckLine } from '../domain/work/index.ts';
-import type { Task } from '../domain/work/index.ts';
-import type { RunSummary, VerifyFinding } from '../domain/runs/index.ts';
-import { costText, findingPlace, verifyLine } from '../domain/runs/index.ts';
+import { type ComposedApp, type DoctorReport, type HealthCheck, type TaskView, readLog } from '#application/actions.ts';
+import { type TaskId, asTaskId, cut, oneLine } from '#domain/shared/index.ts';
+import type { AutoMergeView } from '#domain/landing/index.ts';
+import type { ChecksSummary } from '#domain/landing/index.ts';
+import type { TaskStatus } from '#domain/work/index.ts';
+import { type ProposalCheck, parseTaskIds, proposalCheckLine } from '#domain/work/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import type { RunSummary, VerifyFinding } from '#domain/runs/index.ts';
+import { costText, findingPlace, verifyLine } from '#domain/runs/index.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
   proposed: '?',

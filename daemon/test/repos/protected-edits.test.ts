@@ -13,14 +13,14 @@ const fake = join(import.meta.dirname, '../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const { applyProtectedEdits } = await import('../../src/adapters/local/protected-edits.ts');
-const { writePlanFile } = await import('../../src/adapters/local/plan-file.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { applyProtectedEdits } = await import('#adapters/local/protected-edits.ts');
+const { writePlanFile } = await import('#adapters/local/plan-file.ts');
 const { EDITS_FOLDER, editPathFor, isProtectedPath, protectedEditTarget, protectedEditsMessage } =
-  await import('../../src/domain/repos/protected-edits.ts');
-const { workerSystemPrompt } = await import('../../src/domain/runs/prompt.ts');
-const { parseLogLine } = await import('../../src/domain/runs/translate/log.ts');
+  await import('#domain/repos/protected-edits.ts');
+const { workerSystemPrompt } = await import('#domain/runs/prompt.ts');
+const { parseLogLine } = await import('#domain/runs/translate/log.ts');
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 function newRepo(name: string): string {

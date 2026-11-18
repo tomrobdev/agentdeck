@@ -34,6 +34,9 @@ pub enum AttentionWhy {
     Blocked,
     Review,
     Proposed,
+    /// Any reason this shell doesn't know yet, so a newer daemon's status still reads.
+    #[serde(other)]
+    Other,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

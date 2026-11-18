@@ -1,8 +1,8 @@
 // Adapter for local git: refs and history, what is checked out and which commits there are.
 import { dirname } from 'node:path';
-import { BASE_LOG_FORMAT, type BaseCommit, type Commit, LOG_FORMAT, parseBaseLog, parseLog } from '../../domain/work/index.ts';
-import type { ReviewFacts } from '../../domain/operations/index.ts';
-import { DIFF_FLAGS, git, gitRead, gitRemote } from './exec.ts';
+import { BASE_LOG_FORMAT, type BaseCommit, type Commit, LOG_FORMAT, parseBaseLog, parseLog } from '#domain/work/index.ts';
+import type { ReviewFacts } from '#domain/operations/index.ts';
+import { DIFF_FLAGS, git, gitRead, gitRemote } from '#adapters/git/exec.ts';
 
 const FETCH_TIMEOUT_MS = 60_000;
 

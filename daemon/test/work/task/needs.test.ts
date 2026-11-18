@@ -4,16 +4,16 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
-import { stateFields } from '../../../src/domain/work/task/task.ts';
+import { asTaskId } from '#domain/shared/id.ts';
+import { stateFields } from '#domain/work/task/task.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { isEnvironmentBlock, parseStatus } = await import('../../../src/domain/runs/run-result.ts');
-const { canInstallWith, depsRequest, depsRequestError, installArgs } = await import('../../../src/domain/work/task/needs.ts');
-const { branchName } = await import('../../../src/domain/work/task/branch.ts');
-const { workerSystemPrompt } = await import('../../../src/domain/runs/prompt.ts');
+const { openDb } = await import('#db/index.ts');
+const { isEnvironmentBlock, parseStatus } = await import('#domain/runs/run-result.ts');
+const { canInstallWith, depsRequest, depsRequestError, installArgs } = await import('#domain/work/task/needs.ts');
+const { branchName } = await import('#domain/work/task/branch.ts');
+const { workerSystemPrompt } = await import('#domain/runs/prompt.ts');
 
 test('each NEEDS form parses', () => {
   assert.deepEqual(parseStatus('x\nSTATUS: BLOCKED: NEEDS deps: tailwindcss @tailwindcss/vite').needs, {

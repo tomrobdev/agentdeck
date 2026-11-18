@@ -4,20 +4,20 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
+import type { TaskId } from '#domain/shared/id.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-claim-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { startWaits } = await import('../../../src/application/capacity/queue.ts');
-const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
-const { startState } = await import('../../../src/domain/work/links/link.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startWaits } = await import('#application/capacity/queue.ts');
+const { liveLinks } = await import('#application/work/dependencies.ts');
+const { startState } = await import('#domain/work/links/link.ts');
 
 function waits(db: ReturnType<typeof openDb>) {
   const waitOf = startWaits(db);
   const links = liveLinks(db);
-  return (t: import('../../../src/domain/work/task/task.ts').Task) => waitOf(t, startState(t, links.linksOf(t.id), links.target));
+  return (t: import('#domain/work/task/task.ts').Task) => waitOf(t, startState(t, links.linksOf(t.id), links.target));
 }
 
 test('claimNextTask picks the first queued task, by priority then id, that has no startWait', () => {

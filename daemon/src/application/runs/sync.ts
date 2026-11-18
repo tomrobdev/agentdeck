@@ -1,22 +1,22 @@
 // Syncs task branches with their base branch; a conflict starts a resolve run.
-import { TEST_TIMEOUT_MS } from '../../config.ts';
-import type { App } from '../ports/app.ts';
-import type { SyncFinish } from '../ports/workspace.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '../../domain/runs/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { buildResolvePrompt } from '../../domain/runs/index.ts';
-import { resolveOutcome } from '../../domain/runs/index.ts';
-import type { Outcome, Run } from '../../domain/runs/index.ts';
-import { errorMessage, lastLine } from '../../domain/shared/index.ts';
-import { openPrUrl } from '../../domain/landing/index.ts';
-import { type Task, leftoversMessage } from '../../domain/work/index.ts';
-import { endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
-import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
-import { queueWait } from '../capacity/gate.ts';
-import { logPrEvent } from '../landing/pull-request/open-pr.ts';
-import { settle } from '../landing/settle.ts';
-import { isMergeLocked, isSyncLocked, isSyncing, lockSync, markSyncing, unlockSync } from '../work/checkout-locks.ts';
+import { TEST_TIMEOUT_MS } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import type { SyncFinish } from '#application/ports/workspace.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '#domain/runs/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { buildResolvePrompt } from '#domain/runs/index.ts';
+import { resolveOutcome } from '#domain/runs/index.ts';
+import type { Outcome, Run } from '#domain/runs/index.ts';
+import { errorMessage, lastLine } from '#domain/shared/index.ts';
+import { openPrUrl } from '#domain/landing/index.ts';
+import { type Task, leftoversMessage } from '#domain/work/index.ts';
+import { endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
+import { ActionError, requireTask, requireTaskRepo } from '#application/shared/input.ts';
+import { queueWait } from '#application/capacity/gate.ts';
+import { logPrEvent } from '#application/landing/pull-request/open-pr.ts';
+import { settle } from '#application/landing/settle.ts';
+import { isMergeLocked, isSyncLocked, isSyncing, lockSync, markSyncing, unlockSync } from '#application/work/checkout-locks.ts';
 
 interface SyncOptions {
   allowResolve: boolean;

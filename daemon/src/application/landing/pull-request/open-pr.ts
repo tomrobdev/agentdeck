@@ -1,24 +1,17 @@
 // Opening a task's pull request: when it finishes done, again on the PR refresh after it failed to, and when a person asks.
-import type { App } from '../../ports/app.ts';
-import type { TaskId } from '../../../domain/shared/index.ts';
-import {
-  AUTO_MERGE_LABEL,
-  autoMergeOn,
-  codeCommentsOver,
-  codeCommentsText,
-  countCodeComments,
-  prFrom,
-} from '../../../domain/landing/index.ts';
-import type { Repo } from '../../../domain/repos/index.ts';
-import { buildPrBody, existingPr, isPrExistsError, openPrUrl } from '../../../domain/landing/index.ts';
-import type { BranchPr, PrRetry } from '../../../domain/landing/index.ts';
-import { prNeedsPersonNotification } from '../../../domain/operations/index.ts';
-import { type Task, prEventsOf, prRetryFor } from '../../../domain/work/index.ts';
-import { errorMessage } from '../../../domain/shared/index.ts';
-import { prPlanFor } from '../../work/plans.ts';
-import { notifyLater } from '../../operations/notifications.ts';
-import { movePr } from '../moves.ts';
-import { ActionError, requireTask, requireTaskRepo } from '../../shared/input.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { AUTO_MERGE_LABEL, autoMergeOn, codeCommentsOver, codeCommentsText, countCodeComments, prFrom } from '#domain/landing/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { buildPrBody, existingPr, isPrExistsError, openPrUrl } from '#domain/landing/index.ts';
+import type { BranchPr, PrRetry } from '#domain/landing/index.ts';
+import { prNeedsPersonNotification } from '#domain/operations/index.ts';
+import { type Task, prEventsOf, prRetryFor } from '#domain/work/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
+import { prPlanFor } from '#application/work/plans.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
+import { movePr } from '#application/landing/moves.ts';
+import { ActionError, requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
 export function logPrEvent(app: App, taskId: TaskId, event: { url?: string; error?: string }): void {
   const run = app.runsForTask(taskId).at(-1);

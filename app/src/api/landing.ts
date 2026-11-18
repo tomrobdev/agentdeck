@@ -1,7 +1,7 @@
 // Landing: pull requests, merging and reviews.
 import { queryOptions } from '@tanstack/vue-query';
-import { asTaskId } from '../../../daemon/src/domain/shared/index.ts';
-import { del, get, post } from './http.ts';
+import { asTaskId } from '#daemon/domain/shared/index.ts';
+import { del, get, post } from '#api/http.ts';
 import type {
   AutoMergeRequest,
   AutoMergeResult,
@@ -20,7 +20,7 @@ import type {
   ReviewPatch,
   SubmitReview,
   TaskDetail,
-} from './types.ts';
+} from '#api/types.ts';
 
 export const landingApi = {
   openPr: (id: number) => post<OpenPrResult>(`/api/tasks/${id}/open-pr`),

@@ -1,5 +1,5 @@
 // The window's shell decisions: which panels there are, where a `g` key goes, and which key toggles the command palette.
-import type { GoTarget } from './hotkeys.ts';
+import type { GoTarget } from '#lib/shared/hotkeys.ts';
 
 export type Panel = 'new' | 'repos' | 'settings' | 'daemon';
 

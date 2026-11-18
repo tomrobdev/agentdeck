@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { landingApi } from '../../api/landing';
-import type { Review, SubmitReview } from '../../api/types';
-import { plural } from '../../../../daemon/src/domain/shared/index.ts';
-import { useAction } from '../../composables/shared/useActions';
+import { landingApi } from '#api/landing.ts';
+import type { Review, SubmitReview } from '#api/types.ts';
+import { plural } from '#daemon/domain/shared/index.ts';
+import { useAction } from '#composables/shared/useActions.ts';
 
 const props = defineProps<{ taskId: number; draft: Review | null; kind: SubmitReview['kind'] }>();
 const emit = defineEmits<{ close: []; submitted: [] }>();

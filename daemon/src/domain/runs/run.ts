@@ -1,6 +1,6 @@
 // The run entity and how a task's earlier runs bear on the next.
-import type { PlannerRunId, RunId, TaskId } from '../shared/index.ts';
-import type { RunEnd, RunSummary } from './translate/summary.ts';
+import type { PlannerRunId, RunId, TaskId } from '#domain/shared/index.ts';
+import type { RunEnd, RunSummary } from '#domain/runs/translate/summary.ts';
 
 /**
  * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;

@@ -1,5 +1,5 @@
 // Opening a done task's pull request again after it failed to open: how often, how far apart, and when a person must step in.
-import { sqliteMs, sqliteUtc } from '../../shared/index.ts';
+import { sqliteMs, sqliteUtc } from '#domain/shared/index.ts';
 
 export const PR_OPEN_RETRIES = 5;
 export const PR_RETRY_FIRST_WAIT_MS = 3 * 60_000;

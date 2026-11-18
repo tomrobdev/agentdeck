@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { TaskSummary } from '../../../api/types';
-import { statusText } from '../../../lib/work/task-badges';
-import Chip from '../Chip.vue';
-import StatusIcon from './StatusIcon.vue';
+import type { TaskSummary } from '#api/types.ts';
+import { statusText } from '#lib/work/task-badges.ts';
+import Chip from '#components/ui/Chip.vue';
+import StatusIcon from '#components/ui/status/StatusIcon.vue';
 
 defineProps<{ task: TaskSummary }>();
 </script>

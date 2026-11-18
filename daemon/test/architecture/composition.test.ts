@@ -11,8 +11,8 @@ import {
   cliStarterCalls,
   daemonRequestsWithoutClaude,
   loadProgram,
-} from '../../scripts/lib/claude-starters.ts';
-import { lineOf, parseSource } from '../../scripts/lib/sources.ts';
+} from '#scripts/lib/claude-starters.ts';
+import { lineOf, parseSource } from '#scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 const program = loadProgram();
@@ -38,8 +38,8 @@ test('[cli-in-process] a sample CLI file that proposes in its own process, or as
   const sample = loadProgram(
     {
       'src/cli/repos/sample.ts': [
-        "import * as actions from '../../application/actions.ts';",
-        "import { callDaemon } from '../operations/daemon-client.ts';",
+        "import * as actions from '#application/actions.ts';",
+        "import { callDaemon } from '#cli/operations/daemon-client.ts';",
         'export const propose = (db: actions.ComposedApp) => actions.proposeNow(db, 1 as never);',
         "export const resume = () => callDaemon('POST', `/api/repos/${1}/resume`, {});",
         '',
@@ -93,7 +93,7 @@ test('[composition-root] a sample that builds an App outside compose.ts fails', 
   const sample = loadProgram(
     {
       'src/api/sample.ts': [
-        "import type { App, Ports } from '../application/ports/app.ts';",
+        "import type { App, Ports } from '#application/ports/app.ts';",
         'export const ports = (): Ports => ({}) as never;',
         'export const app = (db: object) => Object.assign(db, ports()) as App;',
         'export const literal: Ports = { ...ports() };',

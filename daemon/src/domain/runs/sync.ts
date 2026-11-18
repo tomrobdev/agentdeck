@@ -1,5 +1,5 @@
 // How a sync (merging the base branch into a task's branch) is worded, and what it comes to.
-import { plural } from '../shared/index.ts';
+import { plural } from '#domain/shared/index.ts';
 
 /** How a sync that changed the branch went. */
 type SyncKind = 'clean' | 'resolved';

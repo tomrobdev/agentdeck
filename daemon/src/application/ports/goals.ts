@@ -1,5 +1,5 @@
 // The Goals port: each repo's goals file, read by the planner.
-import type { Repo } from '../../domain/repos/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
 
 type Named = Pick<Repo, 'name'>;
 

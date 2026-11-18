@@ -1,8 +1,8 @@
 // The terminal command setting: a template split into an argv list, never run through a shell.
-import { loadSetting, saveSetting } from '../shared/storage.ts';
-import { isReview } from '../../../../daemon/src/domain/work/index.ts';
-import type { TaskStatus } from '../../../../daemon/src/domain/work/index.ts';
-import type { PrState } from '../../../../daemon/src/domain/landing/index.ts';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
+import { isReview } from '#daemon/domain/work/index.ts';
+import type { TaskStatus } from '#daemon/domain/work/index.ts';
+import type { PrState } from '#daemon/domain/landing/index.ts';
 
 export const CMUX_TEMPLATE = 'cmux new-workspace --name {title} --cwd {cwd} --command {command} --focus true';
 

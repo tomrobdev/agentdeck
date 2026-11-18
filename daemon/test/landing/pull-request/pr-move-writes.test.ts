@@ -9,10 +9,10 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-prmoves-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { doneTask, testApp } = await import('../../fixtures/fixtures.ts');
-const { endMergeRequest, movePr } = await import('../../../src/application/landing/moves.ts');
-const { cancelMergeRequest, requestMerge } = await import('../../../src/application/actions.ts');
+const { openDb } = await import('#db/index.ts');
+const { doneTask, testApp } = await import('#test/fixtures/fixtures.ts');
+const { endMergeRequest, movePr } = await import('#application/landing/moves.ts');
+const { cancelMergeRequest, requestMerge } = await import('#application/actions.ts');
 
 const db = testApp(openDb(join(home, 'test.db')));
 after(() => db.close());

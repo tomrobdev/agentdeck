@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { TaskSummary } from '../../../api/types';
-import { DEFAULT_SIZE, chainOf, edgesOf, graphTasks, layoutGraph, stuckSet } from '../../../lib/work/queue/graph';
-import { cut } from '../../../../../daemon/src/domain/shared/index.ts';
-import StatusIcon from '../../ui/status/StatusIcon.vue';
+import type { TaskSummary } from '#api/types.ts';
+import { DEFAULT_SIZE, chainOf, edgesOf, graphTasks, layoutGraph, stuckSet } from '#lib/work/queue/graph.ts';
+import { cut } from '#daemon/domain/shared/index.ts';
+import StatusIcon from '#components/ui/status/StatusIcon.vue';
 
 const props = defineProps<{
   all: TaskSummary[];

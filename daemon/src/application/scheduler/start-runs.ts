@@ -1,9 +1,9 @@
 // What each kind of run needs to start: its log lines, and what happens when it crashes or ends.
-import { settle } from '../landing/settle.ts';
-import type { App } from '../ports/app.ts';
-import { runReview } from '../runs/review.ts';
-import { runUnblock } from '../runs/unblock.ts';
-import { runTask } from '../runs/worker.ts';
+import { settle } from '#application/landing/settle.ts';
+import type { App } from '#application/ports/app.ts';
+import { runReview } from '#application/runs/review.ts';
+import { runUnblock } from '#application/runs/unblock.ts';
+import { runTask } from '#application/runs/worker.ts';
 
 type Log = (msg: string) => void;
 

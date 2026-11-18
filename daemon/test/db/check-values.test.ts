@@ -1,9 +1,9 @@
 // The stored PR check columns are parsed once, in the mapper: a malformed or half-written document reads as no value.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readCheck, readCounts, toTask } from '../../src/db/mappers.ts';
-import { stored } from '../../src/domain/shared/index.ts';
-import { openDb } from '../../src/db/index.ts';
+import { readCheck, readCounts, toTask } from '#db/mappers.ts';
+import { stored } from '#domain/shared/index.ts';
+import { openDb } from '#db/index.ts';
 
 test('readCheck: a stored check is a verdict with its reasons, and anything else is none', () => {
   const pending = { kind: 'checks_pending', text: '1 check still running on GitHub' };

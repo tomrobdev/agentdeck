@@ -1,7 +1,7 @@
 // A PR's checks on GitHub, one by one: what `statusCheckRollup` says about each, and what is kept on the task.
-import { carryFailures, failingChecks, failureLine } from './check-failures.ts';
-import { ciNotRunMessages } from './ci-not-run.ts';
-import type { PullRequest } from './pr.ts';
+import { carryFailures, failingChecks, failureLine } from '#domain/landing/pull-request/check-failures.ts';
+import { ciNotRunMessages } from '#domain/landing/pull-request/ci-not-run.ts';
+import type { PullRequest } from '#domain/landing/pull-request/pr.ts';
 
 /**
  * How one check stands. NEUTRAL and SKIPPED conclusions are `skipped`; only SUCCESS passed. Anything GitHub may add or
