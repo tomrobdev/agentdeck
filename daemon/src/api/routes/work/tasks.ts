@@ -55,6 +55,16 @@ export function routes({ db, scheduler, log }: ApiContext): Route[] {
       actions.rejectTask(db, id);
       return detail(id);
     }),
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/park$/, ({ params: [text], body }) => {
+      const id = taskIdParam(text);
+      actions.parkTask(db, id, body.reason as string | undefined);
+      return detail(id);
+    }),
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/lift$/, ({ params: [text] }) => {
+      const id = taskIdParam(text);
+      actions.liftTask(db, id);
+      return detail(id);
+    }),
     route<CancelResult>('POST', /^\/api\/tasks\/(\d+)\/cancel$/, ({ params: [id] }) => ({
       result: actions.cancelTask(db, taskIdParam(id)),
     })),

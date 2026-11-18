@@ -35,6 +35,12 @@ export interface OpenState {
   status: 'proposed' | 'queued' | 'running' | 'cancel_requested';
 }
 
+/** A proposal kept for later: off Attention and not approvable until a person lifts it back to proposed. */
+export interface ParkedState {
+  status: 'parked';
+  park_reason: string | null; // why it waits, and for what
+}
+
 /** A finished task, and whether a person finished it. */
 export interface DoneState {
   status: 'done';
@@ -62,7 +68,7 @@ export interface CancelledState {
 }
 
 /** A task's status and what it carries in that status: the fields of another status can't be set, nor read until the status is narrowed. */
-export type TaskState = OpenState | DoneState | BlockedState | FailedState | CancelledState;
+export type TaskState = OpenState | ParkedState | DoneState | BlockedState | FailedState | CancelledState;
 
 export type Task = TaskCore & TaskState;
 export type BlockedTask = TaskCore & BlockedState;
@@ -78,6 +84,7 @@ export interface StateFields {
   needs: Needs | null;
   question: UnblockQuestion | null;
   done_by: 'person' | null;
+  park_reason: string | null;
 }
 
 export const stateFields = (state: TaskState): StateFields => ({
@@ -85,6 +92,7 @@ export const stateFields = (state: TaskState): StateFields => ({
   needs: state.status === 'blocked' ? state.needs : null,
   question: state.status === 'blocked' ? state.question : null,
   done_by: state.status === 'done' ? state.done_by : null,
+  park_reason: state.status === 'parked' ? state.park_reason : null,
 });
 
 export const PROMPT_SECTIONS = `## Goal
@@ -151,13 +159,13 @@ export const RUNNING_STATUSES: TaskStatus[] = ['running', 'cancel_requested'];
 
 export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', ...RUNNING_STATUSES];
 
-export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];
+export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'parked', 'queued', 'blocked', 'failed'];
 
-export const WORKTREE_REMOVABLE_STATUSES: TaskStatus[] = ['proposed', 'done', 'blocked', 'failed', 'cancelled'];
+export const WORKTREE_REMOVABLE_STATUSES: TaskStatus[] = ['proposed', 'parked', 'done', 'blocked', 'failed', 'cancelled'];
 
 export const attemptsLeft = (t: Pick<TaskCore, 'attempts' | 'max_attempts'>): boolean => t.attempts < t.max_attempts;
 
-export const PLAN_ATTACHABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'done', 'blocked', 'failed', 'cancelled'];
+export const PLAN_ATTACHABLE_STATUSES: TaskStatus[] = ['proposed', 'parked', 'queued', 'done', 'blocked', 'failed', 'cancelled'];
 
 export function leftoversMessage(task: Pick<Task, 'id' | 'title'>): string {
   return `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`;

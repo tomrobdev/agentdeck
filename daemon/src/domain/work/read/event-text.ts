@@ -43,6 +43,10 @@ function agentText(e: EventFields): string {
       return 'approved';
     case 'reject':
       return 'rejected';
+    case 'park':
+      return withReason('parked', e.reason);
+    case 'lift':
+      return 'lifted: proposed again';
     case 'retry':
       return withReason('retried', e.reason);
     case 'unblock_retry':
@@ -92,6 +96,10 @@ function personText(e: EventFields): PersonEventText | null {
       return say('approved the proposal');
     case 'reject':
       return say('rejected the proposal');
+    case 'park':
+      return say('parked the proposal');
+    case 'lift':
+      return say('lifted the proposal');
     case 'retry':
       return say(e.reason ? 'requested changes' : 'queued another attempt');
     case 'cancel':

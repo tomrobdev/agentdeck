@@ -179,6 +179,7 @@ erDiagram
     text pr_checks "nullable"
     text syncing_since "nullable"
     text question "nullable"
+    text park_reason "nullable"
   }
   usage_samples {
     integer id PK

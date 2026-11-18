@@ -62,6 +62,8 @@ function standing(on: TaskId, dependency: Dependency | undefined): Standing {
       return stuck(`${id} is blocked`, 'which is blocked');
     case 'cancelled':
       return stuck(`${id} was cancelled`, 'which was cancelled');
+    case 'parked':
+      return { kind: 'waiting', on, reason: `${id} is parked` };
     case 'proposed':
     case 'queued':
     case 'running':
@@ -206,7 +208,7 @@ export function linkError(task: TaskId, on: TaskId, links: Link[]): string | nul
 }
 
 export function buildsOnError(task: TaskId, status: string, on: TaskId): string | null {
-  if (status === 'proposed' || status === 'queued') return null;
+  if (status === 'proposed' || status === 'parked' || status === 'queued') return null;
   return `#${task} has started already, so it can't build on #${on}; make it an after link instead`;
 }
 

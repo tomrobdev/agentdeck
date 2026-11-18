@@ -69,6 +69,8 @@ export interface TaskSummary {
   question: string | null;
   /** 'person' when a person marked the task done by hand. */
   done_by: 'person' | null;
+  /** Why a parked task waits, and for what; null in every other status. */
+  park_reason: string | null;
   /** 1 or 0 overrides the repo's auto_merge; null follows it. */
   auto_merge: number | null;
   /** Whether the PR will merge on its own and why not. Null when the repo is gone. */
@@ -138,6 +140,8 @@ export interface TaskEventRow {
     | 'cancel'
     | 'approve'
     | 'reject'
+    | 'park'
+    | 'lift'
     | 'retry'
     | 'unblock_retry'
     | 'review_retry'

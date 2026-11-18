@@ -12,6 +12,7 @@ import { costText, findingPlace, verifyLine } from '#domain/runs/index.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
   proposed: '?',
+  parked: '⏸',
   queued: '·',
   running: '▶',
   done: '✓',
@@ -99,6 +100,7 @@ export function fmtTask(
   repoName: string,
 ): string {
   let extra = (t.status === 'blocked' || t.status === 'failed') && t.stop_reason ? `  — ${t.stop_reason}` : '';
+  if (t.status === 'parked' && t.park_reason) extra += `  — ${t.park_reason}`;
   const waiting = t.waiting ?? null;
   if (waiting)
     extra += waiting.stuck

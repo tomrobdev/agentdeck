@@ -1,4 +1,4 @@
-// Use cases for a person's lifecycle events: approve, reject, retry, cancel and mark done.
+// Use cases for a person's lifecycle events: approve, reject, park, lift, retry, cancel and mark done.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
 import { type TaskStatus, fromStatuses, modelError } from '#domain/work/index.ts';
@@ -14,11 +14,29 @@ export function cancelTask(app: App, id: TaskId): 'cancelled' | 'stopping' {
 }
 
 export function approveTask(app: App, id: TaskId): void {
-  if (!applyPersonEvent(app, id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`, undefined, 'conflict');
+  if (!applyPersonEvent(app, id, { type: 'approve' }))
+    throw new ActionError(
+      app.getTask(id)?.status === 'parked' ? `#${id} is parked; lift it before approving it` : `#${id} is not a proposal`,
+      undefined,
+      'conflict',
+    );
 }
 
 export function rejectTask(app: App, id: TaskId): void {
   if (!applyPersonEvent(app, id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`, undefined, 'conflict');
+}
+
+export function parkTask(app: App, id: TaskId, reason?: string): void {
+  if (reason !== undefined && typeof reason !== 'string') throw new ActionError('reason must be text');
+  const t = requireTask(app, id);
+  if (!applyPersonEvent(app, id, { type: 'park' }, { reason: reason?.trim() || null }))
+    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}; only a proposed task can be parked`, undefined, 'conflict');
+}
+
+export function liftTask(app: App, id: TaskId): void {
+  const t = requireTask(app, id);
+  if (!applyPersonEvent(app, id, { type: 'lift' }))
+    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}, not parked`, undefined, 'conflict');
 }
 
 export interface RetryInput {
