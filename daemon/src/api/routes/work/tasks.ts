@@ -8,7 +8,7 @@ import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam }
 import { streamLog } from '#api/log-stream.ts';
 import * as wire from '#api/wire.ts';
 
-export function routes({ db, scheduler }: ApiContext): Route[] {
+export function routes({ db, scheduler, log }: ApiContext): Route[] {
   const detail = (id: TaskId) => wire.taskDetail(db, id);
   return [
     route<TaskSummary[]>('GET', /^\/api\/tasks$/, ({ query }) => {
@@ -92,11 +92,19 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       return { run_id, report, task: await detail(id) };
     }),
     route('GET', /^\/api\/tasks\/(\d+)\/log$/, ({ req, res, params: [id], query }) => {
-      streamLog(db, req, res, taskIdParam(id), {
-        attempt: Number(query.get('attempt')) || undefined,
-        run: Number(query.get('run')) || undefined,
-        from: query.get('from'),
-      });
+      streamLog(
+        db,
+        req,
+        res,
+        taskIdParam(id),
+        {
+          attempt: Number(query.get('attempt')) || undefined,
+          run: Number(query.get('run')) || undefined,
+          from: query.get('from'),
+        },
+        undefined,
+        log,
+      );
       return undefined;
     }),
   ];

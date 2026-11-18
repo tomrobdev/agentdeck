@@ -22,6 +22,7 @@ export interface ApiContext {
   scheduler: ApiScheduler;
   changes: Pick<ChangeWatcher, 'rev' | 'subscribe'>;
   daemon: { info: DaemonInfo; requestRestart: () => void; reloadFacts: () => ReloadFacts };
+  log: (line: string) => void;
 }
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
@@ -73,11 +74,18 @@ export function reviewIdParam(text: string): ReviewId {
   return id;
 }
 
+export type ApiLog = (line: string) => void;
+
+export const errorText = (err: unknown): string => (err instanceof Error ? (err.stack ?? err.message) : String(err));
+
+const answeredErrors = new WeakMap<ServerResponse, string>();
+
 const STATUS_OF_KIND: Record<ActionErrorKind, number> = { invalid: 400, not_found: 404, conflict: 409, upstream: 502 };
 
 const errorBody = (err: ActionError): ApiErrorBody => (err.code ? { error: err.message, code: err.code } : { error: err.message });
 
 export function send(res: ServerResponse, code: number, data: unknown): void {
+  if (code >= 400 && typeof data === 'object' && data !== null && 'error' in data) answeredErrors.set(res, String(data.error));
   res.writeHead(code, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
 }
@@ -118,7 +126,25 @@ export function hasToken(authorization: string | undefined, token: string): bool
   return given.length === wanted.length && timingSafeEqual(given, wanted);
 }
 
-export async function dispatch(routes: Route[], req: IncomingMessage, res: ServerResponse, token: string | null): Promise<void> {
+function logWrite(req: IncomingMessage, res: ServerResponse, log: ApiLog): void {
+  if (READS.has(req.method ?? '')) return;
+  const started = Date.now();
+  res.once('finish', () => {
+    const path = new URL(req.url ?? '/', 'http://x').pathname;
+    const error = res.statusCode >= 400 ? answeredErrors.get(res) : undefined;
+    const took = `${((Date.now() - started) / 1000).toFixed(1)}s`;
+    log(`api ${req.method} ${path} ${res.statusCode} ${took}${error === undefined ? '' : ` ${error}`}`);
+  });
+}
+
+export async function dispatch(
+  routes: Route[],
+  req: IncomingMessage,
+  res: ServerResponse,
+  token: string | null,
+  log: ApiLog,
+): Promise<void> {
+  logWrite(req, res, log);
   if (!isLocalHost(req.headers.host)) return send(res, 403, { error: 'host not allowed: call the API as 127.0.0.1 or localhost' });
   const origin = req.headers.origin;
   if (origin) {
@@ -147,14 +173,14 @@ export async function dispatch(routes: Route[], req: IncomingMessage, res: Serve
       if (out !== undefined) send(res, 200, out);
     } catch (err) {
       if (res.headersSent) {
-        console.error(err);
+        log(`api ${req.method} ${path} failed after answering: ${errorText(err)}`);
         return void res.destroy();
       }
       if (err instanceof PayloadTooLarge) send(res, 413, { error: err.message });
       else if (err instanceof ActionError) send(res, STATUS_OF_KIND[err.kind], errorBody(err));
       else if (err instanceof BadRequest) send(res, 400, { error: err.message });
       else {
-        console.error(err);
+        log(`api ${req.method} ${path} failed: ${errorText(err)}`);
         send(res, 500, { error: 'internal error' });
       }
     }
