@@ -13,6 +13,7 @@ import {
   overlaps,
   pathsNamedIn,
   staleness,
+  targetOf,
 } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import { measureBranch } from '#application/work/files.ts';
@@ -27,7 +28,7 @@ const stalenessCache = promiseCache<Staleness>(32);
 async function stalenessOf(app: App, repo: Repo, task: Task): Promise<Staleness | null> {
   const since = sqliteMs(task.created_at);
   if (!Number.isFinite(since)) return null;
-  const start = await app.workspace.startCommit(repo.path, repo.base_branch);
+  const start = await app.workspace.startCommit(repo.path, targetOf(task, repo));
   if (!start) return null;
   return stalenessCache(`${task.id}\0${start.sha}\0${task.prompt}`, () =>
     app.workspace.commitsSince(repo.path, start.sha, since, COMMIT_LIMIT).then(({ count, commits }) => ({
@@ -42,7 +43,7 @@ async function stalenessOf(app: App, repo: Repo, task: Task): Promise<Staleness 
 async function pathsOf(app: App, repo: Repo, task: Task): Promise<string[]> {
   const named = pathsNamedIn(task.prompt);
   const branch = task.checkout?.branch;
-  const changed = branch ? ((await measureBranch(app, repo, branch))?.paths ?? []) : [];
+  const changed = branch ? ((await measureBranch(app, repo, task, branch))?.paths ?? []) : [];
   return [...new Set([...named, ...changed])];
 }
 

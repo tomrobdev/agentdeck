@@ -12,7 +12,7 @@ import {
   unblockable,
 } from '#domain/runs/index.ts';
 import { latestReviewNote } from '#domain/work/index.ts';
-import { type BlockedTask, leftoversMessage } from '#domain/work/index.ts';
+import { type BlockedTask, leftoversMessage, targetOf } from '#domain/work/index.ts';
 import { errorMessage } from '#domain/shared/index.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 import { planForRun } from '#application/work/plans.ts';
@@ -49,7 +49,7 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
   const { log } = opened;
   const repo = app.getRepo(task.repo_id);
   if (!repo) throw new Error(`repo ${task.repo_id} not found`);
-  const wt = await app.workspace.prepareCheckout(repo, task);
+  const wt = await app.workspace.prepareCheckout(repo, task, targetOf(task, repo));
   if (wt.path !== task.checkout?.worktree) app.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
 
   let plan: PromptPlan | null = null;

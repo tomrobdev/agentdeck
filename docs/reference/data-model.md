@@ -180,6 +180,7 @@ erDiagram
     text syncing_since "nullable"
     text question "nullable"
     text park_reason "nullable"
+    text target "nullable"
   }
   usage_samples {
     integer id PK

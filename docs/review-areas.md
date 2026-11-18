@@ -137,6 +137,7 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/application/work/checkout-locks.ts
 - daemon/src/application/ports/workspace.ts
 - daemon/src/domain/work/task/branch.ts
+- daemon/src/domain/work/task/target.ts
 - daemon/src/domain/runs/sync.ts
 - daemon/src/domain/runs/resolve.ts
 - daemon/src/adapters/git/exec.ts

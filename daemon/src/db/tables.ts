@@ -93,6 +93,7 @@ export const tasks = sqliteTable(
     syncing_since: text(),
     question: text(),
     park_reason: text(),
+    target: text(),
   },
   // guard: an index column in descending order, which the index builder takes only as raw SQL
   (table) => [index('tasks_pick').on(table.status, sql`priority DESC`, table.id)],

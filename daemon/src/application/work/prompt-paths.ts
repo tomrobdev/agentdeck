@@ -1,10 +1,10 @@
 // Warn when a task's prompt names a repo path that won't be there when the task runs.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
-import { linkState } from '#domain/work/index.ts';
+import { linkState, targetOf } from '#domain/work/index.ts';
 import { matchPath, pathsNamedIn } from '#domain/work/index.ts';
 import type { Task } from '#domain/work/index.ts';
-import { targetOf } from '#application/work/dependencies.ts';
+import { linkTargetOf } from '#application/work/dependencies.ts';
 import { requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
 export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
@@ -13,7 +13,7 @@ export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
   if (!paths.length) return [];
   try {
     const repo = requireTaskRepo(app, task);
-    const start = await app.workspace.filesAt(repo.path, { base: repo.base_branch });
+    const start = await app.workspace.filesAt(repo.path, { base: targetOf(task, repo) });
     if (!start) return [];
     const { ref, files: baseFiles } = start;
     const sources = unmergedBuiltOn(app, task);
@@ -59,7 +59,7 @@ function unmergedBuiltOn(app: App, task: Task): Task[] {
       seen.add(link.on);
       const dep = app.getTask(link.on);
       if (!dep) continue;
-      if (linkState(link, targetOf(app, link.on)).kind === 'met') continue;
+      if (linkState(link, linkTargetOf(app, link.on)).kind === 'met') continue;
       found.push(dep);
       queue.push(dep.id);
     }

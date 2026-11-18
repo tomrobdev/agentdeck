@@ -109,7 +109,7 @@ const withPr = () => doneTask(app, repo, { pr: 'open' });
 
 async function withWorktree(status: 'done' | 'blocked' = 'done', needs?: string[], on: typeof repo = repo): Promise<TaskId> {
   const t = app.addTask({ repo_id: on.id, title: 'w', prompt: 'p' });
-  const { branch, path } = await ensureWorktree(on, t);
+  const { branch, path } = await ensureWorktree(on, t, on.base_branch);
   app.setCheckout(t.id, { branch, worktree: path });
   writeFileSync(join(path, 'b.txt'), 'b\n');
   git(path, 'add', '-A');

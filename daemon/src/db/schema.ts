@@ -281,6 +281,8 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE repos ADD COLUMN ci_not_run_ok INTEGER NOT NULL DEFAULT 0;',
   // 40: tasks.park_reason, why a parked task (a proposal kept for later) waits; NULL in every other status.
   'ALTER TABLE tasks ADD COLUMN park_reason TEXT;',
+  // 41: tasks.target (domain/work/task/target.ts), the branch a task's work starts from and lands on; NULL is the repo's base.
+  'ALTER TABLE tasks ADD COLUMN target TEXT;',
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

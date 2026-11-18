@@ -8,7 +8,7 @@ import type { Task } from '#domain/work/index.ts';
 import { git } from '#adapters/git/exec.ts';
 import { branchExists, refExists, startPoint } from '#adapters/git/refs.ts';
 
-export async function ensureWorktree(repo: Repo, task: Task): Promise<{ branch: string; path: string }> {
+export async function ensureWorktree(repo: Repo, task: Task, target: string): Promise<{ branch: string; path: string }> {
   const branch = branchName(task);
   const path = task.checkout?.worktree ?? join(WORKTREE_DIR, repo.name, `task-${task.id}`);
   if (existsSync(path)) return { branch, path };
@@ -18,7 +18,7 @@ export async function ensureWorktree(repo: Repo, task: Task): Promise<{ branch: 
   if (await branchExists(repo.path, branch)) {
     await git(repo.path, 'worktree', 'add', path, branch);
   } else {
-    await git(repo.path, 'worktree', 'add', '--no-track', '-b', branch, path, await startPoint(repo.path, repo.base_branch));
+    await git(repo.path, 'worktree', 'add', '--no-track', '-b', branch, path, await startPoint(repo.path, target));
   }
   return { branch, path };
 }

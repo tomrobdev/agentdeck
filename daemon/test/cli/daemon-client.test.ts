@@ -45,7 +45,7 @@ const repo = app.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
 
 async function doneWithWorktree() {
   const t = app.addTask({ repo_id: repo.id, title: 'w', prompt: 'p' });
-  const { branch, path } = await ensureWorktree(repo, t);
+  const { branch, path } = await ensureWorktree(repo, t, repo.base_branch);
   app.setCheckout(t.id, { branch, worktree: path });
   writeFileSync(join(path, `${t.id}.txt`), 'b\n');
   git(path, 'add', '-A');

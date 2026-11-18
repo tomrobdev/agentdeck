@@ -8,11 +8,11 @@ import type { OpenedRun } from '#application/runs/claude-run.ts';
 export async function measureCodeComments(
   app: App,
   repo: Repo,
-  worktree: string,
+  checkout: { worktree: string; target: string },
   log: OpenedRun['log'],
 ): Promise<{ count: CodeCommentCount; over: boolean } | null> {
   if (!codeCommentLimitOn(repo)) return null;
-  const added = await app.workspace.addedLines(worktree, repo.base_branch, 'HEAD');
+  const added = await app.workspace.addedLines(checkout.worktree, checkout.target, 'HEAD');
   if (!added) {
     app.runLog.event(log, { type: 'agentdeck_error', text: 'count code comments: the branch could not be compared with its base' });
     return null;

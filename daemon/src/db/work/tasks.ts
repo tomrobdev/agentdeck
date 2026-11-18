@@ -1,5 +1,5 @@
 // Tasks: one store merged from its reads (tasks-queries.ts), its status changes (tasks-status.ts, every one through applyEvent, the claim included, guarded by the current status) and its PR writes (tasks-pr.ts), with the other writes here.
-import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '#src/config.ts';
 import { type RepoId, type TaskId, asTaskId, present, stored } from '#domain/shared/index.ts';
@@ -58,6 +58,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       max_attempts?: number;
       status?: 'queued' | 'proposed';
       source?: 'manual' | 'planner';
+      target?: string | null;
       links?: { on: TaskId; kind: LinkKind }[];
       plan_task?: TaskId | null;
       plan_steps?: string[] | null;
@@ -77,6 +78,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             max_attempts: n.max_attempts ?? DEFAULTS.maxAttempts,
             status,
             source: n.source ?? 'manual',
+            target: n.target ?? null,
             plan_task: n.plan_task ?? null,
             plan_steps: stored({ plan_steps: n.plan_steps ?? null }).plan_steps,
           })
@@ -106,7 +108,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     },
     editTask(
       id: TaskId,
-      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>> & {
+      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'target'>> & {
         plan_task?: TaskId | null;
         plan_steps?: string[] | null;
       },
@@ -118,7 +120,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           orm
             .update(tasks)
             .set({ ...given(stored(fields)), updated_at: NOW_SQL })
-            .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
+            .where(
+              and(
+                eq(tasks.id, id),
+                inArray(tasks.status, EDITABLE_STATUSES),
+                fields.target !== undefined ? isNull(tasks.branch) : undefined,
+              ),
+            )
             .returning(TASK_COLUMNS)
             .get(),
           toTask,

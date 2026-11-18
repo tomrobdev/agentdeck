@@ -30,7 +30,7 @@ import {
   setupFailedReason,
 } from '#domain/runs/index.ts';
 import { hasPlanLink, otherPlanOwner } from '#domain/work/index.ts';
-import { type Task, attemptsLeft, leftoversMessage } from '#domain/work/index.ts';
+import { type Task, attemptsLeft, leftoversMessage, targetOf } from '#domain/work/index.ts';
 import { errorMessage } from '#domain/shared/index.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 import type { Repo } from '#domain/repos/index.ts';
@@ -49,7 +49,7 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
 
   let wt: Checkout;
   try {
-    wt = await app.workspace.prepareCheckout(repo, task);
+    wt = await app.workspace.prepareCheckout(repo, task, targetOf(task, repo));
   } catch (err) {
     return finish(app, task, null, { outcome: 'failed', reason: `worktree: ${errorMessage(err)}` });
   }
@@ -67,6 +67,7 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
 async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened: OpenedRun): Promise<WorkerResult> {
   const { runId, log } = opened;
   const ws = app.workspace;
+  const target = targetOf(task, repo);
   const previousRuns = app.runsForTask(task.id).filter((r) => r.id !== runId);
   let session = resumableSession(task, previousRuns);
   if (session) {
@@ -117,11 +118,11 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   );
   app.runLog.event(log, { type: 'agentdeck_sync', ...synced });
   if (synced.kind === 'clean' || synced.kind === 'resolved') {
-    app.recordSync(task.id, syncSummary(repo.base_branch, synced.kind, synced.kind === 'resolved' ? synced.files : []));
+    app.recordSync(task.id, syncSummary(target, synced.kind, synced.kind === 'resolved' ? synced.files : []));
     const resetupFailure = await setUp();
     if (resetupFailure) return resetupFailure;
   } else if (synced.kind === 'failed') {
-    return finish(app, task, opened, { outcome: 'blocked', reason: conflictReason(repo.base_branch, synced.files, synced.reason) });
+    return finish(app, task, opened, { outcome: 'blocked', reason: conflictReason(target, synced.files, synced.reason) });
   } else if (synced.kind === 'rate_limited') {
     return finish(app, task, opened, { outcome: 'rate_limited', reason: synced.reason });
   } else if (synced.kind === 'cancelled') {
@@ -176,11 +177,11 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
     status = parseStatus(end.result.result);
     if (review && runFields.result_text) runFields.result_text = recordAnswers(app, review.comments, runFields.result_text);
     if (!status.blocked) testsPassed = await runTests();
-    if (!status.blocked && testsPassed !== false) ahead = await ws.commitsAhead(wt.path, repo.base_branch);
+    if (!status.blocked && testsPassed !== false) ahead = await ws.commitsAhead(wt.path, target);
   }
   let { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
 
-  const measured = outcome.outcome === 'done' ? await measureCodeComments(app, repo, wt.path, log) : null;
+  const measured = outcome.outcome === 'done' ? await measureCodeComments(app, repo, { worktree: wt.path, target }, log) : null;
   if (measured) Object.assign(runFields, codeCommentFields(measured.count));
   if (measured?.over && runFields.session_id) {
     const turnPrompt = buildCodeCommentsPrompt(measured.count, repo, repo.test_cmd);
@@ -198,7 +199,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
     if (turn.end.kind === 'cancelled') return finish(app, task, opened, { outcome: 'cancelled' }, runFields);
     await afterClaude();
     testsPassed = await runTests();
-    const again = await measureCodeComments(app, repo, wt.path, log);
+    const again = await measureCodeComments(app, repo, { worktree: wt.path, target }, log);
     if (again) Object.assign(runFields, codeCommentFields(again.count));
     ({ result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length }));
   }

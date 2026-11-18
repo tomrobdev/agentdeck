@@ -13,7 +13,7 @@ import {
   verifySchemaArgs,
   verifySystemPrompt,
 } from '#domain/runs/index.ts';
-import { CHECKED_STATUSES, type Task, describeWait } from '#domain/work/index.ts';
+import { CHECKED_STATUSES, type Task, describeWait, targetOf } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import { queueWait } from '#application/capacity/gate.ts';
 import { refuse, requireTask, requireTaskRepo } from '#application/shared/input.ts';
@@ -53,15 +53,16 @@ export function startVerify(app: App, id: TaskId): VerifyStart {
 }
 
 function runOpened(app: App, task: Task, repo: Repo, opened: OpenedRun): Promise<VerifyReport> {
-  return app.workspace.withScratchCheckout(repo, async (checkout) => {
-    if ('error' in checkout) throw new Error(`could not check out ${repo.base_branch}: ${checkout.error}`);
+  const target = targetOf(task, repo);
+  return app.workspace.withScratchCheckout(repo, target, async (checkout) => {
+    if ('error' in checkout) throw new Error(`could not check out ${target}: ${checkout.error}`);
     const head = await app.workspace.head(checkout.path);
     const commit = head?.sha ?? null;
     const ran = await startTaskRun(app, task, {
       kind: 'verify',
       repo,
       worktree: checkout.path,
-      prompt: buildVerifyPrompt(task, { ref: repo.base_branch, commit: head?.short ?? 'its tip' }),
+      prompt: buildVerifyPrompt(task, { ref: target, commit: head?.short ?? 'its tip' }),
       opened,
       maxTurns: VERIFY_MAX_TURNS,
       systemPrompt: verifySystemPrompt(),

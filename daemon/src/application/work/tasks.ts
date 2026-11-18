@@ -2,14 +2,22 @@
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '#domain/work/index.ts';
-import { planOwnerOf } from '#domain/work/index.ts';
+import { missingTargetError, planOwnerOf, targetChangeError } from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
 import { type ModelSource, newTaskModel } from '#domain/work/index.ts';
 import { EDITABLE_STATUSES, type Task, WORKTREE_REMOVABLE_STATUSES, defaultTitle, promptGoal, shapePrompt } from '#domain/work/index.ts';
 import { refuseWhileSyncing } from '#application/work/checkout-locks.ts';
-import { newLinks } from '#application/work/links.ts';
-import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '#application/shared/input.ts';
+import { newLinks, refuseCrossTargets, targetEnd } from '#application/work/links.ts';
+import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, textOrNull, whole } from '#application/shared/input.ts';
 import { checkFollowers } from '#application/work/plans.ts';
 import { checkPlanLink, planRequest, stepList } from '#application/work/plan-link.ts';
+
+async function checkedTarget(app: App, repo: Repo, asked: string | null): Promise<string | null> {
+  if (!asked || asked === repo.base_branch) return null;
+  const facts = await app.workspace.inspectRepo(repo.path, asked);
+  if (!facts?.base) throw new ActionError(missingTargetError(asked), undefined, 'not_found');
+  return asked;
+}
 
 export async function addTask(
   app: App,
@@ -19,6 +27,7 @@ export async function addTask(
     title?: string;
     priority?: number;
     model?: string;
+    target?: string | null;
     max_turns?: number;
     max_attempts?: number;
     builds_on?: TaskId[];
@@ -52,6 +61,12 @@ export async function addTask(
       repoName ? 'not_found' : 'invalid',
     );
   refuse(archivedRepoError(repo));
+  const target = await checkedTarget(app, repo, textOrNull(body, 'target') ?? null);
+  refuseCrossTargets(
+    app,
+    { id: null, repo_id: repo.id, target, base_branch: repo.base_branch },
+    links.filter((l) => l.kind === 'builds_on').map((l) => l.on),
+  );
   const steps = stepList(input.plan_steps);
   const checked = checkPlanLink(app, () => repo, planAsked ?? { task: null }, steps);
   const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
@@ -66,6 +81,7 @@ export async function addTask(
     model: chosen.model,
     max_turns,
     max_attempts,
+    target,
     links,
     plan_task: owner,
     own_plan,
@@ -85,6 +101,7 @@ export async function editTask(
     model?: string;
     max_turns?: number;
     max_attempts?: number;
+    target?: string | null;
     plan_task?: TaskId | null;
     plan_html?: string;
     plan_steps?: string[] | string | null;
@@ -107,6 +124,25 @@ export async function editTask(
   ] as const) {
     const value = whole(body, key, rule);
     if (value !== undefined) fields[key] = value;
+  }
+
+  const askedTarget = textOrNull(body, 'target');
+  if (askedTarget !== undefined) {
+    const repo = requireTaskRepo(app, task);
+    const target = await checkedTarget(app, repo, askedTarget);
+    if (target !== task.target) {
+      refuse(targetChangeError(task), undefined, 'conflict');
+      refuseCrossTargets(
+        app,
+        targetEnd(app, { ...task, target }),
+        app
+          .linksOf(id)
+          .filter((l) => l.kind === 'builds_on')
+          .map((l) => l.on),
+        app.dependentsOf(id, 'builds_on').map((d) => d.id),
+      );
+      fields.target = target;
+    }
   }
 
   const planAsked = planRequest(body);
@@ -133,7 +169,9 @@ export async function editTask(
   if (!Object.keys(fields).length) throw new ActionError('nothing to change');
   const edited = app.editTask(id, fields, { ownPlan });
   if (!edited) {
-    const now = app.getTask(id)?.status ?? task.status;
+    const latest = app.getTask(id);
+    if (fields.target !== undefined && latest) refuse(targetChangeError(latest), undefined, 'conflict');
+    const now = latest?.status ?? task.status;
     throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`, undefined, 'conflict');
   }
   return edited;

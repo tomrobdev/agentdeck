@@ -7,7 +7,7 @@ import type { CheckCounts } from '#domain/landing/index.ts';
 import { carryFailures, countWithSteps, isConflicting, withCheckList } from '#domain/landing/index.ts';
 import { mergeRequestCheck, mergeSyncsFirst, mergesNow, syncingFirstLine } from '#domain/landing/index.ts';
 import { buildPrBody, openPrUrl } from '#domain/landing/index.ts';
-import { mergeReason } from '#domain/work/index.ts';
+import { mergeReason, targetOf } from '#domain/work/index.ts';
 import type { TaskId } from '#domain/shared/index.ts';
 import type { Task } from '#domain/work/index.ts';
 import { errorMessage, present } from '#domain/shared/index.ts';
@@ -90,7 +90,7 @@ export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> 
     title: task.title,
     pr_url: url,
     branch: task.checkout?.branch ?? null,
-    base: repo.base_branch,
+    base: targetOf(task, repo),
     method: repo.merge_method,
     draft: pr.draft,
     commits: pr.commits,
@@ -132,7 +132,7 @@ export async function mergeTask(app: App, id: TaskId, opts: { method?: string; d
   if (mergeSyncsFirst(input)) {
     if (!app.requestMerge(id, method)) throw new ActionError(`#${id} is no longer a done task with an open PR`, undefined, 'conflict');
     app.requestPrCheck();
-    return { method, unblocked: [], syncing: syncingFirstLine(repo.base_branch) };
+    return { method, unblocked: [], syncing: syncingFirstLine(targetOf(task, repo)) };
   }
   const found = mergeFindings(input);
   const problems = found.filter((f) => f.problem);

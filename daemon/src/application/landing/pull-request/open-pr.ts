@@ -6,7 +6,7 @@ import type { Repo } from '#domain/repos/index.ts';
 import { buildPrBody, existingPr, isPrExistsError, openPrUrl } from '#domain/landing/index.ts';
 import type { BranchPr, PrRetry } from '#domain/landing/index.ts';
 import { prNeedsPersonNotification } from '#domain/operations/index.ts';
-import { type Task, prEventsOf, prRetryFor } from '#domain/work/index.ts';
+import { type Task, prEventsOf, prRetryFor, targetOf } from '#domain/work/index.ts';
 import { errorMessage } from '#domain/shared/index.ts';
 import { prPlanFor } from '#application/work/plans.ts';
 import { notifyLater } from '#application/operations/notifications.ts';
@@ -22,8 +22,8 @@ export function ensureAutoMergeLabel(app: App, cwd: string): Promise<void> {
   return app.codeHost.ensureLabel(cwd, AUTO_MERGE_LABEL);
 }
 
-async function commentsOver(app: App, repo: Repo, branch: string): Promise<string | null> {
-  const added = await app.workspace.addedLines(repo.path, repo.base_branch, branch);
+async function commentsOver(app: App, repo: Repo, target: string, branch: string): Promise<string | null> {
+  const added = await app.workspace.addedLines(repo.path, target, branch);
   const comments = added && countCodeComments(added);
   return comments && codeCommentsOver(comments, repo) ? codeCommentsText(comments, repo) : null;
 }
@@ -32,8 +32,9 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
   const repo = app.getRepo(task.repo_id);
   const branch = task.checkout?.branch;
   if (!repo || repo.pr_mode === 'off' || !branch) return {};
+  const target = targetOf(task, repo);
   try {
-    const over = commentsOver(app, repo, branch).catch(() => null);
+    const over = commentsOver(app, repo, target, branch).catch(() => null);
     await app.codeHost.push(repo.path, branch);
     const open = openPrUrl(task.pr);
     if (open) return { url: open };
@@ -47,7 +48,7 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
     const pr: BranchPr = await app.codeHost
       .createPr({
         cwd,
-        base: repo.base_branch,
+        base: target,
         head: branch,
         title: task.title,
         body: buildPrBody(task, app.runsForTask(task.id), prPlanFor(app, task), await over),

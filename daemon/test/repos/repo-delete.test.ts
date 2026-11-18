@@ -79,7 +79,7 @@ test('deleting an archived repo leaves no rows, worktree, branch or files, and s
   const gone = makeRepo('gone');
   const kept = fill(keep, { worktree: false });
   const mine = fill(gone, { worktree: true });
-  const { path: worktree, branch } = await ensureWorktree(gone, db.getTask(mine.task.id)!);
+  const { path: worktree, branch } = await ensureWorktree(gone, db.getTask(mine.task.id)!, gone.base_branch);
   db.setCheckout(mine.task.id, { worktree, branch });
   assert.ok(existsSync(worktree));
   const keptBefore = rowsFor(keep.id);

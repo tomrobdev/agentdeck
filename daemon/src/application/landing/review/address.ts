@@ -11,11 +11,11 @@ import {
 } from '#domain/landing/index.ts';
 import { type ReviewComment, commentStatesFor, commentsToAddress } from '#domain/landing/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
-import { type Task, latestRetryAt } from '#domain/work/index.ts';
+import { type Task, latestRetryAt, targetOf } from '#domain/work/index.ts';
 
 export async function reviewForRun(
   app: App,
-  task: Pick<Task, 'id'>,
+  task: Pick<Task, 'id' | 'target'>,
   repo: Pick<Repo, 'path' | 'base_branch'>,
 ): Promise<{ prompt: ReviewPrompt; comments: ReviewComment[] } | null> {
   const reviews = app.reviewsForTask(task.id);
@@ -28,7 +28,7 @@ export async function reviewForRun(
     if (!patch) {
       patch = (async () => {
         try {
-          const base = await app.workspace.diffBase(repo.path, repo.base_branch, head);
+          const base = await app.workspace.diffBase(repo.path, targetOf(task, repo), head);
           return base ? (await app.workspace.filePatch(repo.path, base.sha, head, [path])).patch : null;
         } catch {
           return null;
