@@ -595,21 +595,22 @@ A PR's checks: the latest ones read, and the counts kept from when they first se
 
 What `gh pr view` says about a PR that decides whether and how it merges.
 
-| Field         | Type                          | Comment                                                                                       |
-| ------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| `state`       | `PrState`                     | GitHub's `state`, as the daemon names it.                                                     |
-| `draft`       | `boolean`                     |                                                                                               |
-| `mergeable`   | `string`                      | GitHub's `mergeable`: MERGEABLE, CONFLICTING or UNKNOWN.                                      |
-| `merge_state` | `string`                      | GitHub's `mergeStateStatus`: CLEAN, BEHIND, DIRTY, BLOCKED, UNSTABLE, DRAFT, …                |
-| `commits`     | `number`                      |                                                                                               |
-| `files`       | `number`                      |                                                                                               |
-| `additions`   | `number`                      |                                                                                               |
-| `deletions`   | `number`                      |                                                                                               |
-| `checks`      | `CheckCounts`                 |                                                                                               |
-| `check_list?` | `PrCheck[] \| undefined`      | Each check, as `checks` counts them. Missing where a caller made the details up.              |
-| `head?`       | `string \| null \| undefined` | The PR's head commit (`headRefOid`); null when GitHub didn't say.                             |
-| `paths`       | `string[]`                    | The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). |
-| `labels`      | `string[]`                    |                                                                                               |
+| Field         | Type                          | Comment                                                                                                 |
+| ------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `state`       | `PrState`                     | GitHub's `state`, as the daemon names it.                                                               |
+| `draft`       | `boolean`                     |                                                                                                         |
+| `mergeable`   | `string`                      | GitHub's `mergeable`: MERGEABLE, CONFLICTING or UNKNOWN.                                                |
+| `merge_state` | `string`                      | GitHub's `mergeStateStatus`: CLEAN, BEHIND, DIRTY, BLOCKED, UNSTABLE, DRAFT, …                          |
+| `commits`     | `number`                      |                                                                                                         |
+| `files`       | `number`                      |                                                                                                         |
+| `additions`   | `number`                      |                                                                                                         |
+| `deletions`   | `number`                      |                                                                                                         |
+| `checks`      | `CheckCounts`                 |                                                                                                         |
+| `check_list?` | `PrCheck[] \| undefined`      | Each check, as `checks` counts them. Missing where a caller made the details up.                        |
+| `head?`       | `string \| null \| undefined` | The PR's head commit (`headRefOid`); null when GitHub didn't say.                                       |
+| `paths`       | `string[]`                    | The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`).           |
+| `labels`      | `string[]`                    |                                                                                                         |
+| `body?`       | `string \| null \| undefined` | The PR's description, whose Door line auto-merge reads; null or missing unless asked for (`withFiles`). |
 
 ### PrFields
 

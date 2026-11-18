@@ -60,6 +60,28 @@ export function pathReasons(paths: string[], skip: string[]): MergeReason[] {
   return reasons;
 }
 
+/** What a PR's description says its change risks: `one-way` is hard to walk back, `two-way` is not; null when it has no Door line one of them reads. */
+export type PrDoor = 'one-way' | 'two-way' | null;
+
+const DOOR_LINE = /^[\s>*_#-]*door[\s*_]*:[\s*_`]*(.*)$/gim;
+
+export function prDoor(body: string | null | undefined): PrDoor {
+  const doors = [...(body ?? '').matchAll(DOOR_LINE)].map(([, value]) => {
+    const door = /^(one|two)[-\s]way\b/i.exec(value.trim());
+    return door ? (`${door[1].toLowerCase()}-way` as const) : null;
+  });
+  if (doors.includes('one-way')) return 'one-way';
+  return doors.length && !doors.includes(null) ? 'two-way' : null;
+}
+
+function doorReason(body: string | null | undefined): MergeReason | null {
+  const door = prDoor(body);
+  if (door === 'two-way') return null;
+  if (door === 'one-way')
+    return { kind: 'one_way_door', text: 'the PR marks its change a one-way door, hard to walk back, so a person merges it' };
+  return { kind: 'no_door', text: 'the PR description has no readable Door line (one-way or two-way), so a person merges it' };
+}
+
 export const autoMergeMaxLinesError = (value: unknown): string | null => wholeNumberError('auto_merge_max_lines', value, 1, 100_000);
 
 /** What only auto-merge's check reads, beside the merge input: the repo's limits, a pause, and the branch as measured. */
@@ -81,6 +103,8 @@ export function autoMergeCheck(input: MergeInput & AutoMergeFacts): AutoMergeChe
   const never: MergeReason[] = [];
   const add = (kind: MergeReasonKind, text: string) => never.push({ kind, text });
   if (!pr.labels.includes(AUTO_MERGE_LABEL.name)) add('no_label', `the PR has no ${AUTO_MERGE_LABEL.name} label`);
+  const door = doorReason(pr.body);
+  if (door) never.push(door);
   if (repo.test_cmd && tests_passed === null) add('tests_not_run', 'the tests have not run');
   if (!repo.test_cmd && tests_passed === null && !checksRan(pr) && !pr.checks.pending)
     add('untested', 'nothing tested it: the repo has no test command and no check ran on the PR');

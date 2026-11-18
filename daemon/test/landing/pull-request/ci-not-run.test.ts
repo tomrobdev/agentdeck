@@ -41,6 +41,7 @@ const prWith = (check_list: PrCheck[]): PrDetails => ({
   head: 'head-1',
   paths: ['src/a.ts'],
   labels: [AUTO_MERGE_LABEL.name],
+  body: 'Door: two-way',
 });
 
 test("parseJobStart and parseAnnotations read GitHub's job and check-run annotations", () => {

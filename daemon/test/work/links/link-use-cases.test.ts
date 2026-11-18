@@ -37,6 +37,7 @@ const pr = {
   checks: { total: 1, failing: 0, pending: 0 },
   paths: ['a.ts'],
   labels: ['agentdeck:auto-merge'],
+  body: 'Door: two-way',
 };
 
 test('addTask takes builds_on and after as id lists, and refuses a missing task without naming a flag', async () => {

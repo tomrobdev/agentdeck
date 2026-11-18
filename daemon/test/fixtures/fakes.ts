@@ -40,6 +40,7 @@ export const READY_PR: PrDetails = {
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
+  body: '## Merge Danger\n\nDoor: two-way',
   commits: 1,
   files: 1,
   additions: 10,

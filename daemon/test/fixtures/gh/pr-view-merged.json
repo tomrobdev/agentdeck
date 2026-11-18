@@ -33,6 +33,7 @@
    "changeType": "ADDED"
   }
  ],
+ "body": "## Merge Danger\n\nDoor: two-way",
  "headRefOid": "b11cd700d095510ddc08e40ed07f196adaedc2a0",
  "isDraft": false,
  "labels": [
