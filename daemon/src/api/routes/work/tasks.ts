@@ -1,7 +1,7 @@
 // Tasks: list, add, edit and move through the lifecycle, sync, verify runs and the log tail.
 import * as actions from '#application/actions.ts';
 import { type TaskId, parseId } from '#domain/shared/index.ts';
-import { TASK_STATUSES } from '#domain/work/index.ts';
+import { TASK_STATUSES, shapePrompt } from '#domain/work/index.ts';
 import type { CancelResult, TaskDetail, TaskSaved, TaskSummary } from '#api/contract/work.ts';
 import type { SyncResult, VerifyResult } from '#api/contract/runs.ts';
 import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam } from '#api/http.ts';
@@ -24,13 +24,15 @@ export function routes({ db, scheduler, log }: ApiContext): Route[] {
     route<TaskSaved>('POST', /^\/api\/tasks$/, async ({ body }) => {
       const links = { builds_on: idsField(body, 'builds_on'), after: idsField(body, 'after') };
       const task = await actions.addTask(db, { ...body, ...links } as Parameters<typeof actions.addTask>[1]);
-      return { ...(await wire.taskDetail(db, task.id)), warnings: await actions.promptWarnings(db, task.id) };
+      const warnings = [...shapePrompt(task.prompt).warnings, ...(await actions.promptWarnings(db, task.id))];
+      return { ...(await wire.taskDetail(db, task.id)), warnings };
     }),
     route<TaskDetail>('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(taskIdParam(id))),
     route<TaskSaved>('POST', /^\/api\/tasks\/(\d+)$/, async ({ params: [text], body }) => {
       const id = taskIdParam(text);
-      await actions.editTask(db, id, body);
-      return { ...(await detail(id)), warnings: await actions.promptWarnings(db, id) };
+      const task = await actions.editTask(db, id, body);
+      const shape = body.prompt === undefined ? [] : shapePrompt(task.prompt).warnings;
+      return { ...(await detail(id)), warnings: [...shape, ...(await actions.promptWarnings(db, id))] };
     }),
     route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [text], body }) => {
       const id = taskIdParam(text);

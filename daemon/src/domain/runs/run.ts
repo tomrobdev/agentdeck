@@ -5,7 +5,7 @@ import type { RunEnd, RunSummary } from '#domain/runs/translate/summary.ts';
 /**
  * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;
  * `unblock` reads why a blocked task stopped and retries it with a note or asks a question (domain/runs/unblock.ts), and
- * never uses an attempt either; `review` reads a done task's changes against its Goal, Definition of done and plan steps,
+ * never uses an attempt either; `review` reads a done task's changes against its Current problem, Expected outcome and plan steps,
  * and answers with findings (domain/runs/review.ts); `verify` checks a proposed or queued task's prompt against the base,
  * claim by claim (domain/runs/verify.ts). Neither uses an attempt.
  */

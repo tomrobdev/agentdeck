@@ -147,7 +147,6 @@ export {
   MODELS,
   OPEN_STATUSES,
   PLAN_ATTACHABLE_STATUSES,
-  PROMPT_SECTIONS,
   RUNNING_STATUSES,
   WORKTREE_REMOVABLE_STATUSES,
   attemptsLeft,
@@ -156,10 +155,10 @@ export {
   leftoversMessage,
   modelSourceText,
   newTaskModel,
-  promptGoal,
   stateFields,
   stopReasonOf,
 } from '#domain/work/task/task.ts';
+export { PROMPT_SECTIONS, promptGoal, promptSection, shapePrompt } from '#domain/work/task/prompt.ts';
 export type {
   BlockedState,
   BlockedTask,

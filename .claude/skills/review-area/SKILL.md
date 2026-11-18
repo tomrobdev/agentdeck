@@ -25,7 +25,7 @@ An area with no ref has never been reviewed: ask where to start, by default a we
 
 ## 2. Gather what merged
 
-- **Tasks:** AgentDeck's merge commits end with `Made by AgentDeck task #<id>`. `git log --format=%B <from>..origin/main -- <paths…> | grep -o 'task #[0-9]*'` lists them; `agentdeck show <id>` gives each one's Goal, Definition of done and plan. Commits with no task came from sessions: list them too.
+- **Tasks:** AgentDeck's merge commits end with `Made by AgentDeck task #<id>`. `git log --format=%B <from>..origin/main -- <paths…> | grep -o 'task #[0-9]*'` lists them; `agentdeck show <id>` gives each one's Current problem, Expected outcome and plan (an older task's Goal and Definition of done). Commits with no task came from sessions: list them too.
 - **The review branch:** one commit holding the area's changes and nothing else:
 
   ```sh
@@ -36,7 +36,7 @@ An area with no ref has never been reviewed: ask where to start, by default a we
 
 ## 3. Review it three ways
 
-Start two subagents at once, each given the branch, the three-dot diff command, the tasks' goals and the expected load, and each told to cite line numbers from the files on main, to change no files, and to return its report in full:
+Start two subagents at once, each given the branch, the three-dot diff command, the tasks' expected outcomes and the expected load, and each told to cite line numbers from the files on main, to change no files, and to return its report in full:
 
 - **Correctness:** `/code-review high area-review/<area>`.
 - **Senior-dev review:** `/ponytail-review` of `area-review/<area>` against main: bugs, load, risky code without a test, what to cut. Subagents may not have the plugin's skills (it said "Unknown skill" in the first run), so tell the subagent to follow `~/.claude/plugins/marketplaces/ponytail/skills/ponytail-review/SKILL.md` by hand when the skill can't be invoked.
@@ -49,7 +49,7 @@ While they run, do the area pass yourself, which neither does. Read the area's f
 - **Decisions in the right layer:** a rule about business state (a status check, a limit, a choice between outcomes) written in `application/`, `api/` or `cli/` that belongs in `domain/`. Imports can be clean while the logic sits in the wrong place.
 - **Aggregate edges:** one aggregate deciding another's state, or reaching into its internals instead of asking it.
 - **Rules no test checks:** skip the ones `pnpm check` enforces. In AgentDeck the unchecked ones are listed with their reasons in `daemon/scripts/lib/rules.ts` (`pnpm rules`); check the area's files against those. Check the ADRs in `docs/adr/` when the area touches them.
-- **Across tasks:** the same job done twice, code a later task left dead when it replaced an earlier one's, and a task's goal or Definition of done the merged code doesn't meet.
+- **Across tasks:** the same job done twice, code a later task left dead when it replaced an earlier one's, and a task's Expected outcome the merged code doesn't meet.
 - **Shallow modules:** wrappers and pass-throughs that add an interface without hiding anything. Name them; a bigger restructure goes to `improve-codebase-architecture`, not into a fix task.
 
 ## 4. Report
@@ -58,7 +58,7 @@ One list from the three: drop duplicates, and drop anything you can't back with 
 
 ## 5. Act on the person's OK
 
-- Group findings into fix tasks, one per PR's worth, written with `add-task`'s sections; queue them, or `--propose` them to triage later.
+- Group findings into fix tasks, one per PR's worth, written with `add-task`'s sections (Current problem, Expected outcome, Out of scope, Constraints); queue them, or `--propose` them to triage later.
 - A one-line fix the person wants now: make it in this session.
 - A rule finding that could be checked mechanically, or one seen in an earlier area review too: propose a test for it in `daemon/test/architecture/architecture.test.ts` (or move it off the unchecked list), so `pnpm check` catches it on every PR from then on.
 - Then mark the area reviewed and remove the branch:

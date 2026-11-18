@@ -1,4 +1,4 @@
-// The review run of a done task: claude reads the task's changes against its Goal, Definition of done and linked plan steps with read-only tools, and answers with a summary and findings.
+// The review run of a done task: claude reads the task's changes against its Current problem, Expected outcome and linked plan steps with read-only tools, and answers with a summary and findings.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
 import type { PromptPlan } from '#domain/runs/index.ts';

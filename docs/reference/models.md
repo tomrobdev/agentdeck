@@ -2011,6 +2011,13 @@ A proposal kept for later: off Attention and not approvable until a person lifts
 | `summary` | `string \| null` |         |
 | `steps`   | `PlanStep[]`     |         |
 
+### ParsedPrompt
+
+| Field      | Type              | Comment |
+| ---------- | ----------------- | ------- |
+| `preamble` | `string`          |         |
+| `sections` | `PromptSection[]` |         |
+
 ### PendingFollowUp
 
 A history row whose status change's follow-ups are still to run (the outbox): what the daemon's tick reads to run them.
@@ -2066,6 +2073,14 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `title`  | `string`         |                                                                        |
 | `status` | `PlanStepStatus` |                                                                        |
 | `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
+
+### PromptSection
+
+| Field     | Type     | Comment |
+| --------- | -------- | ------- |
+| `name`    | `string` |         |
+| `heading` | `string` |         |
+| `body`    | `string` |         |
 
 ### ProposalCheck
 

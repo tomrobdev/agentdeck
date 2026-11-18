@@ -95,41 +95,6 @@ export const stateFields = (state: TaskState): StateFields => ({
   park_reason: state.status === 'parked' ? state.park_reason : null,
 });
 
-export const PROMPT_SECTIONS = `## Goal
-What the task achieves, in a sentence or two.
-
-## Context
-The files to start from, why it is needed, related tasks or plans.
-
-## Change
-What to do.
-
-## Out of scope
-What not to touch.
-
-## Constraints
-Limits the agent must keep to, such as no new dependencies or no changes to package.json.
-
-## Definition of done
-The test command passing, plus concrete checks a reviewer can confirm.`;
-
-export function promptSections(prompt: string): { heading: string; body: string }[] {
-  const sections: { heading: string; lines: string[] }[] = [];
-  for (const line of prompt.split('\n')) {
-    const heading = /^##\s+(.+?)\s*$/.exec(line);
-    if (heading) sections.push({ heading: heading[1], lines: [] });
-    else sections.at(-1)?.lines.push(line);
-  }
-  return sections.map((s) => ({ heading: s.heading, body: s.lines.join('\n').trim() }));
-}
-
-export function promptGoal(prompt: string, maxLines = 6): string {
-  const sections = promptSections(prompt);
-  const goal = sections.find((s) => s.heading.toLowerCase() === 'goal' && s.body);
-  const text = sections.length ? (goal ?? sections.find((s) => s.body))?.body : prompt.trim();
-  return (text ?? '').split('\n').slice(0, maxLines).join('\n').trim();
-}
-
 export const DEFAULT_MODEL = 'sonnet';
 
 export const MODELS = ['haiku', DEFAULT_MODEL, 'opus'];

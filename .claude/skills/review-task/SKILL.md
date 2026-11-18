@@ -1,6 +1,6 @@
 ---
 name: review-task
-description: Review a finished AgentDeck task in a session: read its diff against its Definition of done and plan steps, test it in the task's worktree, then merge it, retry it with a note, or commit a small fix. Use when the user says review #12, check this task, is it ready to merge, or look at what the worker did.
+description: Review a finished AgentDeck task in a session: read its diff against its Expected outcome and plan steps, test it in the task's worktree, then merge it, retry it with a note, or commit a small fix. Use when the user says review #12, check this task, is it ready to merge, or look at what the worker did.
 ---
 
 # Review a task
@@ -14,9 +14,9 @@ agentdeck show <id>      # prompt, links, plan, each run's summary and tests
 agentdeck review <id>    # reviews and line comments made in the dashboard
 ```
 
-- The **Definition of done** is in the prompt; for a task linked to a plan, it is the linked steps' `<ul data-plan-done>` checks in the plan AgentDeck stores (`agentdeck show <id>` names it; the dashboard shows it on the task's Overview).
+- The prompt's **Current problem** says what was wrong, and its **Expected outcome** what a reviewer checks. An older prompt has Goal and Definition of done instead, as `## ` headings or `Goal:` label lines: read them the same way. For a task linked to a plan, the linked steps' `<ul data-plan-done>` checks in the plan AgentDeck stores count too (`agentdeck show <id>` names it; the dashboard shows it on the task's Overview).
 - Read the diff: `git -C ~/.agentdeck/worktrees/<Repo>/task-<id> diff origin/<base>...HEAD`, or `gh pr diff <url>` when the worktree is gone.
-- Check each item of the Definition of done against the diff, one by one. Note what is missing, what is out of scope, and what breaks the repo's rules (its CLAUDE.md).
+- Check each bullet of the Expected outcome against the diff, one by one. Note what is missing, what is out of scope, and what breaks the repo's rules (its CLAUDE.md).
 - A summary's "I didn't run the dashboard" or "one test fails in the sandbox" is a to-do for you, not a pass.
 
 ## 2. Test it in place
@@ -24,7 +24,7 @@ agentdeck review <id>    # reviews and line comments made in the dashboard
 In the task's worktree, which has its dependencies installed:
 
 - Run the repo's test command (`agentdeck repo ls` shows `test=`).
-- Try the change for real where the Definition of done asks for it. For the AgentDeck dashboard, run the dev server from the worktree against the live daemon. For a daemon change, use a separate daemon with its own home and port, as `delegate` describes; never one on `~/.agentdeck`.
+- Try the change for real where the Expected outcome asks for it. For the AgentDeck dashboard, run the dev server from the worktree against the live daemon. For a daemon change, use a separate daemon with its own home and port, as `delegate` describes; never one on `~/.agentdeck`.
 
 If the worktree is gone (`agentdeck clean`, or merged with cleanup), read the PR on GitHub instead, and say what you couldn't test.
 

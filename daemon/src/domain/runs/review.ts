@@ -1,4 +1,4 @@
-// The review run: a claude run that reads a done task's changes against its Goal, Definition of done and linked plan steps, and answers with a summary and findings in REVIEW_ANSWER_SCHEMA.
+// The review run: a claude run that reads a done task's changes against its Current problem, Expected outcome and linked plan steps, and answers with a summary and findings in REVIEW_ANSWER_SCHEMA.
 import {
   BLOCKING_PREFIX,
   COMMENT_SIDES,
@@ -8,7 +8,7 @@ import {
   reviewReason,
 } from '#domain/landing/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
-import { parsePlanWithText } from '#domain/work/index.ts';
+import { parsePlanWithText, promptSection } from '#domain/work/index.ts';
 import type { Task, TaskEventRow } from '#domain/work/index.ts';
 import type { PromptPlan } from '#domain/runs/prompt.ts';
 import type { Run } from '#domain/runs/run.ts';
@@ -106,18 +106,6 @@ export function reviewSystemPrompt(): string {
 - Answer in the JSON schema you were given: a summary, and a finding for each problem, blocking only when the task must not merge as it is.`;
 }
 
-export function promptSection(prompt: string, heading: string): string | null {
-  const lines = prompt.split('\n');
-  const start = lines.findIndex((l) => l.trim().toLowerCase() === `## ${heading.toLowerCase()}`);
-  if (start === -1) return null;
-  const end = lines.findIndex((l, i) => i > start && /^##\s/.test(l));
-  const body = lines
-    .slice(start + 1, end === -1 ? undefined : end)
-    .join('\n')
-    .trim();
-  return body || null;
-}
-
 function planSteps(plan: PromptPlan): string {
   const parsed = plan.html === null ? null : parsePlanWithText(plan.html);
   if (!parsed) return `The task follows the plan ${plan.name}, which could not be read.`;
@@ -144,23 +132,23 @@ export interface ReviewContext {
 export const reviewDiffCommand = (ctx: Pick<ReviewContext, 'from' | 'head'>): string => `git diff ${ctx.from} ${ctx.head}`;
 
 export function buildReviewPrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, ctx: ReviewContext): string {
-  const goal = promptSection(task.prompt, 'Goal');
-  const done = promptSection(task.prompt, 'Definition of done');
+  const problem = promptSection(task.prompt, 'Goal') ?? promptSection(task.prompt, 'Current problem');
+  const outcome = promptSection(task.prompt, 'Expected outcome');
   return [
     `AgentDeck review run for task #${task.id}: "${task.title}".`,
     '',
     "This task's worker finished and reported it done. You are not that worker: read its changes and judge whether they do what the task asks, before they merge.",
     '',
-    '## Goal',
-    (goal ?? task.prompt).slice(0, 4000),
-    ...(done ? ['', '## Definition of done', done.slice(0, 4000)] : []),
+    '## Current problem',
+    (problem ?? task.prompt).slice(0, 4000),
+    ...(outcome ? ['', '## Expected outcome', outcome.slice(0, 4000)] : []),
     ...(ctx.plan ? ['', '## Plan steps', planSteps(ctx.plan)] : []),
     '',
     '## The changes',
     `Run \`${reviewDiffCommand(ctx)}\` to see them (add \`--stat\` for the files), and read the files around them where you need to.`,
     '',
     '## What to answer',
-    '- A summary: what the changes do, and whether they meet the goal, the definition of done and the plan steps.',
+    '- A summary: what the changes do, and whether they fix the current problem and meet the expected outcome and the plan steps.',
     '- A finding for each problem: the file, the line (on the new side for a line of the head, the old side for a removed one), what is wrong and what to do.',
     '- Blocking only for what must not merge as it is: a bug, a missed requirement or done criterion, a broken test, a security hole. Style and small improvements are not blocking.',
     '- No findings when there is nothing to say.',
