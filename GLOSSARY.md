@@ -6,8 +6,10 @@ The words AgentDeck uses in code, logs and UI. Each entry is `**Term**:` and wha
 
 **Repo**: a registered git repo with a base branch, a test command and goals.
 
-**Task**: one unit of work on a repo. It moves through statuses: `proposed → queued → running → done | blocked | failed | cancelled`. A cancel during a run goes through `cancel_requested`.
+**Task**: one unit of work on a repo. It moves through statuses: `proposed → queued → running → done | blocked | failed | cancelled`. A cancel during a run goes through `cancel_requested`, and a proposal can be set aside as `parked`.
 _Avoid_: ticket, tickets, job, jobs
+
+**Parked**: a proposed task a person set aside for a later phase, with a reason. It is off Attention and the headline, can't be approved, and doesn't count as open work for the planner, until a person **lifts** it back to proposed. Not a wait, a hold or a pause.
 
 **Stop reason**: why a task ended blocked or failed, in a line.
 
