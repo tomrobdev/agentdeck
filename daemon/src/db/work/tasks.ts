@@ -12,6 +12,7 @@ import {
   type TaskPlan,
   type TaskStatus,
   type UnblockQuestion,
+  maxTurnsChanges,
   modelChanges,
   questionChanges,
 } from '#domain/work/index.ts';
@@ -183,6 +184,19 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .get() as { status: TaskStatus } | undefined;
         if (!updated) return false;
         recordEvent(orm, id, row.type, updated.status, updated.status, row.type === 'escalate' ? row.reason : 'model');
+        return true;
+      });
+    },
+    changeMaxTurns(id: TaskId, to: number, statuses: TaskStatus[]): boolean {
+      return atomically(db, () => {
+        const updated = orm
+          .update(tasks)
+          .set({ ...columns(maxTurnsChanges(to)), updated_at: NOW_SQL })
+          .where(and(eq(tasks.id, id), inArray(tasks.status, statuses)))
+          .returning({ status: tasks.status })
+          .get() as { status: TaskStatus } | undefined;
+        if (!updated) return false;
+        recordEvent(orm, id, 'edit', updated.status, updated.status, 'max_turns');
         return true;
       });
     },

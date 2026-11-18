@@ -259,7 +259,11 @@ export const taskCommands: Record<string, Command> = {
   },
   retry: ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
-    const { model, escalated } = actions.retryTask(db, id, { note: flags.note, model: flags.model });
+    const { model, escalated } = actions.retryTask(db, id, {
+      note: flags.note,
+      model: flags.model,
+      max_turns: flags['max-turns'] ? Number(flags['max-turns']) : undefined,
+    });
     console.log(escalated ? `requeued #${id}, one model up: ${model}` : `requeued #${id}`);
   },
   done: ({ db, flags, rest }) => {

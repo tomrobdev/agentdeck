@@ -121,6 +121,10 @@ test('approve, reject, cancel, retry and done move a task and say so', async () 
   assert.equal((await run('cancel', '3')).out, 'cancelled #3');
   const failed = failedTask(db, repo);
   assert.equal((await run('retry', String(failed.id), '--note', 'try again')).out, `requeued #${failed.id}`);
+  const turnLimited = failedTask(db, repo, { max_turns: 40 });
+  assert.equal((await run('retry', String(turnLimited.id), '--max-turns', '80')).out, `requeued #${turnLimited.id}`);
+  assert.equal(db.getTask(turnLimited.id)?.max_turns, 80);
+  assert.match((await run('retry', String(failedTask(db, repo).id), '--max-turns', '0')).err, /max_turns/);
   const blocked = blockedTask(db, repo);
   assert.equal((await run('done', String(blocked.id), '--note', 'by hand')).out, `marked #${blocked.id} done`);
 });

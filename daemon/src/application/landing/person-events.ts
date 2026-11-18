@@ -1,7 +1,7 @@
 // Use cases for a person's lifecycle events: approve, reject, retry, cancel and mark done.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
-import { type TaskStatus, fromStatuses, modelError } from '#domain/work/index.ts';
+import { type TaskStatus, fromStatuses, maxTurnsError, modelError } from '#domain/work/index.ts';
 import { refuseWhileSyncing } from '#application/work/checkout-locks.ts';
 import { escalateOnRetry } from '#application/work/escalate.ts';
 import { ActionError, requireTask } from '#application/shared/input.ts';
@@ -42,18 +42,23 @@ export function liftTask(app: App, id: TaskId): void {
 export interface RetryInput {
   note?: string;
   model?: string;
+  max_turns?: number;
 }
 
 export function retryTask(app: App, id: TaskId, input: RetryInput = {}, onlyFrom?: TaskStatus[]): { model: string; escalated: boolean } {
   const t = requireTask(app, id);
   refuseWhileSyncing(app, id);
-  const { note, model } = input;
+  const { note, model, max_turns } = input;
+  const badTurns = max_turns === undefined ? null : maxTurnsError(max_turns);
+  if (badTurns) throw new ActionError(badTurns);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   if (model !== undefined && typeof model !== 'string') throw new ActionError('model must be text');
   const badModel = model === '' ? 'model must not be empty' : modelError(model);
   if (badModel) throw new ActionError(badModel);
   const from = fromStatuses({ type: 'retry' }).filter((s) => !onlyFrom || onlyFrom.includes(s));
   if (!from.includes(t.status)) throw new ActionError(`#${id} is ${t.status}`, undefined, 'conflict');
+  if (max_turns !== undefined && max_turns !== t.max_turns && !app.changeMaxTurns(id, max_turns, from))
+    throw new ActionError(`#${id} changed meanwhile; try again`, undefined, 'conflict');
   const escalated = model === undefined ? escalateOnRetry(app, t) : null;
   if (model !== undefined && model !== t.model && !app.changeModel(id, { from: t.model, to: model }, { type: 'edit' }, from))
     throw new ActionError(`#${id} changed meanwhile; try again`, undefined, 'conflict');

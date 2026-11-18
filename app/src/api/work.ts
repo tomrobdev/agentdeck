@@ -41,7 +41,8 @@ export const workApi = {
   park: (id: number, reason?: string) => post<TaskDetail>(`/api/tasks/${id}/park`, { reason } satisfies ParkRequest),
   lift: (id: number) => post<TaskDetail>(`/api/tasks/${id}/lift`),
   cancel: (id: number) => post<CancelResult>(`/api/tasks/${id}/cancel`),
-  retry: (id: number, note?: string) => post<TaskDetail>(`/api/tasks/${id}/retry`, { note } satisfies RetryRequest),
+  retry: (id: number, note?: string, max_turns?: number) =>
+    post<TaskDetail>(`/api/tasks/${id}/retry`, { note, max_turns } satisfies RetryRequest),
   markDone: (id: number, note?: string) => post<TaskDetail>(`/api/tasks/${id}/done`, { note } satisfies MarkDoneRequest),
   installNeeds: (id: number) => post<TaskDetail>(`/api/tasks/${id}/install-needs`),
   linkTask: (id: number, link: Omit<NewLink, 'on'> & { on: number }) =>

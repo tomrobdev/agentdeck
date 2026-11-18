@@ -21,6 +21,20 @@ const { pending, run } = useAction();
 const { canFixHere, fix } = useFixTask();
 const events = computed(() => personEvents(props.task));
 
+const hitTurnLimit = computed(() => props.task.status === 'failed' && props.task.stop_reason === 'error_max_turns');
+const retrying = ref(false);
+const retryTurns = ref(0);
+function startRetry() {
+  if (!hitTurnLimit.value) return emit('act', 'retry');
+  retryTurns.value = Math.min(props.task.max_turns * 2, 500);
+  retrying.value = true;
+}
+async function retryWithTurns() {
+  if (pending.value) return;
+  await run(() => workApi.retry(props.task.id, undefined, retryTurns.value));
+  retrying.value = false;
+}
+
 const parking = ref(false);
 const parkReason = ref('');
 async function park() {
@@ -85,7 +99,7 @@ function onRequested(next: boolean) {
       <button @click="closing = true">Close PR</button>
       <button @click="emit('review')">↻ Request changes</button>
     </template>
-    <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
+    <button v-else-if="events.includes('retry')" @click="startRetry">↻ Retry</button>
     <button v-if="canFixHere(task)" title="Open an interactive claude session for this task" @click="fix(task)">Fix with Claude</button>
     <button v-if="canFixChecks(task)" :disabled="pending" @click="fixChecks">Fix failing checks</button>
     <button
@@ -119,6 +133,19 @@ function onRequested(next: boolean) {
     @merged="onMerged"
     @requested="onRequested"
   />
+
+  <ConfirmDialog
+    v-if="retrying"
+    title="Retry with more turns"
+    confirm-label="Retry"
+    focus="field"
+    :busy="pending"
+    @cancel="retrying = false"
+    @confirm="retryWithTurns"
+  >
+    <p>#{{ task.id }} ran out of turns at {{ task.max_turns }}. The next run uses:</p>
+    <input v-model.number="retryTurns" type="number" min="1" max="500" class="w-full" @keydown.enter="retryWithTurns" />
+  </ConfirmDialog>
 
   <ConfirmDialog
     v-if="parking"
