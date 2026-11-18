@@ -28,16 +28,12 @@ const SECTION_NAMES: Record<string, string> = {
   constraints: 'Constraints',
 };
 
-/** One section of a task prompt. */
 export interface PromptSection {
-  /** The section's name in the current format (Goal and Context read as Current problem, Definition of done as Expected outcome); an unknown `##` heading keeps its own. */
   name: string;
-  /** The heading as the prompt wrote it. */
   heading: string;
   body: string;
 }
 
-/** A task prompt read into its sections, with the text before the first one. */
 export interface ParsedPrompt {
   preamble: string;
   sections: PromptSection[];
