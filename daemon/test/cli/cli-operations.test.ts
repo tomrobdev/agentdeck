@@ -25,6 +25,10 @@ const repo = await (await import('#application/actions.ts')).addRepo(db, { path,
 test('pause and resume stop and start the queue, and status says which', async () => {
   assert.match((await run('pause')).out, /^paused: running tasks finish/);
   assert.match((await run('status')).out, /^state {6}PAUSED/m);
+  assert.equal((await run('drain')).out, 'already paused: nothing new starts');
+  assert.equal((await run('resume')).out, 'resumed');
+  assert.match((await run('drain')).out, /^draining: no new task starts/);
+  assert.match((await run('status')).out, /^state {6}DRAINING/m);
   assert.equal((await run('resume')).out, 'resumed');
   const status = (await run('status')).out;
   assert.match(status, /^state {6}active/m);

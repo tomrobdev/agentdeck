@@ -200,6 +200,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/application/capacity/
 - daemon/src/domain/capacity/
 - daemon/src/db/capacity/usage.ts
+- daemon/src/db/capacity/drain.ts
 - daemon/src/application/ports/repositories/capacity.ts
 - daemon/src/daemon.ts
 

@@ -187,6 +187,14 @@ test('the status line goes in order: live run, sync, merge request, stop reason,
   assert.equal(statusLine(task({ waiting: { on: [asTaskId(3)], stuck: '#3 was cancelled' } }))?.text, "Can't start: #3 was cancelled");
   assert.equal(statusLine(task({ wait: { kind: 'repo-paused', reason: 'by hand' } }))?.text, "Can't start: agentdeck is paused");
   assert.equal(statusLine(task({ wait: { kind: 'daemon-paused' } as TaskSummary['wait'] }))?.text, "Can't start: AgentDeck is paused");
+  assert.equal(
+    statusLine(task({ wait: { kind: 'draining', repo: true } }))?.text,
+    'The repo is draining: it finishes the work in flight, then pauses',
+  );
+  assert.equal(
+    statusLine(task({ wait: { kind: 'draining', repo: false } }))?.text,
+    'AgentDeck is draining: it finishes the work in flight, then pauses',
+  );
   assert.equal(statusLine(task({ wait: { kind: 'slots', running: 2, max: 2 } })), null, 'a full slot is no sentence');
   assert.equal(
     statusLine(review({ auto_merge_view: autoMerge({ state: 'wait', reasons: ['1 check still running on GitHub'] }) }))?.text,

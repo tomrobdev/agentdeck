@@ -78,7 +78,7 @@ test('no claim row is written outside applyEvent', () => {
     for (const call of source.match(/recordEvent\([^;]*\)/g) ?? []) assert.doesNotMatch(call, /'claim'/, `${file}: ${call}`);
   }
   const tasks = readFileSync(new URL('work/tasks-status.ts', dir), 'utf8');
-  const claim = /claimNextTask\(\)[^]*?\n {4}\},/.exec(tasks)?.[0] ?? '';
+  const claim = /claimNextTask\([^)]*\)[^]*?\n {4}\},/.exec(tasks)?.[0] ?? '';
   assert.match(claim, /applyEvent\(id, \{ type: 'claim' \}\)/, 'claimNextTask claims through applyEvent');
   assert.doesNotMatch(claim, /recordEvent|\.update\(tasks\)/, 'claimNextTask writes no row of its own');
 });

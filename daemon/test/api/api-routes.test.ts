@@ -207,6 +207,12 @@ const ROWS: Row[] = [
   { method: 'GET', path: '/api/stats', shape: ['repos', 'total', 'weeks', 'scorecard'] },
   { method: 'GET', path: '/api/daemon', shape: ['commit', 'started_at', 'pid', 'reload'] },
   { method: 'POST', path: '/api/pause', shape: STATUS, check: (st) => assert.equal(st.paused, true) },
+  {
+    method: 'POST',
+    path: '/api/drain',
+    shape: [...STATUS, 'draining'],
+    check: (st) => assert.deepEqual(st.draining, { daemon: !st.paused, repos: [] }),
+  },
   { method: 'POST', path: '/api/resume', shape: STATUS, check: (st) => assert.equal(st.paused, false) },
   {
     method: 'POST',
@@ -293,6 +299,13 @@ const ROWS: Row[] = [
     },
     shape: REPO,
     check: (r) => assert.equal(r.paused_reason, null),
+  },
+  {
+    method: 'POST',
+    path: '/api/repos/:repo/drain',
+    params: () => ({ repo: newRepo().id }),
+    shape: REPO,
+    check: (r) => assert.ok(app.draining().repos.includes(r.id)),
   },
   {
     method: 'POST',

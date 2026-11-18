@@ -13,7 +13,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('#db/index.ts');
 const { followUpPending } = await import('#application/landing/settle.ts');
 const { finishDrains } = await import('#application/scheduler/drain.ts');
-const { drain, drainRepo, resumeRepo, setPaused } = await import('#application/actions.ts');
+const { startWaits } = await import('#application/capacity/queue.ts');
+const { archiveRepo, drain, drainRepo, resumeRepo, setPaused } = await import('#application/actions.ts');
 
 function setup() {
   const db = testApp(openDb(':memory:'), { codeHost: fakeCodeHost() });
@@ -49,6 +50,7 @@ test('a daemon drain starts only the tasks that ran before, waits for their foll
   assert.equal(db.claimNextTask(db.draining())?.id, retry.id, 'the retry carries on');
   assert.equal(db.claimNextTask(db.draining()), undefined, 'a queued task that never ran does not start');
   assert.equal(db.hasQueued(db.draining()), false);
+  assert.deepEqual(startWaits(db)(db.getTask(fresh.id)!, { kind: 'none' }), { kind: 'draining', repo: false });
 
   tick();
   assert.equal(db.isPaused(), false, 'a task is still running');
@@ -100,6 +102,7 @@ test('a repo drain waits for its own runs alone, then pauses only that repo', ()
   drainRepo(db, 'web');
   assert.equal(db.claimNextTask(db.draining())?.id, freshApi.id, 'another repo carries on');
   assert.equal(db.claimNextTask(db.draining()), undefined, `#${fresh.id} in the draining repo waits`);
+  assert.deepEqual(startWaits(db)(db.getTask(fresh.id)!, { kind: 'none' }), { kind: 'draining', repo: true });
 
   tick();
   assert.equal(db.getRepo(web.id)?.paused_reason, null, 'its unblock run is still going');
@@ -121,5 +124,8 @@ test('a repo drain waits for its own runs alone, then pauses only that repo', ()
   assert.deepEqual(db.draining().repos, []);
   assert.equal(db.claimNextTask(db.draining())?.id, blocked.id);
   assert.equal(db.claimNextTask(db.draining())?.id, fresh.id);
+  db.addRepo({ name: 'old', path: '/tmp/old', base_branch: 'main' });
+  archiveRepo(db, 'old');
+  assert.throws(() => drainRepo(db, 'old'), /old is archived/);
   db.close();
 });

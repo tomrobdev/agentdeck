@@ -28,7 +28,6 @@ export interface InFlight {
 
 export const isDraining = (d: Draining, repo: RepoId): boolean => d.daemon || d.repos.includes(repo);
 
-/** A queued task may start while draining only if it has run before. */
 export const mayStart = (d: Draining, task: { repo_id: RepoId; has_run: boolean }): boolean => task.has_run || !isDraining(d, task.repo_id);
 
 export function inFlightLine(f: InFlight): string | null {
