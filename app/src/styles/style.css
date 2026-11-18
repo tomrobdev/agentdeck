@@ -296,6 +296,9 @@
   .s-queued {
     --c: var(--queued);
   }
+  .s-parked {
+    --c: var(--cancelled);
+  }
   .s-running,
   .s-cancel_requested {
     --c: var(--running);

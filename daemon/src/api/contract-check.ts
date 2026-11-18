@@ -2,7 +2,7 @@
 import type { LogEntry as DomainLogEntry } from '#domain/runs/index.ts';
 import * as actions from '#application/actions.ts';
 import type { NewRepo, RepoPatch } from '#api/contract/repos.ts';
-import type { MarkDoneRequest, NewLink, NewTask, RetryRequest, TaskPatch, TaskSummary } from '#api/contract/work.ts';
+import type { MarkDoneRequest, NewLink, NewTask, ParkRequest, RetryRequest, TaskPatch, TaskSummary } from '#api/contract/work.ts';
 import type { LiveView, RunSummary, SyncView, VerifyResult } from '#api/contract/runs.ts';
 import type {
   AutoMergeRequest,
@@ -48,4 +48,5 @@ check<Fits<ReviewPatch, In<typeof actions.editReview, 2>>>();
 check<Fits<NewReviewComment, In<typeof actions.addReviewComment, 2>>>();
 check<Fits<SubmitReview, In<typeof actions.submitReview, 2>>>();
 check<Fits<RetryRequest, In<typeof actions.retryTask, 2>>>();
+check<Fits<ParkRequest['reason'], In<typeof actions.parkTask, 2>>>();
 check<Fits<MarkDoneRequest['note'], In<typeof actions.markDone, 2>>>();

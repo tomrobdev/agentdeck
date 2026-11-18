@@ -13,6 +13,7 @@ const kind = computed(() => {
 });
 const TITLES: Record<string, string> = {
   proposed: 'Proposed',
+  parked: 'Parked for later',
   queued: 'Queued',
   waiting: 'Waiting on another task',
   stuck: 'Stuck: its dependency needs you',
@@ -37,6 +38,10 @@ const TITLES: Record<string, string> = {
   >
     <title>{{ TITLES[kind] }}</title>
     <circle v-if="kind === 'proposed'" cx="7" cy="7" r="5.5" fill="none" stroke="var(--c)" stroke-width="1.5" stroke-dasharray="2 2" />
+    <template v-else-if="kind === 'parked'">
+      <circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--c)" stroke-width="1.5" stroke-dasharray="2 2" />
+      <path d="M5.6 4.8v4.4M8.4 4.8v4.4" stroke="var(--c)" stroke-width="1.4" stroke-linecap="round" />
+    </template>
     <template v-else-if="kind === 'queued'">
       <circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--c)" stroke-width="1.5" />
     </template>

@@ -238,6 +238,11 @@ export interface RetryRequest {
   model?: string;
 }
 
+/** POST /api/tasks/:id/park: `reason` says why the proposal waits, and for what. */
+export interface ParkRequest {
+  reason?: string;
+}
+
 /** POST /api/tasks/:id/done: `note` is kept on the timeline. */
 export interface MarkDoneRequest {
   note?: string;
