@@ -1,4 +1,4 @@
-// Auto-merge (docs/plans/auto-merge.html): the pure check, and the daemon merging on its PR refresh with a fake github adapter.
+// Auto-merge: the pure check, and the daemon merging on its PR refresh with a fake github adapter.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';

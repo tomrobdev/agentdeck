@@ -1,4 +1,4 @@
-// A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html).
+// A merge request: a person's Merge, which the daemon carries out once the PR is ready.
 import { isMergeabilityUnknown } from '#domain/landing/merge/conflict.ts';
 import { DEFAULT_MERGE_METHOD, type MergeMethod } from '#domain/repos/index.ts';
 import { type AutoMergeCheck, type MergeInput, reasonTexts, unattendedVerdict } from '#domain/landing/merge/merge.ts';

@@ -1,4 +1,4 @@
-// Merge requests: a person's Merge, recorded on the task and carried out by the daemon once the PR is ready (docs/plans/merge-requests.html; the carrying out is `refreshPrStates` and `autoMerge`).
+// Merge requests: a person's Merge, recorded on the task and carried out by the daemon once the PR is ready (the carrying out is `refreshPrStates` and `autoMerge`).
 import { API_PORT } from '#src/config.ts';
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';

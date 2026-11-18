@@ -1,4 +1,4 @@
-// What counts as an intervention in the pilot scorecard (docs/pilot/scorecard.md).
+// What counts as an intervention in the pilot scorecard.
 import { isAutoMergeReason } from '#domain/work/index.ts';
 import { INSTALL_NOTE } from '#domain/work/index.ts';
 import type { ScorecardEvent, ScorecardTask } from '#domain/insights/scorecard.ts';

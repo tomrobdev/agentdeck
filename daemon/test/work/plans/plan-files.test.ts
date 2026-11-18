@@ -1,4 +1,4 @@
-// The plans in docs/plans/ are plans: each parses, links the shared stylesheet and brings no CSS of its own.
+// The example plan in docs/plans/ is a plan: it parses, links the shared stylesheet and brings no CSS of its own.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

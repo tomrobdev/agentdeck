@@ -1,4 +1,4 @@
-// Whether the daemon may merge a done task's PR without a person (docs/plans/auto-merge.html).
+// Whether the daemon may merge a done task's PR without a person.
 import type { Repo } from '#domain/repos/index.ts';
 import { PROTECTED_PREFIXES, isProtectedPath } from '#domain/repos/index.ts';
 import { wholeNumberError } from '#domain/shared/index.ts';

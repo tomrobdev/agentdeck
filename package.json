@@ -1,6 +1,8 @@
 {
   "name": "agentdeck",
   "private": true,
+  "license": "MIT",
+  "repository": "github:tomrobdev/agentdeck",
   "type": "module",
   "packageManager": "pnpm@12.14.0",
   "engines": {
