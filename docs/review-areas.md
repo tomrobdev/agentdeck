@@ -38,6 +38,7 @@ What a session or worker is told about a task: the agent context digest, prompt 
 - daemon/src/application/work/prompt-paths.ts
 - daemon/src/application/work/proposal-check.ts
 - app/src/components/work/overview/ProposalCheckCard.vue
+- app/src/components/work/overview/TaskBrief.vue
 - app/src/components/work/task/ApproveDialog.vue
 - app/src/composables/work/useApprovals.ts
 - app/src/composables/work/useFixTask.ts

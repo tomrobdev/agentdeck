@@ -10,6 +10,7 @@ import DocumentsCard from '#components/work/overview/DocumentsCard.vue';
 import FinalMessage from '#components/runs/FinalMessage.vue';
 import PlanCard from '#components/work/overview/PlanCard.vue';
 import ProposalCheckCard from '#components/work/overview/ProposalCheckCard.vue';
+import TaskBrief from '#components/work/overview/TaskBrief.vue';
 import PullRequestCard from '#components/landing/PullRequestCard.vue';
 import VerifyCard from '#components/runs/VerifyCard.vue';
 import VerifyFindings from '#components/runs/VerifyFindings.vue';
@@ -64,7 +65,7 @@ const when = 'ml-auto text-sm text-muted';
         class="px-3.5 py-3"
         :class="longPrompt && !promptOpen && 'max-h-80 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]'"
       >
-        <Markdown :text="task.prompt" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
+        <TaskBrief :prompt="task.prompt" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
       </div>
       <button
         v-if="longPrompt"

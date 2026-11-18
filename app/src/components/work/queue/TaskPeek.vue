@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type PersonEvent, planProgress, promptGoal } from '#daemon/domain/work/index.ts';
+import { type PersonEvent, planProgress } from '#daemon/domain/work/index.ts';
 import { describeWait } from '#lib/work/work-wording.ts';
 import { taskQuery } from '#api/work.ts';
 import type { PlanStep } from '#api/types.ts';
@@ -11,6 +11,7 @@ import Markdown from '#components/ui/Markdown.vue';
 import FinalMessage from '#components/runs/FinalMessage.vue';
 import LogView from '#components/runs/LogView.vue';
 import ProposalCheckCard from '#components/work/overview/ProposalCheckCard.vue';
+import TaskBrief from '#components/work/overview/TaskBrief.vue';
 import PullRequestCard from '#components/landing/PullRequestCard.vue';
 import QuestionCallout from '#components/work/overview/QuestionCallout.vue';
 import RunSummaryCard from '#components/runs/RunSummaryCard.vue';
@@ -31,7 +32,6 @@ const model = computed(() => (task.value ? modelLine(task.value, lastWorkRun.val
 const properties = computed(() => (task.value ? peekProps(task.value) : []));
 const links = computed(() => (task.value ? linkParts(task.value.links) : []));
 const needed = computed(() => (task.value ? neededBy(task.value.dependents) : []));
-const goal = computed(() => (task.value ? promptGoal(task.value.prompt) : ''));
 const actions = computed(() => (task.value ? peekActions(task.value) : []));
 const stopped = computed(() => task.value?.status === 'blocked' || task.value?.status === 'failed');
 const failedRun = computed(() => task.value?.runs.findLast((r) => r.summary) ?? null);
@@ -118,9 +118,9 @@ function act(kind: (typeof actions.value)[number]) {
         </ul>
       </section>
 
-      <section v-if="goal" class="card" aria-label="Goal" data-peek-goal>
-        <div class="max-h-40 overflow-hidden px-3.5 py-2.5 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]">
-          <Markdown :text="goal" />
+      <section v-if="task.prompt.trim()" class="card" aria-label="Brief" data-peek-goal>
+        <div class="max-h-56 overflow-hidden px-3.5 py-2.5 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]">
+          <TaskBrief :prompt="task.prompt" />
         </div>
         <button class="w-full rounded-none border-0 border-t border-border bg-transparent p-1.5 text-accent" @click="emit('open')">
           More

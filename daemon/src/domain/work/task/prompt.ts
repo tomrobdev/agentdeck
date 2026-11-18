@@ -81,6 +81,32 @@ export function promptGoal(prompt: string, maxLines = 6): string {
   return text.split('\n').slice(0, maxLines).join('\n').trim();
 }
 
+export interface PromptBrief {
+  sections: { name: string; body: string }[];
+  rest: string;
+}
+
+export function promptBrief(prompt: string): PromptBrief {
+  const parsed = parsePrompt(prompt);
+  if (!parsed.sections.length) return { sections: [], rest: prompt.trim() };
+  const sections = SECTION_ORDER.flatMap((name) => {
+    const body = sectionText(parsed, name);
+    return body === null
+      ? []
+      : [
+          {
+            name,
+            body: parsed.sections
+              .filter((s) => s.name === name && s.body)
+              .map((s) => s.body)
+              .join('\n\n'),
+          },
+        ];
+  });
+  const rest = parsed.sections.filter((s) => !SECTION_ORDER.includes(s.name) && s.body).map((s) => `## ${s.heading}\n${s.body}`);
+  return { sections, rest: [parsed.preamble, ...rest].filter(Boolean).join('\n\n') };
+}
+
 export function shapePrompt(prompt: string): { prompt: string; warnings: string[] } {
   const parsed = parsePrompt(prompt);
   if (!parsed.sections.length)

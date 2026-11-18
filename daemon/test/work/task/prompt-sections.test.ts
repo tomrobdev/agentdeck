@@ -1,7 +1,7 @@
 // A task prompt's sections, pure: one parser for ## headings and Heading: label lines, old names and new, and the shape a saved prompt takes.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { PROMPT_SECTIONS, promptSection, shapePrompt } from '#domain/work/index.ts';
+import { PROMPT_SECTIONS, promptBrief, promptSection, shapePrompt } from '#domain/work/index.ts';
 import { parsePrompt } from '#domain/work/task/prompt.ts';
 
 test('the format is Current problem, Expected outcome, Out of scope and Constraints, in that order', () => {
@@ -67,7 +67,23 @@ test('a saved prompt gets ## headings in the new order and names, with the pream
   assert.equal(shapePrompt(shaped.prompt).prompt, shaped.prompt, 'shaping twice changes nothing');
 });
 
-test('a missing Current problem or Expected outcome is a warning, not a refusal', () => {
+test('a brief has the sections in the fixed order under new names, empty ones left out, and the rest after', () => {
+  const brief = promptBrief(
+    'Intro.\nConstraints: no deps\nDefinition of done:\n- tests pass\nGoal: Ship it.\nOut of scope:\n## Notes\nextra',
+  );
+  assert.deepEqual(brief.sections, [
+    { name: 'Current problem', body: 'Ship it.' },
+    { name: 'Expected outcome', body: '- tests pass' },
+    { name: 'Constraints', body: 'no deps' },
+  ]);
+  assert.equal(brief.rest, 'Intro.\n\n## Notes\nextra');
+});
+
+test('a brief of a prompt with no sections is all rest', () => {
+  assert.deepEqual(promptBrief('Fix the typo.\n'), { sections: [], rest: 'Fix the typo.' });
+});
+
+test('a missing Current problem or Expected outcome or Expected outcome is a warning, not a refusal', () => {
   assert.deepEqual(shapePrompt('## Goal\nShip it.').warnings, ['the prompt has no ## Expected outcome section']);
   assert.deepEqual(shapePrompt('## Current problem\n\n## Out of scope\nx').warnings, [
     'the prompt has no ## Current problem section',
