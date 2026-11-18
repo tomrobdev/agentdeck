@@ -8,6 +8,7 @@ import type { UnblockQuestion } from '#domain/work/task/needs.ts';
 /** The fields of a task a write sets, named as its columns are; the store stores the documents as JSON. `'now'` is a timestamp it fills in. */
 export interface TaskChanges {
   model?: string;
+  max_turns?: number;
   question?: UnblockQuestion | null;
   auto_merge?: boolean | null;
   auto_merge_check?: AutoMergeCheck | null;
@@ -27,6 +28,8 @@ const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null,
 const NO_AUTO_MERGE_CHECK = { auto_merge_check: null, auto_merge_checked_at: null } as const;
 
 export const modelChanges = (to: string): TaskChanges => ({ model: to });
+
+export const maxTurnsChanges = (to: number): TaskChanges => ({ max_turns: to });
 
 export const questionChanges = (question: UnblockQuestion): TaskChanges => ({ question });
 

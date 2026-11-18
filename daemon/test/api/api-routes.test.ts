@@ -448,10 +448,27 @@ const ROWS: Row[] = [
     shape: TASK_DETAIL,
     check: (t) => assert.equal(t.status, 'queued'),
   },
+  {
+    method: 'POST',
+    path: '/api/tasks/:task/retry',
+    params: task(() => failedTask(app, repo).id),
+    body: { max_turns: 90 },
+    shape: TASK_DETAIL,
+    check: (t) => {
+      assert.equal(t.status, 'queued');
+      assert.equal(t.max_turns, 90);
+    },
+  },
   bad(
     'POST',
     '/api/tasks/:task/retry',
     { note: 5 },
+    task(() => failedTask(app, repo).id),
+  ),
+  bad(
+    'POST',
+    '/api/tasks/:task/retry',
+    { max_turns: 0 },
     task(() => failedTask(app, repo).id),
   ),
   {
