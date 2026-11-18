@@ -79,6 +79,11 @@ async function archive() {
   actionError.value = '';
   if (await run(() => reposApi.archiveRepo(id))) emit('archived');
 }
+
+async function drain() {
+  actionError.value = '';
+  if (await run(() => reposApi.drainRepo(id))) msg.value = 'Draining: it pauses once the work in flight finishes';
+}
 </script>
 
 <template>
@@ -233,6 +238,15 @@ async function archive() {
     <footer class="pane-footer">
       <button type="button" :disabled="!!busy" title="Hide the repo and its tasks and stop its work; you can undo this" @click="archive">
         Archive
+      </button>
+      <button
+        v-if="!repo.paused_reason"
+        type="button"
+        :disabled="!!busy"
+        title="Start none of its new tasks, finish its work in flight, then pause it and send a 'drained' notification"
+        @click="drain"
+      >
+        Drain
       </button>
       <p v-if="error" class="form-error min-w-0 truncate" :title="error">{{ error }}</p>
       <span v-else class="text-muted min-w-0 truncate text-sm">{{ msg }}</span>

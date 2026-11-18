@@ -1,5 +1,6 @@
 // Work's repositories: tasks, their history, their links and their plans.
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { Draining } from '#domain/capacity/index.ts';
 import type { AutoMergeCheck, CheckCounts, MergeRequestMove, StoredChecks } from '#domain/landing/index.ts';
 import type { AttentionCandidate } from '#domain/operations/index.ts';
 import type { MergeMethod } from '#domain/repos/index.ts';
@@ -63,14 +64,14 @@ export interface TaskRepository {
   countQueuedByRepo(): Map<RepoId, number>;
   countReview(): number;
   attentionTasks(limit: number): AttentionCandidate[];
-  hasQueued(): boolean;
+  hasQueued(draining?: Draining): boolean;
   unblockCandidates(): BlockedTask[];
   reviewCandidates(): Task[];
   recordQuestion(id: TaskId, question: UnblockQuestion, reason: string): boolean;
   listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: TaskId }): TaskSummary[];
   openPrTasks(): Task[];
   failedPrTasks(): Task[];
-  claimNextTask(): Task | undefined;
+  claimNextTask(draining?: Draining): Task | undefined;
   editTask(id: TaskId, fields: TaskEdit, opts?: { ownPlan?: string }): Task | undefined;
   attachOwnPlan(id: TaskId, html: string): TaskPlan | undefined;
   setCheckout(id: TaskId, fields: { branch?: string | null; worktree?: string | null }): void;

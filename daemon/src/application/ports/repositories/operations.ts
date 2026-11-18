@@ -1,6 +1,6 @@
 // Operations' repositories: the settings, the notifications sent, and the change feed the dashboard watches.
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
-import type { Budget } from '#domain/capacity/index.ts';
+import type { Budget, Draining } from '#domain/capacity/index.ts';
 import type { Notification, NotifySettings, ReviewDue, Settings } from '#domain/operations/index.ts';
 import type { PlannerSettings } from '#domain/proposals/index.ts';
 
@@ -21,6 +21,8 @@ export interface SettingsRepository {
   writeSettings(s: Settings): void;
   isPaused(): boolean;
   setPaused(paused: boolean): void;
+  draining(): Draining;
+  setDraining(d: Draining): void;
   restartPauseAt(): number | null;
   setRestartPauseAt(at: number | null): void;
   rateLimitedUntil(): number | null;

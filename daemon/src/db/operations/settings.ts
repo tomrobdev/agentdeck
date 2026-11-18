@@ -8,13 +8,15 @@ import type { PlannerSettings } from '#domain/proposals/index.ts';
 import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '#domain/runs/index.ts';
 import { DEFAULT_MODEL } from '#domain/work/index.ts';
 import type { Settings } from '#domain/operations/index.ts';
-import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '#domain/capacity/index.ts';
+import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET, type Draining } from '#domain/capacity/index.ts';
 import type { Orm } from '#db/orm.ts';
 import { atomically } from '#db/sql.ts';
 import { settings } from '#db/tables.ts';
 
 export const SETTING_DEFAULTS = {
   paused: '1',
+  draining: '0',
+  draining_repos: '[]',
   rate_limited_until: '0',
   pr_check_requested: '0',
   app_seen_at: '0',
@@ -111,6 +113,12 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
       atomically(db, () => set('review_due_told', JSON.stringify({ ...json<Record<string, number>>('review_due_told', {}), [repo]: at }))),
     isPaused: (): boolean => get('paused') === '1',
     setPaused: (paused: boolean): void => set('paused', paused ? '1' : '0'),
+    draining: (): Draining => ({ daemon: get('draining') === '1', repos: json<RepoId[]>('draining_repos', []) }),
+    setDraining: (d: Draining): void =>
+      atomically(db, () => {
+        set('draining', d.daemon ? '1' : '0');
+        set('draining_repos', JSON.stringify([...new Set(d.repos)]));
+      }),
     restartPauseAt: (): number | null => Number(get('restart_pause_at')) || null,
     setRestartPauseAt: (at: number | null): void => set('restart_pause_at', String(at ?? 0)),
     rateLimitedUntil: (): number | null => Number(get('rate_limited_until')) || null,

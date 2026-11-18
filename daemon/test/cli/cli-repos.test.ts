@@ -45,8 +45,11 @@ test('goals prints the goals file, and --file replaces it', async () => {
 });
 
 test('repo resume, archive, unarchive and delete need a repo, and delete of a live repo goes ahead', async () => {
-  for (const sub of ['doctor', 'resume', 'archive', 'unarchive', 'delete'])
+  for (const sub of ['doctor', 'resume', 'drain', 'archive', 'unarchive', 'delete'])
     assert.match((await run('repo', sub)).err, /usage: agentdeck repo/);
+  assert.equal((await run('repo', 'resume', 'alpha')).out, 'alpha: resumed');
+  assert.match((await run('repo', 'drain', 'alpha')).out, /^alpha: draining: no new task starts/);
+  assert.match((await run('status')).out, /^repo {7}alpha DRAINING/m);
   assert.equal((await run('repo', 'resume', 'alpha')).out, 'alpha: resumed');
   assert.equal((await run('repo', 'archive', 'alpha')).out, 'alpha: archived');
   assert.match((await run('repo', 'ls', '--archived')).out, /^alpha/);

@@ -18,7 +18,8 @@ Repos
   agentdeck repo unarchive <repo>                 bring an archived repo and its tasks back as they were
   agentdeck repo delete <repo> [--yes]            delete an archived repo, its tasks, runs, worktrees and logs for good (local only); asks unless --yes
   agentdeck repo doctor <repo>                    check the repo is ready for unattended runs; pauses it if not (exit 1)
-  agentdeck repo resume <repo>                    let a paused repo's tasks run again
+  agentdeck repo resume <repo>                    let a paused repo's tasks run again (or end its drain)
+  agentdeck repo drain <repo>                     start none of its new tasks, finish its work in flight, then pause it
   agentdeck repo set <repo> auto_approve on|off   planner tasks skip approval
   agentdeck repo set <repo> base_branch <branch>  branch new task worktrees start from
   agentdeck repo set <repo> test_cmd "<cmd>"      run after each task ("" for none)
@@ -118,6 +119,8 @@ Daemon
   agentdeck daemon              run the scheduler in the foreground
   agentdeck run-once            work the queue until empty, then exit (ignores pause; refused while the daemon runs)
   agentdeck pause | resume
+  agentdeck drain               start no new task, let the work in flight finish (retries, resolve, unblock and review
+                                  runs), then pause and send a 'drained' notification; resume ends a drain
   agentdeck status
   agentdeck settings              show concurrency, usage budget and notification settings
   agentdeck set <key> <value>     max_concurrent, five_hour_max, five_hour_soft, weekly_max, pace_slack (0..1),

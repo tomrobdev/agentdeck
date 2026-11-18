@@ -13,6 +13,10 @@ export function describeWait(h: StartWait): string {
       return `On hold for the usage budget: ${h.reason}${h.until ? `; lifts around ${when(h.until)}` : ''}`;
     case 'repo-paused':
       return `The repo is paused: ${oneLine(h.reason)}`;
+    case 'draining':
+      return h.repo
+        ? 'The repo is draining: it finishes the work in flight, then pauses'
+        : 'AgentDeck is draining: it finishes the work in flight, then pauses';
     case 'dependency':
       return h.stuck ? `Can't start: ${h.stuck}` : `Waits for ${h.on.map((id) => `#${id}`).join(', ')} to finish`;
     case 'unblocking':

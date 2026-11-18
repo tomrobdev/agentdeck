@@ -1,6 +1,7 @@
 // The database: the only place SQL lives.
 import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH, ensureDirs } from '#src/config.ts';
+import { drainStore } from '#db/capacity/drain.ts';
 import { usageStore } from '#db/capacity/usage.ts';
 import { changeStore } from '#db/changes.ts';
 import { statsStore } from '#db/insights/stats.ts';
@@ -44,5 +45,6 @@ export function openDb(path = DB_PATH) {
     ...plannerRunStore(orm),
     ...notificationStore(orm),
     ...usageStore(orm),
+    ...drainStore(orm),
   };
 }

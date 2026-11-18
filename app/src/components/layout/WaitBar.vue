@@ -11,10 +11,35 @@ const emit = defineEmits<{ resume: []; resumeRepo: [id: number] }>();
 const queued = computed(() => props.status?.counts.queued ?? 0);
 const wait = computed(() => (queued.value ? (props.status?.wait ?? null) : null));
 const repos = computed(() => props.status?.paused_repos ?? []);
+const draining = computed(() => {
+  const d = props.status?.draining;
+  if (!d) return [];
+  return [
+    ...(d.daemon ? [{ key: 'daemon', name: 'AgentDeck', repo: null }] : []),
+    ...d.repos.map((r) => ({ key: `repo-${r.id}`, name: r.name, repo: r.id })),
+  ];
+});
 </script>
 
 <template>
-  <div v-if="wait || repos.length" class="mx-6 mt-3 flex flex-col gap-1.5" role="status">
+  <div v-if="wait || repos.length || draining.length" class="mx-6 mt-3 flex flex-col gap-1.5" role="status">
+    <div
+      v-for="d in draining"
+      :key="d.key"
+      class="s-running flex items-center gap-3 rounded-md border border-[color-mix(in_srgb,var(--c)_40%,transparent)] bg-[color-mix(in_srgb,var(--c)_9%,var(--panel))] px-3 py-2"
+    >
+      <span class="min-w-0 flex-1 truncate"
+        ><strong>{{ d.name }} is draining.</strong> No new task starts; once the work in flight finishes it pauses and tells you.</span
+      >
+      <button
+        class="shrink-0"
+        :disabled="busy"
+        title="Stop draining and let new tasks start"
+        @click="d.repo === null ? emit('resume') : emit('resumeRepo', d.repo)"
+      >
+        Stop draining
+      </button>
+    </div>
     <div
       v-if="wait"
       class="s-blocked flex items-center gap-3 rounded-md border border-[color-mix(in_srgb,var(--c)_40%,transparent)] bg-[color-mix(in_srgb,var(--c)_9%,var(--panel))] px-3 py-2"

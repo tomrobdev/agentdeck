@@ -9,6 +9,7 @@ import { type ReloadInput, reloadState, restartWait } from '#domain/operations/i
 import type { ReviewDueSettings, Settings } from '#domain/operations/index.ts';
 import { reviewDueDaysError, reviewDueLinesError } from '#domain/operations/index.ts';
 import { modelError } from '#domain/work/index.ts';
+import type { RepoId } from '#domain/shared/index.ts';
 import { flag, list, number, object, refuse, text, whole } from '#application/shared/input.ts';
 import { startGate } from '#application/capacity/gate.ts';
 import { notify } from '#application/operations/notifications.ts';
@@ -17,7 +18,23 @@ import { runningActivity } from '#application/operations/restart.ts';
 
 export function setPaused(app: App, paused: boolean): void {
   app.setPaused(paused);
+  app.setDraining({ ...app.draining(), daemon: false });
   if (!paused) app.setRateLimitedUntil(0);
+}
+
+export function drain(app: App): { draining: boolean } {
+  if (app.isPaused()) return { draining: false };
+  app.setDraining({ ...app.draining(), daemon: true });
+  return { draining: true };
+}
+
+function drainingView(app: App): { daemon: boolean; repos: { id: RepoId; name: string }[] } {
+  const d = app.draining();
+  const repos = d.repos.flatMap((id) => {
+    const repo = app.getRepo(id);
+    return repo ? [{ id, name: repo.name }] : [];
+  });
+  return { daemon: d.daemon, repos };
 }
 
 export interface DaemonInfo {
@@ -47,6 +64,7 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
   return {
     daemon,
     paused: gate.paused,
+    draining: drainingView(app),
     rate_limited_until: gate.rate_limited_until,
     running: app.countRunning(),
     max_concurrent: app.maxConcurrent(),

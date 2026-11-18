@@ -25,6 +25,24 @@ The exported interfaces and object types of `domain/`, grouped by folder, with t
 | `until`          | `number \| null` | When a hold is expected to lift (unix seconds).                     |
 | `weekly_allowed` | `number \| null` | Weekly pacing: how much of the 7d window the plan allows right now. |
 
+### Draining
+
+| Field    | Type       | Comment |
+| -------- | ---------- | ------- |
+| `daemon` | `boolean`  |         |
+| `repos`  | `RepoId[]` |         |
+
+### InFlight
+
+| Field        | Type     | Comment |
+| ------------ | -------- | ------- |
+| `runs`       | `number` |         |
+| `retries`    | `number` |         |
+| `planner`    | `number` |         |
+| `follow_ups` | `number` |         |
+| `unblocks`   | `number` |         |
+| `reviews`    | `number` |         |
+
 ### QuotaSample
 
 A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1.
