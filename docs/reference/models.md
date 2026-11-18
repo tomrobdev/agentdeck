@@ -2174,8 +2174,6 @@ The fields a state carries, each null where its status has none: how the columns
 
 ### TargetEnd
 
-One end of a builds-on link, as the target check reads it: id is null for a task not added yet.
-
 | Field         | Type             | Comment |
 | ------------- | ---------------- | ------- |
 | `id`          | `TaskId \| null` |         |
@@ -2184,8 +2182,6 @@ One end of a builds-on link, as the target check reads it: id is null for a task
 | `target`      | `string \| null` |         |
 
 ### TargetOwner
-
-What a task's target is read from: its own, else its repo's base.
 
 | Field    | Type             | Comment |
 | -------- | ---------------- | ------- |

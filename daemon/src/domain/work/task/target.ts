@@ -2,14 +2,12 @@
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
 import type { Checkout } from '#domain/work/task/checkout.ts';
 
-/** What a task's target is read from: its own, else its repo's base. */
 export interface TargetOwner {
   target: string | null;
 }
 
 export const targetOf = (task: TargetOwner, repo: { base_branch: string }): string => task.target ?? repo.base_branch;
 
-/** One end of a builds-on link, as the target check reads it: id is null for a task not added yet. */
 export interface TargetEnd extends TargetOwner {
   id: TaskId | null;
   repo_id: RepoId;
