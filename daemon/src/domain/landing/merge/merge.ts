@@ -40,7 +40,6 @@ export interface PrDetails {
   /** The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). */
   paths: string[];
   labels: string[];
-  /** The PR's description, whose Door line auto-merge reads; null or missing unless asked for (`withFiles`). */
   body?: string | null;
 }
 
@@ -221,8 +220,8 @@ export function mergeCheck(input: MergeInput): MergeCheck {
 
 /**
  * What a reason a merge waits or needs a person is about: a merge finding's kind, GitHub still working out mergeability,
- * one of the rules only auto-merge asks (`no_label`, `one_way_door`, `no_door`, `tests_not_run`, `untested`, `too_many_lines`,
- * `too_many_code_comments`, `files_unlisted`, `protected_paths`, `skipped_paths`, `paused`), its review gate in a repo with auto_review on (`review_pending`,
+ * one of the rules only auto-merge asks (`no_label`, `tests_not_run`, `untested`, `too_many_lines`, `too_many_code_comments`, `files_unlisted`,
+ * `protected_paths`, `skipped_paths`, `paused`), its review gate in a repo with auto_review on (`review_pending`,
  * `review_blocking`, `review_failed`, `review_unread`, `review_unanswered`: review-gate.ts), or `other`: a reason stored
  * before reasons had kinds.
  */

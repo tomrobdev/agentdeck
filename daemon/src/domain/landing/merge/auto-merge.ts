@@ -60,7 +60,6 @@ export function pathReasons(paths: string[], skip: string[]): MergeReason[] {
   return reasons;
 }
 
-/** What a PR's description says its change risks: `one-way` is hard to walk back, `two-way` is not; null when it has no Door line one of them reads. */
 export type PrDoor = 'one-way' | 'two-way' | null;
 
 const DOOR_LINE = /^[\s>*_#-]*door[\s*_]*:[\s*_`]*(.*)$/gim;
