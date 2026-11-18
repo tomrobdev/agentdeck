@@ -1,12 +1,14 @@
 // Pure tests of when the daemon may restart and when a repo is due for an area review.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { RESTART_PAUSE_FRESH_MS } from '#domain/operations/restart.ts';
 import {
   offMain,
   reloadDecision,
   reloadState,
   remindReviewDue,
   restartWait,
+  restartWaiting,
   reviewDue,
   reviewDueDaysError,
   reviewDueLinesError,
@@ -111,4 +113,11 @@ test('the review limits are whole numbers in range', () => {
   assert.match(reviewDueDaysError(0) ?? '', /review_due_days must be a whole number from 1 to 365/);
   assert.equal(reviewDueLinesError(3000), null);
   assert.match(reviewDueLinesError(2_000_000) ?? '', /review_due_lines/);
+});
+
+test('restartWaiting: a restart waits while its pause was renewed within RESTART_PAUSE_FRESH_MS', () => {
+  assert.equal(restartWaiting(null, 1_000_000), false, 'no restart took a pause');
+  assert.equal(restartWaiting(1_000_000, 1_000_000), true);
+  assert.equal(restartWaiting(1_000_000, 1_000_000 + RESTART_PAUSE_FRESH_MS - 1), true);
+  assert.equal(restartWaiting(1_000_000, 1_000_000 + RESTART_PAUSE_FRESH_MS), false, 'cut off: nobody renewed it');
 });

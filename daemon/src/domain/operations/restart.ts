@@ -30,6 +30,10 @@ export function restartWait({ tasks, planner, resolves, unblocks = 0, reviews = 
   return parts.length ? parts.join(' and ') : null;
 }
 
+export const RESTART_PAUSE_FRESH_MS = 30_000;
+
+export const restartWaiting = (pauseAt: number | null, now: number): boolean => pauseAt !== null && now - pauseAt < RESTART_PAUSE_FRESH_MS;
+
 export const RELOAD_QUIET_MS = 1500;
 
 export interface ReloadInput {

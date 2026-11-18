@@ -48,16 +48,21 @@ export function startApi(options: ApiOptions): Promise<Server> {
   ].flatMap((m) => m.routes(ctx));
 
   const server = createServer((req, res) => {
-    if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
-      res.once('close', ctx.scheduler.request());
+    const write = req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS';
+    const answered = write ? ctx.scheduler.request() : undefined;
+    const closed = new Promise<void>((resolve) => res.once('close', resolve));
+    if (write) {
       res.once('finish', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) ctx.scheduler.wake();
       });
     }
-    return dispatch(routes, req, res, options.token).catch((err) => {
-      console.error(err);
-      res.destroy();
-    });
+    return dispatch(routes, req, res, options.token)
+      .catch((err) => {
+        console.error(err);
+        res.destroy();
+      })
+      .then(() => closed)
+      .then(answered);
   });
   return new Promise((resolve, reject) => {
     server.once('error', reject);

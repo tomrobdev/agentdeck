@@ -1,5 +1,5 @@
 // Tasks: one store merged from its reads (tasks-queries.ts), its status changes (tasks-status.ts, every one through applyEvent, the claim included, guarded by the current status) and its PR writes (tasks-pr.ts), with the other writes here.
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '#src/config.ts';
 import { type RepoId, type TaskId, asTaskId, present, stored } from '#domain/shared/index.ts';
@@ -158,6 +158,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .set({ syncing_since: on ? NOW_SQL : null })
         .where(eq(tasks.id, id))
         .run();
+    },
+    clearSyncMarkers(): void {
+      orm.update(tasks).set({ syncing_since: null }).where(isNotNull(tasks.syncing_since)).run();
     },
     recordSync(id: TaskId, reason: string): boolean {
       return noteEvent(id, ['running', 'done'], 'sync', reason);
