@@ -165,7 +165,7 @@ test('park stores its reason and lift clears it', () => {
   db.raw.prepare("UPDATE tasks SET status = 'proposed' WHERE id = ?").run(id);
   assert.ok(db.applyEvent(id, { type: 'park' }, { reason: 'phase 3' }));
   assert.equal(parkReason(), 'phase 3');
-  assert.equal(db.applyEvent(id, { type: 'approve' }), null);
+  assert.equal(db.applyEvent(id, { type: 'approve' }), undefined);
   assert.ok(db.applyEvent(id, { type: 'lift' }));
   assert.equal(parkReason(), null);
   assert.equal(db.getTask(id)?.status, 'proposed');
