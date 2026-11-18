@@ -75,13 +75,13 @@ test('repo and search narrow the list', () => {
 });
 
 test('sorts', () => {
-  assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+  assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
   assert.deepEqual(ids({ sort: 'priority' }).slice(0, 2), [8, 4]);
   assert.deepEqual(ids({ sort: 'updated' })[0], 1);
   assert.deepEqual(
     ids({ sort: 'attention' }),
-    [4, 3, 10, 9, 8, 7, 6, 5, 13, 11, 2, 1, 12],
-    'needs you, review (the PR others wait on first), proposed, running, queued, done (merged or not), cancelled',
+    [4, 3, 10, 9, 8, 7, 6, 5, 13, 11, 2, 1, 14, 12],
+    'needs you, review (the PR others wait on first), proposed, running, queued, done (merged or not), parked, cancelled',
   );
 });
 

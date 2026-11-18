@@ -86,8 +86,10 @@ test('worktree removal refuses a task in any status but WORKTREE_REMOVABLE_STATU
     cancel_requested: /: task is running$/,
   };
   for (const status of TASK_STATUSES) {
-    const added = db.addTask({ repo_id: repo.id, title: status, prompt: 'p', status: status === 'proposed' ? 'proposed' : 'queued' });
-    const t = status === 'proposed' ? added : advance(db, added.id, status);
+    const proposal = status === 'proposed' || status === 'parked';
+    const added = db.addTask({ repo_id: repo.id, title: status, prompt: 'p', status: proposal ? 'proposed' : 'queued' });
+    if (status === 'parked') db.applyEvent(added.id, { type: 'park' });
+    const t = proposal ? (db.getTask(added.id) ?? added) : advance(db, added.id, status);
     assert.equal(t.status, status);
     const refused = refusals[status];
     assert.equal(WORKTREE_REMOVABLE_STATUSES.includes(status), !refused, status);
