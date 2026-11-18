@@ -3,13 +3,17 @@ import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { repoQuery, reposApi } from '#api/repos.ts';
 import { MODEL_LABELS } from '#lib/runs/run-wording.ts';
+import { PR_MODE_OPTIONS } from '#lib/repos/repos-wording.ts';
 import { ago } from '#lib/shared/time.ts';
 import { MERGE_METHODS, type Repo } from '#api/types.ts';
 import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '#lib/shared/forms.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import { plural } from '#daemon/domain/shared/index.ts';
+import FieldRow from '#components/ui/form/FieldRow.vue';
+import FieldSection from '#components/ui/form/FieldSection.vue';
+import SwitchRow from '#components/ui/form/SwitchRow.vue';
 import NumberInput from '#components/ui/form/NumberInput.vue';
-import Switch from '#components/ui/form/Switch.vue';
+import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
 
 const props = defineProps<{ repo: Repo }>();
 const emit = defineEmits<{ archived: [] }>();
@@ -78,128 +82,164 @@ async function archive() {
 </script>
 
 <template>
-  <form v-if="form && detail" class="mt-2.5 flex flex-col gap-2.5" @submit.prevent="save">
-    <label class="field flex-1">
-      <span>Goals <span class="text-muted">(the planner reads these when the queue runs dry)</span></span>
-      <textarea
-        class="resize-y font-mono text-sm"
-        v-model="form.goals"
-        rows="9"
-        placeholder="What should this repo become? Priorities first, then anything the agents must not touch."
-      />
-      <small class="text-muted text-xs"
-        >Stored in <code>{{ detail.goals_path }}</code
-        >, which you can also edit in any editor.</small
-      >
-    </label>
-    <div class="flex gap-2.5">
-      <label class="field flex-1">
-        <span>Test command</span>
-        <input v-model="form.testCmd" placeholder="npm test" />
-      </label>
-      <Switch v-model="form.autoApprove" class="flex-none self-end pb-2">Auto-approve planner tasks</Switch>
+  <form v-if="form && detail" class="flex min-h-0 flex-1 flex-col" @submit.prevent="save">
+    <div class="pane-body">
+      <header class="mb-5 flex flex-col gap-0.5">
+        <h3 class="m-0 text-lg font-semibold">{{ repo.name }}</h3>
+        <code class="text-muted truncate text-sm" :title="repo.path">{{ repo.path }}</code>
+        <p v-if="repo.paused_reason" class="m-0 mt-1 line-clamp-2 text-sm text-blocked" :title="repo.paused_reason">
+          Paused: {{ repo.paused_reason }}
+        </p>
+      </header>
+
+      <div class="flex flex-col gap-8">
+        <FieldSection title="Basics">
+          <FieldRow label="Base branch" hint="New task worktrees start from it, and pull requests target it.">
+            <input v-model="form.baseBranch" class="max-w-xs font-mono" spellcheck="false" />
+          </FieldRow>
+          <FieldRow label="Setup command" hint="Runs in each worktree before claude. Empty for none.">
+            <textarea v-model="form.setupCmd" class="resize-y font-mono text-sm" rows="3" spellcheck="false" placeholder="npm ci" />
+          </FieldRow>
+          <FieldRow label="Test command" hint="Runs after each task. Empty for none.">
+            <input v-model="form.testCmd" class="font-mono" spellcheck="false" placeholder="npm test" />
+          </FieldRow>
+          <FieldRow label="Model" hint="For a new task that names none.">
+            <select v-model="form.model">
+              <option value="">The default model setting</option>
+              <option v-for="m in modelChoices(form.model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+            </select>
+          </FieldRow>
+        </FieldSection>
+
+        <FieldSection title="Pull requests">
+          <FieldRow as="div" label="Open a pull request" hint="When a task is done, push its branch and open one.">
+            <SegmentedControl v-model="form.prMode" label="Open a pull request" :options="PR_MODE_OPTIONS" />
+          </FieldRow>
+          <FieldRow label="Merge method" hint="When a pull request is merged from the app or on its own.">
+            <select v-model="form.mergeMethod">
+              <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
+            </select>
+          </FieldRow>
+        </FieldSection>
+
+        <FieldSection title="Automation">
+          <SwitchRow
+            v-model="form.autoApprove"
+            label="Auto-approve proposals"
+            hint="The planner's tasks are queued without a person approving them."
+          />
+          <SwitchRow
+            v-model="form.autoResolve"
+            label="Resolve conflicts"
+            hint="A claude run when a branch or an open pull request conflicts with the base. Clean merges always happen."
+          />
+          <SwitchRow
+            v-model="form.autoUnblock"
+            label="Unblock runs"
+            hint="A short run when a task blocks: it retries with a note, or asks you a question."
+          />
+          <SwitchRow
+            v-model="form.autoReview"
+            label="Review runs"
+            hint="A run that reads a done task's changes against its goal and plan steps."
+          />
+          <SwitchRow v-model="form.autoMerge" label="Merge automatically" hint="Once tests and checks pass. Turn it off per task." />
+          <template v-if="form.autoMerge">
+            <FieldRow label="Most lines" hint="A pull request changing more needs you.">
+              <NumberInput class="w-28" v-model="form.autoMergeMaxLines" label="Most lines" />
+            </FieldRow>
+            <FieldRow label="Paths that need you" hint="Path prefixes, comma-separated.">
+              <input v-model="form.autoMergeSkip" class="font-mono" placeholder=".github/, db/schema.ts" />
+            </FieldRow>
+            <SwitchRow
+              v-model="form.ciNotRunOk"
+              label="Merge when CI did not run"
+              hint="A check that never started, such as a billing stop, doesn't stop it when the last run passed the tests."
+              data-testid="repo-ci-not-run-ok"
+            />
+          </template>
+        </FieldSection>
+
+        <FieldSection title="Code comments" hint="A branch over either limit is flagged. 0 turns a limit off.">
+          <FieldRow label="Most lines" hint="Code comment lines a branch may add.">
+            <NumberInput v-model="form.codeCommentMaxLines" class="w-28" label="Code comment lines" data-testid="repo-code-comment-lines" />
+          </FieldRow>
+          <FieldRow label="Largest share" hint="Of the lines a branch adds.">
+            <span class="flex items-center gap-1.5"
+              ><NumberInput
+                v-model="form.codeCommentMaxPercent"
+                class="w-28"
+                label="Code comment share"
+                data-testid="repo-code-comment-percent"
+              />%</span
+            >
+          </FieldRow>
+        </FieldSection>
+
+        <FieldSection title="Sandbox and tools">
+          <SwitchRow
+            v-model="form.sandbox"
+            label="Sandbox"
+            hint="Confine the agent's shell commands to the worktree and the hosts below."
+          />
+          <FieldRow v-if="form.sandbox" label="Network hosts" hint="Sandboxed commands may reach these. Empty for none.">
+            <input v-model="form.network" class="font-mono" placeholder="registry.npmjs.org, github.com" />
+          </FieldRow>
+          <FieldRow label="Tool rules" :hint="`One per line; they replace the detected rules, and empty goes back to them. ${toolsInUse}`">
+            <textarea
+              class="resize-y font-mono text-sm"
+              v-model="form.tools"
+              rows="10"
+              placeholder="Read&#10;Edit&#10;Bash(make *)"
+              data-testid="repo-tools"
+            />
+          </FieldRow>
+        </FieldSection>
+
+        <FieldSection title="Goals and planner">
+          <FieldRow as="div" label="Goals">
+            <template #hint
+              >The planner reads these when the queue runs dry. Stored in <code class="break-all">{{ detail.goals_path }}</code
+              >, which you can also edit in any editor.</template
+            >
+            <textarea
+              class="resize-y font-mono text-sm"
+              v-model="form.goals"
+              aria-label="Goals"
+              rows="10"
+              placeholder="What should this repo become? Priorities first, then anything the agents must not touch."
+            />
+            <span class="flex items-center gap-2">
+              <button
+                type="button"
+                :disabled="!!busy || !form.goals.trim()"
+                :title="form.goals.trim() ? 'Save, then let the planner propose tasks now' : 'Write some goals first'"
+                @click="proposeNow"
+              >
+                {{ busy === 'propose' ? 'Proposing…' : 'Save & propose tasks' }}
+              </button>
+              <small v-if="!form.goals.trim()" class="text-muted text-xs">Write some goals first.</small>
+            </span>
+            <small v-if="lastPlannerRun" class="text-muted line-clamp-2 text-xs" :title="lastPlannerRun.note ?? ''">
+              Last proposals {{ ago(lastPlannerRun.started_at) }}: {{ lastPlannerRun.outcome ?? 'running' }}
+              <template v-if="lastPlannerRun.proposed"> · {{ plural(lastPlannerRun.proposed, 'task') }}</template>
+              <template v-if="lastPlannerRun.note"> · {{ lastPlannerRun.note }}</template>
+            </small>
+          </FieldRow>
+        </FieldSection>
+      </div>
     </div>
-    <div class="flex gap-2.5">
-      <label class="field flex-1">
-        <span>Merge method <span class="text-muted">(when you merge a PR from the app)</span></span>
-        <select v-model="form.mergeMethod">
-          <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
-        </select>
-      </label>
-      <label class="field flex-1">
-        <span>Model <span class="text-muted">(for a new task that names none)</span></span>
-        <select v-model="form.model">
-          <option value="">The default model setting</option>
-          <option v-for="m in modelChoices(form.model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
-        </select>
-      </label>
-    </div>
-    <Switch v-model="form.autoResolve" class="flex-none">
-      <span
-        >Resolve merge conflicts automatically
-        <span class="text-muted">(a claude run when a branch or an open PR conflicts with the base; clean merges always happen)</span></span
-      >
-    </Switch>
-    <Switch v-model="form.autoUnblock" class="flex-none">
-      <span
-        >Unblock runs
-        <span class="text-muted"
-          >(a short claude run when a task blocks: it retries with a note, or asks you a question with options)</span
-        ></span
-      >
-    </Switch>
-    <Switch v-model="form.autoMerge" class="flex-none">
-      <span
-        >Merge PRs automatically
-        <span class="text-muted">(once tests and checks pass; planner proposals only when you approve them; turn off per task)</span></span
-      >
-    </Switch>
-    <div v-if="form.autoMerge" class="flex gap-3">
-      <label class="field w-28 flex-none">
-        <span>Max lines</span>
-        <NumberInput v-model="form.autoMergeMaxLines" />
-      </label>
-      <label class="field flex-1">
-        <span>Paths that need you <span class="text-muted">(prefixes)</span></span>
-        <input v-model="form.autoMergeSkip" placeholder=".github/, db/schema.ts" />
-      </label>
-    </div>
-    <Switch v-if="form.autoMerge" v-model="form.ciNotRunOk" class="flex-none" data-testid="repo-ci-not-run-ok">
-      <span
-        >Merge when CI did not run
-        <span class="text-muted"
-          >(a GitHub check that never started, such as a billing stop or a spending limit, doesn't stop auto-merge when the last run passed
-          the tests)</span
-        ></span
-      >
-    </Switch>
-    <div class="flex gap-3">
-      <label class="field flex-1">
-        <span>Code comment lines <span class="text-muted">(a branch adding more is over the limit; 0 = off)</span></span>
-        <NumberInput v-model="form.codeCommentMaxLines" data-testid="repo-code-comment-lines" />
-      </label>
-      <label class="field flex-1">
-        <span>Code comment share <span class="text-muted">(% of the added lines; 0 = off)</span></span>
-        <NumberInput v-model="form.codeCommentMaxPercent" data-testid="repo-code-comment-percent" />
-      </label>
-    </div>
-    <Switch v-model="form.sandbox" class="flex-none">
-      <span
-        >Run the agent's shell commands in the sandbox
-        <span class="text-muted">(confined to the worktree and the hosts below; docs/adr/0001-worker-sandbox.md)</span></span
-      >
-    </Switch>
-    <label v-if="form.sandbox" class="field flex-1">
-      <span>Network hosts <span class="text-muted">(sandboxed commands may reach these; empty = none)</span></span>
-      <input v-model="form.network" placeholder="registry.npmjs.org, github.com" />
-    </label>
-    <label class="field flex-1">
-      <span>Tool rules <span class="text-muted">(one per line; they replace the detected rules, and empty goes back to them)</span></span>
-      <textarea
-        class="resize-y font-mono text-sm"
-        v-model="form.tools"
-        rows="3"
-        placeholder="Read&#10;Edit&#10;Bash(make *)"
-        data-testid="repo-tools"
-      />
-      <small class="text-muted text-xs">{{ toolsInUse }}</small>
-    </label>
-    <p v-if="lastPlannerRun" class="text-muted m-0 line-clamp-2 text-sm" :title="lastPlannerRun.note ?? ''">
-      Last proposals {{ ago(lastPlannerRun.started_at) }}: {{ lastPlannerRun.outcome ?? 'running' }}
-      <template v-if="lastPlannerRun.proposed"> · {{ plural(lastPlannerRun.proposed, 'task') }}</template>
-      <template v-if="lastPlannerRun.note"> · {{ lastPlannerRun.note }}</template>
-    </p>
-    <p v-if="error" class="form-error">{{ error }}</p>
-    <div class="flex items-center justify-end gap-2">
+
+    <footer class="pane-footer">
       <button type="button" :disabled="!!busy" title="Hide the repo and its tasks and stop its work; you can undo this" @click="archive">
         Archive
       </button>
-      <span class="text-muted mr-auto text-sm">{{ msg }}</span>
-      <button type="button" @click="proposeNow" :disabled="!!busy || !form.goals.trim()">
-        {{ busy === 'propose' ? 'Proposing…' : 'Save & propose tasks' }}
-      </button>
+      <p v-if="error" class="form-error min-w-0 truncate" :title="error">{{ error }}</p>
+      <span v-else class="text-muted min-w-0 truncate text-sm">{{ msg }}</span>
+      <span class="spacer" />
       <button class="primary" type="submit" :disabled="!!busy">Save</button>
-    </div>
+    </footer>
   </form>
-  <p v-else-if="error" class="form-error mt-2.5">{{ error }}</p>
+  <p v-else-if="error" class="form-error pane-body">{{ error }}</p>
+  <p v-else class="text-muted pane-body">Loading…</p>
 </template>
