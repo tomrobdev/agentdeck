@@ -19,7 +19,7 @@ const { mergeFailure, verdictView } = await import('#domain/landing/merge/merge.
 const { mergeRequestCheck } = await import('#domain/landing/merge/merge-request.ts');
 const { cancelMergeRequest, requestMerge } = await import('#application/actions.ts');
 const { github } = await import('#adapters/github/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeView } = await import('#domain/landing/merge/auto-merge.ts');
+const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeView, prDoor } = await import('#domain/landing/merge/auto-merge.ts');
 const { isMergeLocked } = await import('#application/work/checkout-locks.ts');
 const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
 const { autoMerge } = await import('#application/landing/merge/auto-merge.ts');
@@ -62,6 +62,7 @@ const ready: PrDetails = {
   head: 'head-1',
   paths: ['src/a.ts', 'src/b.ts'],
   labels: [AUTO_MERGE_LABEL.name],
+  body: '## Merge Danger\n\n**Door:** two-way. Revert the commit.',
 };
 const auto = (id: TaskId, pr: PrDetails = ready) => ({ id, pr, requested: false });
 
@@ -153,6 +154,48 @@ test('autoMergeCheck: what needs a person', () => {
     'GitHub says branch protection may block this merge (required reviews or checks)',
   ]);
   assert.equal(check({ labels: [] }, { paused: 'AgentDeck is paused' }).verdict, 'never', 'a person beats a wait');
+});
+
+test("prDoor: reads the Door line of the PR's Merge Danger, in the shapes markdown gives it", () => {
+  for (const body of ['Door: one-way', '**Door:** One-way. Drops a column.', '- door: one way', '> Door: `one-way`'])
+    assert.equal(prDoor(body), 'one-way', body);
+  for (const body of ['Door: two-way', '## Merge Danger\n\n**Door:** two-way\n\nRevert it.', '* Door: Two way'])
+    assert.equal(prDoor(body), 'two-way', body);
+  for (const body of [null, undefined, '', 'No danger here', 'Door: maybe', 'Door:', 'Front door: two-way'])
+    assert.equal(prDoor(body), null, String(body));
+  assert.equal(prDoor('Door: two-way\nDoor: one-way'), 'one-way', 'one one-way line is enough');
+  assert.equal(prDoor('Door: two-way\nDoor: unsure'), null, 'an unreadable line makes the whole unreadable');
+});
+
+test('autoMergeCheck: a one-way door, or no readable Door line, needs a person and says why; a two-way door merges', () => {
+  assert.deepEqual(raw({ body: '## Merge Danger\n\nDoor: one-way. Deletes old runs.' }), {
+    verdict: 'never',
+    reasons: [{ kind: 'one_way_door', text: 'the PR marks its change a one-way door, hard to walk back, so a person merges it' }],
+  });
+  for (const body of [null, 'A PR with no Merge Danger', 'Door: depends'])
+    assert.deepEqual(raw({ body }), {
+      verdict: 'never',
+      reasons: [{ kind: 'no_door', text: 'the PR description has no readable Door line (one-way or two-way), so a person merges it' }],
+    });
+  assert.deepEqual(check({ body: 'Door: two-way' }), { verdict: 'merge', reasons: [] });
+  assert.deepEqual(check({ body: 'Door: two-way', additions: 390, deletions: 20 }).reasons, ['410 lines changed, over the limit of 400']);
+});
+
+test('the refresh never merges a one-way door PR, and the preview names why', async () => {
+  const oneWay = tested();
+  details[oneWay.url] = { ...ready, body: 'Door: one-way' };
+  const twoWay = tested();
+  const found = await refreshPrStates(db);
+  assert.deepEqual(
+    found.mergeable.map((m) => m.id),
+    [twoWay.id],
+  );
+  assert.deepEqual((await mergePreview(db, oneWay.id)).auto_merge, {
+    verdict: 'never',
+    reasons: ['the PR marks its change a one-way door, hard to walk back, so a person merges it'],
+  });
+  assert.equal(db.getTask(oneWay.id)!.pr?.auto_merge_check?.reasons[0].kind, 'one_way_door');
+  for (const t of [oneWay, twoWay]) db.recordPr(t.id, { type: 'closed' });
 });
 
 test('autoMergeCheck: with no test command, only a check that ran tested it; skipped and neutral ones did not', () => {

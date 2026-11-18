@@ -610,6 +610,7 @@ What `gh pr view` says about a PR that decides whether and how it merges.
 | `head?`       | `string \| null \| undefined` | The PR's head commit (`headRefOid`); null when GitHub didn't say.                             |
 | `paths`       | `string[]`                    | The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). |
 | `labels`      | `string[]`                    |                                                                                               |
+| `body?`       | `string \| null \| undefined` |                                                                                               |
 
 ### PrFields
 

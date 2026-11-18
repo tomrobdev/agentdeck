@@ -40,6 +40,7 @@ export interface PrDetails {
   /** The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). */
   paths: string[];
   labels: string[];
+  body?: string | null;
 }
 
 export function parsePrDetails(json: string): PrDetails {
@@ -64,6 +65,7 @@ export function parsePrDetails(json: string): PrDetails {
     head: typeof raw.headRefOid === 'string' && raw.headRefOid ? raw.headRefOid : null,
     paths: names(raw.files, 'path'),
     labels: names(raw.labels, 'name'),
+    body: typeof raw.body === 'string' ? raw.body : null,
   };
 }
 
@@ -227,6 +229,8 @@ export type MergeReasonKind =
   | MergeFinding['kind']
   | 'mergeability_unknown'
   | 'no_label'
+  | 'one_way_door'
+  | 'no_door'
   | 'tests_not_run'
   | 'untested'
   | 'too_many_lines'

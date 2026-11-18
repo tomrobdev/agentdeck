@@ -51,6 +51,7 @@ const ready: PrDetails = {
   head: 'head-1',
   paths: ['src/a.ts', 'src/b.ts'],
   labels: [AUTO_MERGE_LABEL.name],
+  body: 'Door: two-way',
 };
 
 let details: Record<string, PrDetails>;

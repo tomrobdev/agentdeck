@@ -17,6 +17,7 @@ const ready: PrDetails = {
   head: 'head-1',
   paths: ['src/a.ts'],
   labels: [AUTO_MERGE_LABEL.name],
+  body: 'Door: two-way',
 };
 
 const clean = { mergeable: 'MERGEABLE', merge_state: 'CLEAN' };

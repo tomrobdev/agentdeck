@@ -584,6 +584,7 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
       changedFiles: 5,
       files: [{ path: 'a.ts', additions: 1 }, { path: 'docs/b.md' }, {}],
       labels: [{ name: 'agentdeck:auto-merge', color: 'ededed' }],
+      body: 'Door: two-way',
       statusCheckRollup: [
         { status: 'COMPLETED', conclusion: 'SUCCESS' },
         { status: 'COMPLETED', conclusion: 'FAILURE' },
@@ -607,6 +608,7 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
     checks: { total: 6, failing: 2, pending: 2 },
     paths: ['a.ts', 'docs/b.md'],
     labels: ['agentdeck:auto-merge'],
+    body: 'Door: two-way',
   });
   assert.deepEqual(
     check_list?.map((c) => c.state),
