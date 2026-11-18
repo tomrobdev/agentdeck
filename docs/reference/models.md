@@ -27,8 +27,6 @@ The exported interfaces and object types of `domain/`, grouped by folder, with t
 
 ### Draining
 
-What is draining: the whole daemon, or some repos.
-
 | Field    | Type       | Comment |
 | -------- | ---------- | ------- |
 | `daemon` | `boolean`  |         |
@@ -36,16 +34,14 @@ What is draining: the whole daemon, or some repos.
 
 ### InFlight
 
-The work still in flight in a drain's scope, which the drain waits for before it pauses.
-
-| Field        | Type     | Comment                                                                            |
-| ------------ | -------- | ---------------------------------------------------------------------------------- |
-| `runs`       | `number` | Tasks running, and runs of any kind not yet ended.                                 |
-| `retries`    | `number` | Queued tasks that have run before: their next attempt starts while draining.       |
-| `planner`    | `number` | Planner runs under way.                                                            |
-| `follow_ups` | `number` | Status changes whose follow-ups (opening a PR, telling a person) have not run yet. |
-| `unblocks`   | `number` | Blocked tasks waiting for their unblock run.                                       |
-| `reviews`    | `number` | Done tasks waiting for their review run.                                           |
+| Field        | Type     | Comment |
+| ------------ | -------- | ------- |
+| `runs`       | `number` |         |
+| `retries`    | `number` |         |
+| `planner`    | `number` |         |
+| `follow_ups` | `number` |         |
+| `unblocks`   | `number` |         |
+| `reviews`    | `number` |         |
 
 ### QuotaSample
 

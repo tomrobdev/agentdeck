@@ -20,7 +20,6 @@ export type QueueWait =
 export type StartWait =
   | QueueWait
   | { kind: 'repo-paused'; reason: string }
-  /** The daemon, or its repo when `repo`, is draining, and this task has never run. */
   | { kind: 'draining'; repo: boolean }
   /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
   | { kind: 'dependency'; on: TaskId[]; stuck: string | null }

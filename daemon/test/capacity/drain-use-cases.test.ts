@@ -1,4 +1,3 @@
-// A drain starts no queued task that never ran, waits for the work in flight and its follow-ups, then ends paused with a drained notification.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';

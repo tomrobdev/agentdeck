@@ -75,7 +75,6 @@ export interface Status {
   /** The code the daemon is running. */
   daemon: { commit: string | null; started_at: string; pid: number };
   paused: boolean;
-  /** What is draining: the daemon, and the repos draining on their own. Each ends paused once nothing is in flight in it. */
   draining: { daemon: boolean; repos: { id: RepoId; name: string }[] };
   rate_limited_until: number | null;
   running: number;

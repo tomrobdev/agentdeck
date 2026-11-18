@@ -2,7 +2,6 @@
 import type { RepoId } from '#domain/shared/index.ts';
 import { plural } from '#domain/shared/index.ts';
 
-/** What is draining: the whole daemon, or some repos. */
 export interface Draining {
   daemon: boolean;
   repos: RepoId[];
@@ -10,19 +9,12 @@ export interface Draining {
 
 export const NOT_DRAINING: Draining = { daemon: false, repos: [] };
 
-/** The work still in flight in a drain's scope, which the drain waits for before it pauses. */
 export interface InFlight {
-  /** Tasks running, and runs of any kind not yet ended. */
   runs: number;
-  /** Queued tasks that have run before: their next attempt starts while draining. */
   retries: number;
-  /** Planner runs under way. */
   planner: number;
-  /** Status changes whose follow-ups (opening a PR, telling a person) have not run yet. */
   follow_ups: number;
-  /** Blocked tasks waiting for their unblock run. */
   unblocks: number;
-  /** Done tasks waiting for their review run. */
   reviews: number;
 }
 
