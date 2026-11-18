@@ -5,6 +5,7 @@ import { archivedReposQuery, repoDeletionQuery, repoQuery, reposApi } from '#api
 import type { Repo, RepoDeletion } from '#api/types.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import { errorMessage, plural } from '#daemon/domain/shared/index.ts';
+import FieldSection from '#components/ui/form/FieldSection.vue';
 
 const { run } = useActions();
 const queryClient = useQueryClient();
@@ -50,8 +51,9 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div v-if="archived.length || archiveError" class="mb-4 flex flex-col gap-2 border-t border-border pt-3.5">
-    <h4 class="m-0">Archived</h4>
+  <div class="pane-body flex flex-col gap-3">
+    <FieldSection title="Archived" hint="Hidden, with their tasks, and doing no work. Unarchive one to bring it back as it was." />
+    <p v-if="!archived.length && !archiveError" class="text-muted m-0">No archived repos.</p>
     <ul v-if="archived.length" class="m-0 flex list-none flex-col gap-2 p-0">
       <li v-for="r in archived" :key="r.id" class="flex flex-col gap-2 rounded-md border border-border px-2.5 py-2">
         <div class="flex items-center gap-2">

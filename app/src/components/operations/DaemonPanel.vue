@@ -8,7 +8,10 @@ import { taskList } from '#lib/work/work-wording.ts';
 import { useAction } from '#composables/shared/useActions.ts';
 import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
 import Modal from '#components/ui/Modal.vue';
+import RecentAlerts from '#components/operations/RecentAlerts.vue';
+import type { NotificationRow } from '#api/types.ts';
 
+defineProps<{ notifications: NotificationRow[] }>();
 defineEmits<{ close: [] }>();
 const { run, pending } = useAction();
 
@@ -140,6 +143,8 @@ function refresh() {
       }}</pre>
       <p v-else class="text-muted m-0">{{ healthQ.isPending.value ? 'Loading…' : 'The log is empty.' }}</p>
     </section>
+
+    <RecentAlerts class="mb-3" :notifications="notifications" />
 
     <p v-if="requeued.length" class="m-0 mb-3" role="status">
       Restarting at once. {{ taskList(requeued.map((t) => t.id)) }} {{ requeued.length === 1 ? 'is' : 'are' }} requeued.

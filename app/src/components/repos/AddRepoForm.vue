@@ -4,6 +4,8 @@ import { reposApi } from '#api/repos.ts';
 import type { Repo } from '#api/types.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import { isNative, pickFolder } from '#platform/native.ts';
+import FieldRow from '#components/ui/form/FieldRow.vue';
+import FieldSection from '#components/ui/form/FieldSection.vue';
 
 const emit = defineEmits<{ added: [repo: Repo] }>();
 const { run } = useActions();
@@ -32,27 +34,28 @@ async function add() {
 </script>
 
 <template>
-  <form class="flex flex-col gap-2.5 border-t border-border pt-3.5" @submit.prevent="add">
-    <h4 class="m-0">Add a repo</h4>
-    <label class="field flex-1">
-      Path to a local git repo
-      <span class="flex gap-2">
-        <input v-model="path" class="flex-1" placeholder="~/Documents/Dev/myproject" />
-        <button v-if="isNative" type="button" @click="choose">Choose…</button>
-      </span>
-    </label>
-    <div class="flex gap-2.5">
-      <label class="field flex-1">
-        <span>Name <span class="text-muted">(optional)</span></span>
-        <input v-model="name" />
-      </label>
-      <label class="field flex-1">
-        <span>Test command <span class="text-muted">(run after each task)</span></span>
-        <input v-model="test" placeholder="npm test" />
-      </label>
+  <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="add">
+    <div class="pane-body">
+      <FieldSection
+        title="Add a repo"
+        hint="Its toolchain is detected, with a setup command and tool rules to match; change them once it is added."
+      >
+        <FieldRow label="Path" hint="A local git repo.">
+          <span class="flex gap-2">
+            <input v-model="path" class="flex-1 font-mono" spellcheck="false" placeholder="~/Documents/Dev/myproject" />
+            <button v-if="isNative" type="button" @click="choose">Choose…</button>
+          </span>
+        </FieldRow>
+        <FieldRow label="Name" hint="Optional. The folder's name otherwise.">
+          <input v-model="name" class="max-w-xs" />
+        </FieldRow>
+        <FieldRow label="Test command" hint="Optional. Runs after each task.">
+          <input v-model="test" class="font-mono" spellcheck="false" placeholder="npm test" />
+        </FieldRow>
+      </FieldSection>
     </div>
-    <div class="flex items-center justify-end gap-2">
+    <footer class="pane-footer justify-end">
       <button class="primary" type="submit" :disabled="saving || !path.trim()">Add repo</button>
-    </div>
+    </footer>
   </form>
 </template>
