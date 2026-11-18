@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync, type WriteStream } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync, type WriteStream } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -74,6 +74,23 @@ const replay = (fixture: string) => capture(REPLAY, [], { AGENTDECK_REPLAY: join
 const fakeRun = (prompt: string, extra: string[] = []) =>
   capture(FAKE, ['-p', prompt, '--output-format', 'stream-json', '--verbose', ...extra], { AGENTDECK_HOME: scratch });
 const kinds = (entries: LogEntry[]) => entries.map((e) => e.kind);
+
+test('the fake claude refuses to run outside a temporary directory, so a stray start writes and commits nothing', () => {
+  const before = execFileSync('git', ['status', '--porcelain'], { cwd: FIXTURES, encoding: 'utf8' });
+  const run = spawnSync(process.execPath, [FAKE], { cwd: FIXTURES, encoding: 'utf8' });
+  assert.equal(run.status, 2);
+  assert.match(run.stderr, /refusing to run in .*fixtures, which is not inside the temporary directory/);
+  assert.equal(run.stdout, '');
+  assert.equal(existsSync(join(FIXTURES, 'fake-output.txt')), false);
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: FIXTURES, encoding: 'utf8' }), before);
+});
+
+test('runClaude refuses a relative working directory instead of starting claude in its own', async () => {
+  process.env.AGENTDECK_CLAUDE_BIN = FAKE;
+  const log = { write: () => true } as unknown as WriteStream;
+  await assert.rejects(runClaude({ args: ['-p', 'FAKE_DONE'], cwd: '', log }), /absolute working directory/);
+  await assert.rejects(runClaude({ args: ['-p', 'FAKE_DONE'], cwd: 'repo', log }), /absolute working directory/);
+});
 
 test('done-with-tool: the session, usage, live line, log entries and result fields read out of a real run', async () => {
   const c = await replay('done-with-tool');
