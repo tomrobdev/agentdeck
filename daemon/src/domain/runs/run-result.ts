@@ -94,7 +94,6 @@ export interface ClaudeRunLike<R extends ResultLike = ResultLike> {
   stderr: string;
   /** The session claude's init line named; undefined if it stopped before. */
   sessionId?: string;
-  /** The limit that stopped claude, when one did. */
   timedOut?: LimitStop;
 }
 

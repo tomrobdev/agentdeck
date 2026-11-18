@@ -54,6 +54,8 @@ test('limitReason names the limit and its length', () => {
   assert.equal(limitReason({ limit: 'total', ms: 60 * 60_000 }), 'total limit: claude ran for 60 min');
   assert.equal(limitReason({ limit: 'stall', ms: 1_500 }), 'stall limit: claude printed nothing for 1500 ms');
   assert.equal(limitReason({ limit: 'total', ms: 3_000 }), 'total limit: claude ran for 3 s');
+  assert.equal(limitReason({ limit: 'total', ms: 90_000 }), 'total limit: claude ran for 90 s');
+  assert.equal(limitReason({ limit: 'stall', ms: 500 }), 'stall limit: claude printed nothing for 500 ms');
 });
 
 const killed: ClaudeRun = {

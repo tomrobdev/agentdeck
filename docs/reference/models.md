@@ -1257,7 +1257,7 @@ What a finished `claude` process left behind (the adapter's `ClaudeRun`).
 | `cancelled`        | `boolean`                                                                                |                                                                       |
 | `stderr`           | `string`                                                                                 |                                                                       |
 | `sessionId?`       | `string \| undefined`                                                                    | The session claude's init line named; undefined if it stopped before. |
-| `timedOut?`        | `LimitStop \| undefined`                                                                 | The limit that stopped claude, when one did.                          |
+| `timedOut?`        | `LimitStop \| undefined`                                                                 |                                                                       |
 
 ### EditLike
 
@@ -1280,8 +1280,6 @@ A change of a task's model one step up, and the failure that called for it.
 | `cause` | `HardFailure` |         |
 
 ### LimitStop
-
-A run a limit stopped: which one, and what it was.
 
 | Field   | Type       | Comment |
 | ------- | ---------- | ------- |
@@ -1469,8 +1467,6 @@ What a run came to, for `runOutcome`.
 | `denials`      | `number`                                                                                                          | Tool uses the permission rules refused during the run.                                                        |
 
 ### RunClock
-
-A run's time so far: when it was last looked at, how long since its last line, and how long in all.
 
 | Field     | Type     | Comment |
 | --------- | -------- | ------- |

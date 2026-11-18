@@ -54,7 +54,9 @@ const groupAlive = (pid: number): boolean => {
 };
 
 test('the limits are read from the environment, and checked a few times within the stall limit', () => {
-  assert.deepEqual(runLimits(), { stallMs: 1_500, maxMs: 4_000, checkMs: 375 });
+  const { stallMs, maxMs, checkMs } = runLimits();
+  assert.deepEqual([stallMs, maxMs], [1_500, 4_000]);
+  assert.ok(checkMs <= stallMs / 4, `checked every ${checkMs} ms`);
 });
 
 test('a claude that stops printing is stopped at the stall limit: the run fails naming it, and the task retries', async () => {

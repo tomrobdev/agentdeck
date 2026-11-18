@@ -10,14 +10,12 @@ export interface RunLimits {
   checkMs: number;
 }
 
-/** A run's time so far: when it was last looked at, how long since its last line, and how long in all. */
 export interface RunClock {
   at: number;
   quietMs: number;
   totalMs: number;
 }
 
-/** A run a limit stopped: which one, and what it was. */
 export interface LimitStop {
   limit: RunLimit;
   ms: number;
