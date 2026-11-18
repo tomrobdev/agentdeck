@@ -23,11 +23,15 @@ export interface UnblockReport {
   reason?: string;
 }
 
-export function nextUnblockable(app: App): BlockedTask | undefined {
-  return app.unblockCandidates().find((t) => {
+export function unblockableTasks(app: App): BlockedTask[] {
+  return app.unblockCandidates().filter((t) => {
     const repo = app.getRepo(t.repo_id);
     return repo !== undefined && unblockable(t, app.runsForTask(t.id), repo);
   });
+}
+
+export function nextUnblockable(app: App): BlockedTask | undefined {
+  return unblockableTasks(app)[0];
 }
 
 export async function runUnblock(app: App, task: BlockedTask): Promise<UnblockReport> {

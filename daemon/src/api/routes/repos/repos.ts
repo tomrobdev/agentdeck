@@ -18,6 +18,7 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     ),
     route<DoctorReport>('POST', /^\/api\/repos\/(\d+)\/doctor$/, ({ params: [id] }) => actions.doctorRepo(db, repoIdParam(id))),
     route<Repo>('POST', /^\/api\/repos\/(\d+)\/resume$/, ({ params: [id] }) => actions.repoView(actions.resumeRepo(db, repoIdParam(id)))),
+    route<Repo>('POST', /^\/api\/repos\/(\d+)\/drain$/, ({ params: [id] }) => actions.repoView(actions.drainRepo(db, repoIdParam(id)))),
     route<Repo>('POST', /^\/api\/repos\/(\d+)\/archive$/, ({ params: [id] }) => actions.repoView(actions.archiveRepo(db, repoIdParam(id)))),
     route<Repo>('POST', /^\/api\/repos\/(\d+)\/unarchive$/, ({ params: [id] }) =>
       actions.repoView(actions.unarchiveRepo(db, repoIdParam(id))),

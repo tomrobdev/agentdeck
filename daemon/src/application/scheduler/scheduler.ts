@@ -16,6 +16,8 @@ import { retryFailedPrs } from '#application/landing/pull-request/open-pr.ts';
 import { nextUnblockable } from '#application/runs/unblock.ts';
 import { nextReviewable } from '#application/runs/review.ts';
 import { startReview, startUnblock, startWork } from '#application/scheduler/start-runs.ts';
+import { finishDrains } from '#application/scheduler/drain.ts';
+import { type Draining, isDraining } from '#domain/capacity/index.ts';
 import type { App } from '#application/ports/app.ts';
 import type { KeepAwake } from '#application/ports/processes.ts';
 import type { Activity, ReloadDecision } from '#domain/operations/index.ts';
@@ -199,9 +201,10 @@ export class Scheduler {
     this.lastReload = reload?.pending ? reload.reason : null;
     const { reason, free } = reload?.pending ? { reason: 'reload pending', free: 0 } : this.gate();
     const followingUp = this.maybeFollowUp();
+    const draining = this.app.draining();
     if (!reason && !followingUp) {
       for (let room = free; room > 0; room--) {
-        const task = this.app.claimNextTask();
+        const task = this.app.claimNextTask(draining);
         if (!task) break;
         const p: Promise<unknown> = startWork(this.app, task, this.opts.log, () => {
           this.running.delete(p);
@@ -212,8 +215,9 @@ export class Scheduler {
       }
       this.maybeUnblock();
       this.maybeReview();
-      if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose();
+      if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(draining);
     }
+    if (!this.opts.once) this.maybeFinishDrains();
     this.maybeRefreshPrs();
     this.maybeCheckReviews();
     this.awake.set(this.running.size > 0 || this.proposing);
@@ -345,8 +349,24 @@ export class Scheduler {
       });
   }
 
-  private maybePropose(): void {
-    const repo = this.app.listRepos().find((r) => plannerDue(this.app, r));
+  private maybeFinishDrains(): void {
+    try {
+      finishDrains(
+        this.app,
+        {
+          busy: this.running.size > 0 || this.proposing,
+          follow_ups: this.app.pendingFollowUps().length,
+          reviews: this.findingReview || this.reviewIdleUntil <= Date.now() ? 1 : 0,
+        },
+        this.opts.log,
+      );
+    } catch (err) {
+      this.opts.log(`drain check crashed: ${err instanceof Error ? err.stack : err}`);
+    }
+  }
+
+  private maybePropose(draining: Draining): void {
+    const repo = this.app.listRepos().find((r) => !isDraining(draining, r.id) && plannerDue(this.app, r));
     if (!repo) return;
     this.opts.log(`planner: proposing tasks for ${repo.name}`);
     this.track(

@@ -78,6 +78,10 @@ export const daemonCommands: Record<string, Command> = {
     actions.setPaused(db, true);
     console.log('paused: running tasks finish, no new ones start');
   },
+  drain: ({ db }) => {
+    if (!actions.drain(db).draining) console.log('already paused: nothing new starts');
+    else console.log('draining: no new task starts, the work in flight finishes, then the daemon pauses and tells you');
+  },
   resume: ({ db }) => {
     actions.setPaused(db, false);
     console.log('resumed');
@@ -117,7 +121,8 @@ export const daemonCommands: Record<string, Command> = {
     const st = actions.status(db);
     const until = st.rate_limited_until;
     const limited = until && until * 1000 > Date.now() ? ` (rate limited, resumes in ${relTime(until)})` : '';
-    console.log(`state      ${st.paused ? 'PAUSED' : 'active'}${limited}`);
+    console.log(`state      ${st.paused ? 'PAUSED' : st.draining.daemon ? 'DRAINING' : 'active'}${limited}`);
+    for (const r of st.draining.repos) console.log(`repo       ${r.name} DRAINING  → agentdeck repo resume ${r.name}`);
     console.log(`slots      ${st.running}/${st.max_concurrent} running`);
     if (st.governor.reason)
       console.log(

@@ -8,6 +8,7 @@ export const NOTIFY_LABELS: Record<NotifyKind, string> = {
   done: 'Task done',
   hold: 'Work held by budget',
   paused: 'Repo paused',
+  drained: 'Drained and paused',
   proposed: 'Planner proposals',
   merged: 'PR auto-merged',
   checks_failed: 'PR checks failed',
