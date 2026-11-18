@@ -144,6 +144,22 @@ test('a planner run that throws still ends its row', async () => {
   assert.equal(db.countRunningPlannerRuns(), 0);
 });
 
+test('a planner run a limit stopped fails, naming the limit', async () => {
+  actions.updateRepo(db, repoId, { goals: 'FAKE_PLAN_EMPTY' });
+  const real = db.agent;
+  const stopped = { result: undefined, exitCode: -1, rateLimitedUntil: undefined, cancelled: false, stderr: '', sessionId: undefined };
+  db.agent = { ...real, run: async () => ({ ...stopped, timedOut: { limit: 'stall', ms: 15 * 60_000 } }) };
+  try {
+    const res = await actions.proposeNow(db, repoId);
+    assert.equal(res.outcome, 'failed');
+    assert.equal(res.note, 'stall limit: claude printed nothing for 15 min');
+  } finally {
+    db.agent = real;
+  }
+  const [run] = db.plannerRuns(repoId);
+  assert.deepEqual([run.outcome, run.note], ['failed', 'stall limit: claude printed nothing for 15 min']);
+});
+
 test('repo names that escape the goals folder or read as an id are refused', async () => {
   for (const name of ['../x', 'a/b', '5', '.hidden', '-x']) {
     await assert.rejects(actions.addRepo(db, { path: makeRepo(`n${Math.random().toString(36).slice(2)}`), name }), /repo name/);

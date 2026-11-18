@@ -79,5 +79,8 @@ export const DEFAULTS = {
 
 export const CANCEL_POLL_MS = msFrom(process.env.AGENTDECK_CANCEL_POLL_MS, 2_000);
 
+export const RUN_STALL_MS = msFrom(process.env.AGENTDECK_RUN_STALL_MS, 15 * 60_000);
+export const RUN_MAX_MS = msFrom(process.env.AGENTDECK_RUN_MAX_MS, 60 * 60_000);
+
 export const SETUP_TIMEOUT_MS = 10 * 60_000;
 export const TEST_TIMEOUT_MS = 15 * 60_000;

@@ -1243,6 +1243,7 @@ What a claude session left behind: its result, how the process ended, and why it
 | `cancelled`        | `boolean`                   |                                                                                               |
 | `stderr`           | `string`                    | The end of what claude wrote to stderr, e.g. why it refused to start.                         |
 | `sessionId`        | `string \| undefined`       | The session claude's first `system`/`init` line named; undefined if claude stopped before it. |
+| `timedOut?`        | `LimitStop \| undefined`    |                                                                                               |
 
 ### ClaudeRunLike
 
@@ -1256,6 +1257,7 @@ What a finished `claude` process left behind (the adapter's `ClaudeRun`).
 | `cancelled`        | `boolean`                                                                                |                                                                       |
 | `stderr`           | `string`                                                                                 |                                                                       |
 | `sessionId?`       | `string \| undefined`                                                                    | The session claude's init line named; undefined if it stopped before. |
+| `timedOut?`        | `LimitStop \| undefined`                                                                 |                                                                       |
 
 ### EditLike
 
@@ -1276,6 +1278,13 @@ A change of a task's model one step up, and the failure that called for it.
 | `from`  | `string`      |         |
 | `to`    | `string`      |         |
 | `cause` | `HardFailure` |         |
+
+### LimitStop
+
+| Field   | Type       | Comment |
+| ------- | ---------- | ------- |
+| `limit` | `RunLimit` |         |
+| `ms`    | `number`   |         |
 
 ### LiveState
 
@@ -1451,11 +1460,29 @@ What a run came to, for `runOutcome`.
 
 | Field          | Type                                                                                                              | Comment                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `end`          | `{ kind: "cancelled" \| "finished"; } \| { kind: "failed" \| "rate_limited"; reason: string; }`                   | How claude's process ended; a `finished` one has its final message in `status`.                               |
+| `end`          | `{ kind: "cancelled" \| "finished"; } \| { kind: "failed" \| "rate_limited" \| "timed_out"; reason: string; }`    | How claude's process ended; a `finished` one has its final message in `status`.                               |
 | `status?`      | `{ blocked: boolean; reason?: string \| undefined; declared: boolean; needs?: Needs \| undefined; } \| undefined` | The final message's status (`parseStatus`); read only for a finished run.                                     |
 | `testsPassed`  | `boolean \| null`                                                                                                 | Whether the repo's test command passed; null when it was not run (no command, or the agent reported blocked). |
 | `commitsAhead` | `number \| null`                                                                                                  | Commits on the branch past the base; null when not counted (only a run that could be done needs it).          |
 | `denials`      | `number`                                                                                                          | Tool uses the permission rules refused during the run.                                                        |
+
+### RunClock
+
+| Field     | Type     | Comment |
+| --------- | -------- | ------- |
+| `at`      | `number` |         |
+| `quietMs` | `number` |         |
+| `totalMs` | `number` |         |
+
+### RunLimits
+
+The limits on one claude process, and how often they are checked; all in milliseconds.
+
+| Field     | Type     | Comment |
+| --------- | -------- | ------- |
+| `stallMs` | `number` |         |
+| `maxMs`   | `number` |         |
+| `checkMs` | `number` |         |
 
 ### RunModels
 

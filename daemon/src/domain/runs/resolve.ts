@@ -8,7 +8,7 @@ export type ResolveOutcome =
 export function resolveOutcome(end: RunClass): ResolveOutcome {
   if (end.kind === 'cancelled') return { outcome: 'cancelled' };
   if (end.kind === 'rate_limited') return { outcome: 'rate_limited', reason: end.reason };
-  if (end.kind === 'failed') return { outcome: 'failed', reason: end.reason };
+  if (end.kind === 'failed' || end.kind === 'timed_out') return { outcome: 'failed', reason: end.reason };
   const status = parseStatus(end.result.result);
   if (status.blocked) return { outcome: 'blocked', reason: status.reason ?? 'the agent could not resolve the conflicts' };
   return { outcome: 'check' };

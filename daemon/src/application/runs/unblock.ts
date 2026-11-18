@@ -79,9 +79,10 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
     await endTaskRun(app, opened, 'cancelled', 'the task is no longer blocked', fields);
     return { outcome: 'cancelled' };
   }
-  if (end.kind === 'rate_limited' || end.kind === 'failed') {
-    await endTaskRun(app, opened, end.kind, end.reason, fields);
-    return { outcome: end.kind, reason: end.reason };
+  if (end.kind === 'rate_limited' || end.kind === 'failed' || end.kind === 'timed_out') {
+    const outcome = end.kind === 'rate_limited' ? end.kind : 'failed';
+    await endTaskRun(app, opened, outcome, end.reason, fields);
+    return { outcome, reason: end.reason };
   }
   const decision = unblockDecision(parseUnblock(end.result.result), app.getTask(task.id) ?? task);
   app.runLog.event(log, {

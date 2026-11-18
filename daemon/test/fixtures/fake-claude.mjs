@@ -204,6 +204,10 @@ if (given.startsWith('AgentDeck counted the code comments')) {
 } else if (prompt.includes('FAKE_ERROR')) {
   process.stderr.write('fake failure\n');
   process.exit(1);
+} else if (prompt.includes('FAKE_HANG')) {
+  await new Promise(() => setInterval(() => {}, 60_000));
+} else if (prompt.includes('FAKE_CHATTER')) {
+  await new Promise(() => setInterval(() => assistant([{ type: 'text', text: 'still going' }]), 100));
 } else if (prompt.includes('FAKE_MAX_TURNS')) {
   readme();
   const { result: _text, api_error_status: _status, ...end } = ending('');

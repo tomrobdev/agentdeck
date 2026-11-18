@@ -6,6 +6,7 @@ import type { App } from '#application/ports/app.ts';
 import type { PlannerRunId, RepoId } from '#domain/shared/index.ts';
 import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '#domain/proposals/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
+import { limitReason } from '#domain/runs/index.ts';
 import { lastLine, plural } from '#domain/shared/index.ts';
 import { newTaskModel } from '#domain/work/index.ts';
 import { recordRateLimit, usageRecorder } from '#application/runs/claude-run.ts';
@@ -52,6 +53,11 @@ async function planRepo(app: App, repo: Repo, goals: string, runId: PlannerRunId
     onUsage: usageRecorder(app),
   });
 
+  if (run.timedOut) {
+    const note = limitReason(run.timedOut);
+    app.finishPlannerRun(runId, 'failed', 0, note);
+    return { outcome: 'failed', tasks: [], skipped: [], note };
+  }
   if (run.rateLimitedUntil) {
     recordRateLimit(app, run.rateLimitedUntil);
     app.finishPlannerRun(runId, 'rate_limited', 0, null);

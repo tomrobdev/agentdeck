@@ -2,6 +2,7 @@
 import { STATUS_WORD, lastLine, oneLine } from '#domain/shared/index.ts';
 import { type Needs, parseNeeds } from '#domain/work/index.ts';
 import type { Outcome, Run } from '#domain/runs/run.ts';
+import { type LimitStop, limitReason } from '#domain/runs/run-limit.ts';
 
 /** The parts of claude's final `result` event that a run records. */
 export interface ResultLike {
@@ -71,6 +72,7 @@ export interface ClaudeRun {
   stderr: string;
   /** The session claude's first `system`/`init` line named; undefined if claude stopped before it. */
   sessionId: string | undefined;
+  timedOut?: LimitStop;
 }
 
 /** One usage window a claude session reports. */
@@ -91,6 +93,7 @@ export interface ClaudeRunLike<R extends ResultLike = ResultLike> {
   stderr: string;
   /** The session claude's init line named; undefined if it stopped before. */
   sessionId?: string;
+  timedOut?: LimitStop;
 }
 
 export function resumeFailed(run: ClaudeRunLike): boolean {
@@ -102,10 +105,12 @@ export type RunClass<R extends ResultLike = ResultLike> =
   | { kind: 'cancelled' }
   | { kind: 'rate_limited'; until: number; reason: string }
   | { kind: 'failed'; reason: string }
+  | { kind: 'timed_out'; stop: LimitStop; reason: string }
   | { kind: 'finished'; result: R };
 
 export function classifyRun<R extends ResultLike>(run: ClaudeRunLike<R>): RunClass<R> {
   if (run.cancelled) return { kind: 'cancelled' };
+  if (run.timedOut) return { kind: 'timed_out', stop: run.timedOut, reason: limitReason(run.timedOut) };
   if (run.rateLimitedUntil) {
     const until = run.rateLimitedUntil;
     return { kind: 'rate_limited', until, reason: `rate limited until ${new Date(until * 1000).toISOString()}` };
@@ -159,7 +164,7 @@ export function isEnvironmentBlock(b: { needs?: Needs; denials?: number; setupFa
 /** What a run came to, for `runOutcome`. */
 export interface RunCameTo {
   /** How claude's process ended; a `finished` one has its final message in `status`. */
-  end: { kind: 'cancelled' | 'finished' } | { kind: 'rate_limited' | 'failed'; reason: string };
+  end: { kind: 'cancelled' | 'finished' } | { kind: 'rate_limited' | 'failed' | 'timed_out'; reason: string };
   /** The final message's status (`parseStatus`); read only for a finished run. */
   status?: ReturnType<typeof parseStatus>;
   /** Whether the repo's test command passed; null when it was not run (no command, or the agent reported blocked). */
@@ -182,7 +187,7 @@ function baseOutcome(r: RunCameTo): WorkerResult {
   const { end } = r;
   if (end.kind === 'cancelled') return { outcome: 'cancelled' };
   if (end.kind === 'rate_limited') return { outcome: 'rate_limited', reason: end.reason };
-  if (end.kind === 'failed') return { outcome: 'failed', reason: end.reason };
+  if (end.kind === 'failed' || end.kind === 'timed_out') return { outcome: 'failed', reason: end.reason };
   const status = r.status ?? { blocked: false, declared: false };
   if (status.blocked) {
     return { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked', ...(status.needs ? { needs: status.needs } : {}) };
