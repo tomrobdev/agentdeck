@@ -1,9 +1,18 @@
 #!/usr/bin/env node
 // Stand-in for `claude -p ... --output-format stream-json` in tests.
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { isAbsolute, join, relative } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+
+const fromTmp = relative(realpathSync(tmpdir()), realpathSync(process.cwd()));
+if (!fromTmp || fromTmp.startsWith('..') || isAbsolute(fromTmp)) {
+  process.stderr.write(
+    `fake-claude: refusing to run in ${process.cwd()}, which is not inside the temporary directory ${tmpdir()}: tests start it in a scratch checkout\n`,
+  );
+  process.exit(2);
+}
 
 const args = process.argv.slice(2);
 const given = args[args.indexOf('-p') + 1] ?? '';

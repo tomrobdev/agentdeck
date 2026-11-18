@@ -46,6 +46,7 @@ export async function runClaude(opts: {
   onModel?: (modelId: string) => void;
 }): Promise<ClaudeRun> {
   const { log } = opts;
+  if (!isAbsolute(opts.cwd)) throw new Error(`claude needs an absolute working directory, not "${opts.cwd}"`);
   const child = spawn(claudeBin(), opts.args, {
     cwd: opts.cwd,
     env: withToolchainPath({ ...process.env, ...opts.env }) as NodeJS.ProcessEnv,
