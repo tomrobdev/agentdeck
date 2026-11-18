@@ -38,3 +38,27 @@ test('an error result is failed with its subtype', () => {
   const end = classifyRun({ ...base, result: { result: 'x', is_error: true, subtype: 'error_max_turns' } });
   assert.deepEqual(end, { kind: 'failed', reason: 'error_max_turns' });
 });
+
+test('an error claude reported under the subtype success is named by what it said, never "success"', () => {
+  const result = { is_error: true, subtype: 'success', result: 'Retrying…\nAPI Error: 529 Overloaded' };
+  assert.deepEqual(classifyRun({ ...base, exitCode: 1, result }), { kind: 'failed', reason: 'API Error: 529 Overloaded' });
+  assert.deepEqual(classifyRun({ ...base, exitCode: 1, result: { is_error: true, subtype: 'success', result: '' } }), {
+    kind: 'failed',
+    reason: 'claude exited with code 1',
+  });
+});
+
+test('a good result from a process that exited non-zero is failed by its exit code', () => {
+  const end = classifyRun({
+    ...base,
+    exitCode: 1,
+    stderr: 'hook failed',
+    result: { is_error: false, subtype: 'success', result: 'STATUS: DONE' },
+  });
+  assert.deepEqual(end, { kind: 'failed', reason: 'claude exited with code 1: hook failed' });
+});
+
+test('an error subtype is still the reason', () => {
+  const end = classifyRun({ ...base, exitCode: 1, result: { is_error: true, subtype: 'error_max_turns', result: 'x' } });
+  assert.deepEqual(end, { kind: 'failed', reason: 'error_max_turns' });
+});

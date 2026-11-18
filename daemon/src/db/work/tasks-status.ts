@@ -67,14 +67,14 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
         .where(and(eq(buildsOn.task_id, t.id), eq(buildsOn.kind, 'builds_on'), notExists(unmet))),
     );
   };
-  const notUnblocking = () =>
+  const noRunBeside = () =>
     notExists(
       orm
         .select({ id: runs.id })
         .from(runs)
-        .where(and(eq(runs.task_id, t.id), inArray(runs.kind, ['unblock', 'review']), isNull(runs.ended_at))),
+        .where(and(eq(runs.task_id, t.id), inArray(runs.kind, ['unblock', 'review', 'resolve']), isNull(runs.ended_at))),
     );
-  const claimable = () => and(inArray(t.status, fromStatuses({ type: 'claim' })), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id));
+  const claimable = () => and(inArray(t.status, fromStatuses({ type: 'claim' })), notWaiting(), noRunBeside(), inOpenRepo(t.repo_id));
 
   const applyEvent = (
     id: TaskId,

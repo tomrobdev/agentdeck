@@ -44,3 +44,28 @@ test('a cancel or a rate limit never pauses', () => {
   const limited = runOutcome({ ...finished, end: { kind: 'rate_limited', reason: 'later' }, denials: 1 });
   assert.deepEqual(limited, { result: { outcome: 'rate_limited', reason: 'later' }, pause: false });
 });
+
+test('a blocked status is read however the worker dressed the line', () => {
+  const lines = [
+    'STATUS: BLOCKED - need a decision',
+    'STATUS: BLOCKED — need a decision',
+    'STATUS: BLOCKED need a decision',
+    '**STATUS: BLOCKED: need a decision**',
+    '`STATUS: BLOCKED: need a decision`',
+    '- STATUS: BLOCKED: need a decision',
+    '> status: blocked: need a decision',
+  ];
+  for (const line of lines) {
+    const status = parseStatus(`I could not finish.\n${line}`);
+    assert.deepEqual(status, { blocked: true, declared: true, reason: 'need a decision' }, line);
+    assert.equal(runOutcome({ ...finished, status, testsPassed: true }).result.outcome, 'blocked', line);
+  }
+  assert.deepEqual(parseStatus('STATUS: BLOCKED.'), { blocked: true, declared: true, reason: undefined });
+  assert.deepEqual(parseStatus('**STATUS: BLOCKED: NEEDS deps: zod**').needs, { kind: 'deps', items: ['zod'] });
+});
+
+test('a status needs its own line and a whole word', () => {
+  assert.equal(parseStatus('I left STATUS: BLOCKED out of the docs').declared, false);
+  assert.equal(parseStatus('STATUS: DONEISH').declared, false);
+  assert.deepEqual(parseStatus('**STATUS: DONE**'), { blocked: false, declared: true, reason: undefined });
+});
