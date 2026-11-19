@@ -92,7 +92,7 @@ test('a branch changing both runs both, the crash test first, each with the path
 });
 
 test('the crash test runs 5 times', () => {
-  assert.deepEqual(EXTRA_CHECKS[0].command, ['node', 'daemon/scripts/crash-test.mjs', '5']);
+  assert.deepEqual(EXTRA_CHECKS[0].command, ['node', 'daemon/scripts/crash-test.mjs', '6']);
 });
 
 test('the reason line names the paths, and how many more', () => {

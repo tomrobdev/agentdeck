@@ -6,7 +6,7 @@ export type ExtraCheck = {
   prefixes: string[];
 };
 
-export const TASK_CRASH_ITERATIONS = 5;
+export const TASK_CRASH_ITERATIONS = 6;
 
 export const EXTRA_CHECKS: ExtraCheck[] = [
   {

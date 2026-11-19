@@ -1021,12 +1021,12 @@ Problems found in the daemon log.
 
 A claude process group recorded on a run, found alive.
 
-| Field   | Type                                                                    | Comment                         |
-| ------- | ----------------------------------------------------------------------- | ------------------------------- |
-| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock" \| "verify"` |                                 |
-| `run`   | `number`                                                                |                                 |
-| `pid`   | `number`                                                                |                                 |
-| `ended` | `boolean`                                                               | The run has a finished-at time. |
+| Field   | Type                                                                                      | Comment                         |
+| ------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
+| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock" \| "verify" \| "plan_resolve"` |                                 |
+| `run`   | `number`                                                                                  |                                 |
+| `pid`   | `number`                                                                                  |                                 |
+| `ended` | `boolean`                                                                                 | The run has a finished-at time. |
 
 ### ReloadDecision
 
@@ -1145,7 +1145,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `review_model`             | `string`            | The model review runs use (`runModel` in domain/runs/run.ts); opus by default, a reviewer at least as strong as the worker. |
 | `reload_on_change`         | `boolean`           | Restart the daemon onto new code when daemon/src changes and nothing is running.                                            |
 | `review_due`               | `ReviewDueSettings` | When a repo is due for an area review (review_due_days, review_due_lines).                                                  |
-| `plan_branch_sync_minutes` | `number`            | How often the daemon syncs each active plan branch with its base, in minutes (`planBranchSyncDue` in domain/work/).         |
+| `plan_branch_sync_minutes` | `number`            |                                                                                                                             |
 
 ## `domain/proposals/`
 
