@@ -30,7 +30,10 @@ What it does, in order, checking GitHub with `gh` and the daemon's database afte
 3. **Task one** is done and its PR opened, with the auto-merge label; the check passes on GitHub and the daemon keeps it; a review run reads the changes and its review is clean; the daemon merges the PR and deletes its branch.
 4. **Task two** lands after task one, and both write the same new file, so once task one merges, task two's PR conflicts with main. A resolve run syncs it, the branch on GitHub gets the merge with main, and the daemon merges it with both sides kept.
 5. **Task three** has auto-merge off. Once its PR is open the script closes it with `gh pr close`; the daemon records it closed, and neither merges it nor opens another.
-6. **Cleanup.** Stops the daemon and deletes the `agentdeck/` branches it left on GitHub, passed or not.
+6. **A plan branch.** A plan of three tasks, each building on the one before, gets a plan branch (`plan/<id>-…`) with `agentdeck plan-branch open`. The first task's PR opens into the plan branch, not main, and merges there with the branch kept. A commit pushed to main that conflicts with the plan branch is brought in by a resolve run. The other two tasks' PRs merge into the plan branch, the plan's PR opens into main, and the script merges it with `gh pr merge`; the daemon records the plan branch landed and deletes it on GitHub.
+7. **Cleanup.** Stops the daemon and deletes the `agentdeck/` and `plan/` branches it left on GitHub, passed or not.
+
+`pnpm test:github --record` also writes the GitHub responses of the plan branch scenario, a task PR whose base is the plan branch and the plan's PR, to `daemon/test/fixtures/gh/`, as `pr-view-plan-branch-task` and `pr-view-plan-branch`.
 
 The PR refresh runs every few minutes; the script asks for one every few seconds instead, as a merge from the CLI does.
 

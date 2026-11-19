@@ -8,13 +8,27 @@ import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { parseArgs } from 'node:util';
 
-const { values: opts } = parseArgs({ options: { keep: { type: 'boolean', default: false } } });
+const { values: opts } = parseArgs({ options: { keep: { type: 'boolean', default: false }, record: { type: 'boolean', default: false } } });
 const ROOT = resolve(import.meta.dirname, '../..');
 const DAEMON = join(ROOT, 'daemon');
 const CLI = join(DAEMON, 'src/cli.ts');
 const FAKE_CLAUDE = join(DAEMON, 'test/fixtures/fake-claude.mjs');
 const REPO_NAME = 'e2e';
 const BRANCH_PREFIX = 'agentdeck/';
+const BRANCH_PREFIXES = [BRANCH_PREFIX, 'plan/'];
+const isOurs = (branch) => BRANCH_PREFIXES.some((p) => branch.startsWith(p));
+const FIXTURES = join(ROOT, 'daemon/test/fixtures/gh');
+const PLAN_HTML = `<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head><meta charset="utf-8" /><title>E2E plan branch</title></head>
+  <body>
+    <p data-plan-summary>Three small steps that land on a plan branch.</p>
+    <section data-plan-step id="one" data-status="todo"><h2>One</h2></section>
+    <section data-plan-step id="two" data-status="todo"><h2>Two</h2></section>
+    <section data-plan-step id="three" data-status="todo"><h2>Three</h2></section>
+  </body>
+</html>
+`;
 const RESET_SUBJECT = 'agentdeck github-e2e: reset';
 const CHECK_NAME = 'check';
 const WORKFLOW = `# Written by AgentDeck's github-e2e reset (daemon/scripts/github-e2e.mjs): one quick check on every PR.
@@ -180,14 +194,14 @@ const remoteBranches = () =>
 
 function clearBranches(cwd) {
   const open = ghJson('pr', 'list', '-R', REPO, '--state', 'open', '--limit', '100', '--json', 'number,headRefName').filter((p) =>
-    p.headRefName.startsWith(BRANCH_PREFIX),
+    isOurs(p.headRefName),
   );
   for (const p of open) gh('pr', 'close', String(p.number), '-R', REPO);
   const branches = run('git', ['ls-remote', '--heads', 'origin'], { cwd })
     .split('\n')
     .filter(Boolean)
     .map((l) => l.split('\t')[1].replace('refs/heads/', ''))
-    .filter((b) => b.startsWith(BRANCH_PREFIX));
+    .filter(isOurs);
   if (branches.length) run('git', ['push', '-q', 'origin', ...branches.map((b) => `:refs/heads/${b}`)], { cwd });
   return { prs: open.length, branches };
 }
@@ -199,7 +213,7 @@ function addTask(title, prompt, ...flags) {
   return id;
 }
 
-async function prOpened(id, note, { label }) {
+async function prOpened(id, note, { label, base = 'main' }) {
   const task = await waitFor(`#${id} done with its PR open`, () => {
     const t = taskRow(id);
     if (['blocked', 'failed', 'cancelled'].includes(t.status)) throw fatal(`#${id} is ${t.status}: ${t.stop_reason}`);
@@ -208,11 +222,11 @@ async function prOpened(id, note, { label }) {
   note(`db: #${id} done on ${task.branch}, pr_state open, ${task.pr_url}`);
   const pr = prView(task.pr_url, 'state,headRefName,baseRefName,labels,isDraft');
   expect(pr.state === 'OPEN', `GitHub says the PR is ${pr.state}`);
-  expect(pr.headRefName === task.branch && pr.baseRefName === 'main', `the PR is ${pr.headRefName} → ${pr.baseRefName}`);
+  expect(pr.headRefName === task.branch && pr.baseRefName === base, `the PR is ${pr.headRefName} → ${pr.baseRefName}, not into ${base}`);
   expect(!pr.isDraft, 'the PR is a draft, but pr_mode is ready');
   const labelled = pr.labels.some((l) => l.name === 'agentdeck:auto-merge');
   expect(labelled === label, `the PR ${labelled ? 'has' : 'lacks'} the agentdeck:auto-merge label`);
-  note(`gh: PR open, ${pr.headRefName} → main, ${label ? 'labelled agentdeck:auto-merge' : 'no auto-merge label'}`);
+  note(`gh: PR open, ${pr.headRefName} → ${base}, ${label ? 'labelled agentdeck:auto-merge' : 'no auto-merge label'}`);
   return task.pr_url;
 }
 
@@ -397,6 +411,130 @@ try {
     const open = prs.filter((p) => p.state === 'OPEN');
     expect(!open.length, `GitHub has an open PR for ${t.branch}: ${open.map((p) => p.url).join(', ')}`);
     note(`gh: the PR is closed and ${t.branch} has no other open; db: still closed, status ${t.status}`);
+  });
+
+  const planFile = join(HOME, 'e2e-plan.html');
+  writeFileSync(planFile, PLAN_HTML);
+  const planOwner = addTask(
+    'e2e: plan step one',
+    'FAKE_DONE write fake-output.txt for the plan',
+    '--plan',
+    planFile,
+    '--steps',
+    'one',
+    '--propose',
+  );
+  const branchRow = () => database().prepare('SELECT * FROM plan_branches WHERE plan_task = ?').get(planOwner);
+  cli('plan-branch', 'open', String(planOwner));
+  const planName = branchRow()?.name;
+  expect(planName?.startsWith(`plan/${planOwner}-`), `plan-branch open left ${JSON.stringify(branchRow())}`);
+  const planSecond = addTask(
+    'e2e: plan step two',
+    'FAKE_DONE write fake-output.txt for the plan again',
+    '--plan',
+    String(planOwner),
+    '--steps',
+    'two',
+    '--builds-on',
+    String(planOwner),
+    '--propose',
+  );
+  const planThird = addTask(
+    'e2e: plan step three',
+    'FAKE_DONE write fake-output.txt for the plan a third time',
+    '--plan',
+    String(planOwner),
+    '--steps',
+    'three',
+    '--builds-on',
+    String(planSecond),
+    '--propose',
+  );
+  const planTasks = [planOwner, planSecond, planThird];
+  for (const id of planTasks) {
+    const target = taskRow(id).target;
+    expect(target === planName, `#${id} targets ${target}, not ${planName}`);
+  }
+  cli('approve', ...planTasks.map(String));
+  const scrubbed = (value) => JSON.stringify(value, null, 1).replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, 'person@example.com');
+  const record = (name, value) => {
+    if (opts.record) writeFileSync(join(FIXTURES, `${name}.json`), `${scrubbed(value)}\n`);
+  };
+  const PR_FIELDS =
+    'state,headRefOid,headRefName,baseRefName,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,files,labels';
+  const planUrls = {};
+
+  await step(`#${planOwner}'s PR opens into ${planName}, not main`, async (note) => {
+    planUrls[planOwner] = await prOpened(planOwner, note, { label: true, base: planName });
+    const pr = prView(planUrls[planOwner], PR_FIELDS);
+    record('pr-view-plan-branch-task', pr);
+    const checks = (pr.statusCheckRollup ?? []).map((c) => `${c.name} ${c.status}`);
+    note(`gh: PR into ${pr.baseRefName} has ${checks.length ? checks.join(', ') : 'no checks'}`);
+    expect(branchRow().status === 'active', `the plan branch is ${branchRow().status}, not active`);
+    expect(remoteBranches().includes(planName), `${planName} is not on GitHub`);
+    note(`db: ${planName} active; gh: ${planName} pushed`);
+  });
+
+  await step(`#${planOwner} merged into ${planName}`, async (note) => {
+    await merged(planOwner, planUrls[planOwner], note);
+    expect(remoteBranches().includes(planName), `${planName} was deleted when a task PR merged into it`);
+    const { default_branch: def } = ghJson('api', `repos/${REPO}`);
+    expect(def === 'main', `the default branch is ${def}`);
+    note(`gh: ${planName} still there, main still the default branch`);
+  });
+
+  const runsDone = () => database().prepare("SELECT COUNT(*) AS n FROM runs WHERE kind = 'resolve' AND outcome = 'done'").get().n;
+  let mainSha = '';
+
+  await step(`a commit on main that conflicts with ${planName}, a resolve run syncs it`, async (note) => {
+    const before = runsDone();
+    const pusher = join(HOME, 'pusher');
+    gh('repo', 'clone', REPO, pusher, '--', '-q');
+    const git = (...args) =>
+      run('git', ['-c', 'user.name=AgentDeck e2e', '-c', 'user.email=e2e@agentdeck.invalid', ...args], { cwd: pusher });
+    writeFileSync(join(pusher, 'fake-output.txt'), 'changed on main behind the plan branch\n');
+    git('commit', '-qam', 'e2e: a conflicting change on main');
+    git('push', '-q', 'origin', 'HEAD:main');
+    mainSha = git('rev-parse', 'HEAD');
+    note(`gh: main is ${mainSha.slice(0, 7)}, with a change to fake-output.txt the plan branch also changed`);
+    await waitFor('a resolve run for the plan branch', () => {
+      const failedRun = database().prepare("SELECT * FROM runs WHERE kind = 'resolve' AND outcome IS NOT NULL AND outcome != 'done'").get();
+      if (failedRun) throw fatal(`a resolve run ended ${failedRun.outcome}`);
+      return runsDone() > before;
+    });
+    note('db: a resolve run done');
+    await waitFor(`${planName} to have main's commit`, () => {
+      const cmp = ghJson('api', `repos/${REPO}/compare/${mainSha}...${planName}`);
+      return cmp.behind_by === 0 && cmp.ahead_by > 0;
+    });
+    const status = branchRow().status;
+    expect(status === 'active', `the plan branch is ${status} after its resolve, not active`);
+    note(`gh: ${planName} contains main's ${mainSha.slice(0, 7)}; db: plan branch ${status}`);
+  });
+
+  await step(`#${planSecond} and #${planThird} merge into ${planName}`, async (note) => {
+    for (const id of [planSecond, planThird]) {
+      planUrls[id] = await prOpened(id, note, { label: true, base: planName });
+      await merged(id, planUrls[id], note);
+    }
+    expect(remoteBranches().includes(planName), `${planName} was deleted before it landed`);
+  });
+
+  await step(`${planName}'s PR opens into main and a person merges it`, async (note) => {
+    const opened = await waitFor(`${planName}'s PR to open`, () => branchRow().pr_url && branchRow());
+    expect(opened.status === 'landing', `the plan branch is ${opened.status}, not landing`);
+    const pr = prView(opened.pr_url, PR_FIELDS);
+    record('pr-view-plan-branch', pr);
+    expect(pr.state === 'OPEN', `GitHub says the plan PR is ${pr.state}`);
+    expect(pr.headRefName === planName && pr.baseRefName === 'main', `the plan PR is ${pr.headRefName} → ${pr.baseRefName}`);
+    note(`gh: ${opened.pr_url} open, ${planName} → main`);
+    gh('pr', 'merge', opened.pr_url, '-R', REPO, '--merge');
+    note('gh pr merge, by a person');
+    await waitFor('the daemon to record the plan branch landed', () => branchRow().status === 'landed');
+    note(`db: ${planName} landed`);
+    await waitFor(`${planName} deleted on GitHub`, () => !remoteBranches().includes(planName), 60_000);
+    note(`gh: ${planName} deleted`);
+    expect(mainOutput().includes('done by fake claude'), "main's fake-output.txt lacks the plan's work");
   });
 } catch (err) {
   if (err.refusal) {
