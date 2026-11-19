@@ -99,7 +99,6 @@ export const UNTESTED_DOMAIN_EXPORTS: string[] = [
   'proposals/selectProposals',
   'runs/buildCodeCommentsPrompt',
   'runs/buildResumePrompt',
-  'runs/claudeArgs',
   'runs/runSummary',
   'runs/workerSettings',
   'runs/buildReviewPrompt',

@@ -32,6 +32,7 @@ ${codeComments}${
       : "- Run the project's tests if there are any, and fix failures you caused."
   }
 - Some commands are refused by AgentDeck's tool rules. A refusal covers only that one command: try a simpler command or another tool (Read, Glob, Grep instead of cat, find, grep), and keep working.
+- To wait for a background command, wait for its completion notice and never schedule a wake-up (ScheduleWakeup and the cron tools are off): a wake-up only keeps the process, and its slot, alive after your work is over.
 - Commit your work with clear messages. Never push, never switch branches.
 - If the task asks for a plan, or is big enough to need one, and the prompt gives you none, write it to ${PLAN_FILE}. AgentDeck keeps it as the task's plan after the run; git ignores that file, so never commit it or copy it elsewhere in the repo. AgentDeck reads it from these attributes:
   <html data-agentdeck-plan="1">, a <title>, one <p data-plan-summary> saying what and why,
