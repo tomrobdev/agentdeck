@@ -5,11 +5,12 @@ import { type Link, type LinkIndex, type LinkTarget, linkState, releasedBy, stuc
 import type { Task } from '#domain/work/index.ts';
 import { plural } from '#domain/shared/index.ts';
 import { notifyLater } from '#application/operations/notifications.ts';
+import { placeOf } from '#application/work/links.ts';
 
 export function linkTargetOf(app: App, id: TaskId): LinkTarget | undefined {
   const dep = app.getTask(id);
   if (!dep) return undefined;
-  return { ...dep, pr_mode: app.getRepo(dep.repo_id)?.pr_mode ?? 'off', links: app.linksOf(id) };
+  return { ...dep, pr_mode: app.getRepo(dep.repo_id)?.pr_mode ?? 'off', place: placeOf(app, dep), links: app.linksOf(id) };
 }
 
 export function liveLinks(app: App): LinkIndex {
@@ -75,10 +76,11 @@ export function warnStuckDependents(app: App, id: TaskId): void {
 export function buildersOnRepo(app: App, repoId: RepoId, taskIds: TaskId[]): Task[] {
   const builders = new Map<TaskId, Task>();
   for (const on of taskIds) {
-    if (linkState({ on, kind: 'builds_on' }, linkTargetOf(app, on)).kind === 'met') continue;
+    const dependency = linkTargetOf(app, on);
     for (const d of app.dependentsOf(on, 'builds_on')) {
       const t = d.status === 'queued' ? app.getTask(d.id) : undefined;
-      if (t && t.repo_id !== repoId) builders.set(t.id, t);
+      if (!t || t.repo_id === repoId) continue;
+      if (linkState({ on, kind: 'builds_on' }, dependency, placeOf(app, t)).kind !== 'met') builders.set(t.id, t);
     }
   }
   return [...builders.values()].sort((a, b) => a.id - b.id);

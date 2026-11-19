@@ -6,6 +6,7 @@ import type { PrMode } from '#domain/repos/index.ts';
 import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 import { isReview, stageOf } from '#domain/work/task/stage.ts';
 import type { DoneState } from '#domain/work/task/task.ts';
+import { BASE_PLACE, type Place, meets, placesReachable, placesReached, placesUsed } from '#domain/work/task/target.ts';
 
 export type LinkKind = 'builds_on' | 'after';
 
@@ -20,7 +21,7 @@ export interface Link {
 type DependencyState = DoneState | { status: Exclude<TaskStatus, 'done'> };
 
 /** `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged. */
-export type Dependency = DependencyState & { pr: Pick<PullRequest, 'state'> | null; pr_mode: PrMode };
+export type Dependency = DependencyState & { pr: Pick<PullRequest, 'state'> | null; pr_mode: PrMode; place?: Place };
 
 /** A task that depends on another, and the kind of that link. */
 export interface Dependent {
@@ -42,16 +43,31 @@ export type LinkTarget = Dependency & { links: Link[] };
 type Standing =
   { kind: 'met' } | { kind: 'waiting'; on: TaskId; reason: string } | { kind: 'stuck'; on: TaskId; reason: string; which: string };
 
-function standing(on: TaskId, dependency: Dependency | undefined): Standing {
+function placed(on: TaskId, dependency: Dependency, user: Place | null): Standing {
+  if (user === null) return { kind: 'met' };
+  const place = dependency.place ?? BASE_PLACE;
+  const used = placesUsed(user);
+  if (meets(placesReached(place), used)) return { kind: 'met' };
+  const where = place.target ?? 'its base';
+  if (meets(placesReachable(place), used))
+    return { kind: 'waiting', on, reason: `#${on} is merged into ${where}, which has not landed yet` };
+  const which =
+    place.plan_branch === 'abandoned'
+      ? `merged into ${where}, which was abandoned`
+      : `merged into ${where}, which never reaches this task's target`;
+  return { kind: 'stuck', on, reason: `#${on} is ${which}`, which: `which is ${which}` };
+}
+
+function standing(on: TaskId, dependency: Dependency | undefined, user: Place | null): Standing {
   const id = `#${on}`;
   const stuck = (reason: string, which: string): Standing => ({ kind: 'stuck', on, reason, which });
   if (!dependency) return stuck(`${id} no longer exists`, 'which no longer exists');
   switch (dependency.status) {
     case 'done':
       const state = dependency.pr?.state ?? null;
-      if (state === 'merged') return { kind: 'met' };
-      if (state === null && dependency.pr_mode === 'off') return { kind: 'met' };
-      if (dependency.done_by === 'person' && state !== 'open') return { kind: 'met' };
+      if (state === 'merged') return placed(on, dependency, user);
+      if (state === null && dependency.pr_mode === 'off') return placed(on, dependency, user);
+      if (dependency.done_by === 'person' && state !== 'open') return placed(on, dependency, user);
       if (state === 'closed') return stuck(`${id}'s PR was closed without merging`, 'whose PR was closed without merging');
       if (state === 'failed') return stuck(`${id}'s PR could not be opened`, 'whose PR could not be opened');
       if (state === 'open') return { kind: 'waiting', on, reason: `${id}'s PR is not merged yet` };
@@ -92,8 +108,8 @@ export type LinkState =
   | { kind: 'stuck'; on: TaskId; reason: string }
   | { kind: 'unlanded'; on: TaskId; reason: string };
 
-export function linkState(link: Pick<Link, 'on' | 'kind'>, dependency: Dependency | undefined): LinkState {
-  const s = standing(link.on, dependency);
+export function linkState(link: Pick<Link, 'on' | 'kind'>, dependency: Dependency | undefined, user: Place = BASE_PLACE): LinkState {
+  const s = standing(link.on, dependency, link.kind === 'builds_on' ? user : null);
   if (link.kind === 'builds_on') return s.kind === 'stuck' ? { kind: 'stuck', on: s.on, reason: s.reason } : s;
   if (s.kind === 'met' || neverLands(dependency)) return { kind: 'met' };
   return { kind: 'unlanded', on: s.on, reason: s.reason };
@@ -125,15 +141,16 @@ export function startState(task: { id: TaskId }, links: Link[], lookup: (id: Tas
     for (const next of target.links) {
       if (next.kind !== 'builds_on') continue;
       const nextDep = lookup(next.on);
-      const r = root(next.on, [...via, on], nextDep, standing(next.on, nextDep));
+      const r = root(next.on, [...via, on], nextDep, standing(next.on, nextDep, target.place ?? BASE_PLACE));
       if (r) return r;
     }
     return null;
   };
+  const place = lookup(task.id)?.place ?? BASE_PLACE;
   const waiting: TaskId[] = [];
   for (const link of own) {
     const dep = lookup(link.on);
-    const s = standing(link.on, dep);
+    const s = standing(link.on, dep, place);
     const r = root(link.on, [], dep, s);
     if (r) return { kind: 'stuck', ...r };
     if (s.kind === 'waiting') waiting.push(link.on);

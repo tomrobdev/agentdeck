@@ -11,7 +11,7 @@ import {
   planAfterRun,
   toPlan,
 } from '#domain/work/index.ts';
-import type { TaskId } from '#domain/shared/index.ts';
+import { type RepoId, type TaskId, present } from '#domain/shared/index.ts';
 import type { PrPlan } from '#domain/landing/index.ts';
 import type { PromptPlan } from '#domain/runs/index.ts';
 import { hasPlanLink, otherPlanOwner, planOwnerOf } from '#domain/work/index.ts';
@@ -19,7 +19,9 @@ import { PLAN_ATTACHABLE_STATUSES, RUNNING_STATUSES, type Task } from '#domain/w
 import {
   type PlanBranch,
   type PlanBranchTask,
+  abandonRunningError,
   isLivePlanBranch,
+  reposToOpen,
   needsCut,
   planBranchMoveError,
   planBranchName,
@@ -116,14 +118,18 @@ export function attachPlan(app: App, id: TaskId, input: { html?: unknown }): Tas
   return saved;
 }
 
-function planBranchTasks(app: App, owner: Task): PlanBranchTask[] {
+function openPlanTasks(app: App, owner: Task): Task[] {
   const ids = new Set([owner.id, ...app.planFollowers(owner.id).map((f) => f.id)]);
   return [...ids].flatMap((id) => {
     const t = app.getTask(id);
-    if (!t || t.repo_id !== owner.repo_id || t.status === 'done' || t.status === 'cancelled') return [];
-    return [{ id: t.id, target: t.target, started: !!t.checkout?.branch, running: RUNNING_STATUSES.includes(t.status) }];
+    return t && t.status !== 'done' && t.status !== 'cancelled' ? [t] : [];
   });
 }
+
+const planBranchTasks = (tasks: Task[], repo: RepoId): PlanBranchTask[] =>
+  tasks
+    .filter((t) => t.repo_id === repo)
+    .map((t) => ({ id: t.id, target: t.target, started: !!t.checkout?.branch, running: RUNNING_STATUSES.includes(t.status) }));
 
 function planOwnerTask(app: App, id: TaskId): { owner: Task; plan: OwnPlan } {
   const owner = requireTask(app, planOwnerOf(requireTask(app, id)));
@@ -132,27 +138,55 @@ function planOwnerTask(app: App, id: TaskId): { owner: Task; plan: OwnPlan } {
   return { owner, plan };
 }
 
-export function openPlanBranch(app: App, id: TaskId): PlanBranch & { targeted: TaskId[] } {
+const planBranchesOf = (app: App, owner: Task): PlanBranch[] => app.listRepos().flatMap((r) => app.planBranchOf(owner.id, r.id) ?? []);
+
+const ownerFirst = <B extends { repo_id: RepoId }>(owner: Task, branches: B[]): B[] => [
+  ...branches.filter((b) => b.repo_id === owner.repo_id),
+  ...branches.filter((b) => b.repo_id !== owner.repo_id),
+];
+
+type OpenedBranch = PlanBranch & { targeted: TaskId[] };
+
+export function openPlanBranch(app: App, id: TaskId): OpenedBranch & { others: OpenedBranch[] } {
   const { owner, plan } = planOwnerTask(app, id);
-  const repo = requireTaskRepo(app, owner);
-  refuse(planBranchOpenError(owner.id, app.planBranchOf(owner.id, repo.id)), undefined, 'conflict');
-  const name = planBranchName(owner.id, parsePlan(plan.html)?.title ?? '');
-  const { opened, targeted } = app.openPlanBranch(
-    { plan_task: owner.id, repo_id: repo.id, name, base: repo.base_branch },
-    tasksToTarget(planBranchTasks(app, owner)),
+  const existing = ownerFirst(owner, planBranchesOf(app, owner));
+  const tasks = openPlanTasks(app, owner);
+  const missing = reposToOpen(
+    owner.repo_id,
+    tasks.map((t) => t.repo_id),
+    existing.map((b) => b.repo_id),
   );
-  return { ...opened, targeted };
+  if (!missing.length) refuse(planBranchOpenError(owner.id, existing[0]), undefined, 'conflict');
+  const name = existing[0]?.name ?? planBranchName(owner.id, parsePlan(plan.html)?.title ?? '');
+  const [first, ...others] = missing.map((repo_id): OpenedBranch => {
+    const repo = present(app.getRepo(repo_id), `repo ${repo_id}`);
+    const { opened, targeted } = app.openPlanBranch(
+      { plan_task: owner.id, repo_id, name, base: repo.base_branch },
+      tasksToTarget(planBranchTasks(tasks, repo_id)),
+    );
+    return { ...opened, targeted };
+  });
+  return { ...present(first, 'the plan branch opened'), others };
 }
 
-export function abandonPlanBranch(app: App, id: TaskId): PlanBranch & { moved: TaskId[] } {
-  const { owner } = planOwnerTask(app, id);
-  const branch = app.planBranchOf(owner.id, owner.repo_id);
-  if (!branch) throw new ActionError(`#${owner.id}'s plan has no plan branch`, undefined, 'not_found');
-  refuse(planBranchMoveError(branch, 'abandon'), undefined, 'conflict');
+type AbandonedBranch = PlanBranch & { moved: TaskId[] };
+
+function abandonOne(app: App, branch: PlanBranch): AbandonedBranch {
   const outcome = app.abandonPlanBranch(branch);
   if (!outcome) throw new ActionError(`${branch.name} changed while it was being abandoned; try again`, undefined, 'conflict');
   if ('refused' in outcome) throw new ActionError(outcome.refused, undefined, 'conflict');
   return { ...outcome.abandoned, moved: outcome.moved };
+}
+
+export function abandonPlanBranch(app: App, id: TaskId): AbandonedBranch & { others: AbandonedBranch[] } {
+  const { owner } = planOwnerTask(app, id);
+  const [branch, ...rest] = ownerFirst(owner, planBranchesOf(app, owner));
+  if (!branch) throw new ActionError(`#${owner.id}'s plan has no plan branch`, undefined, 'not_found');
+  refuse(planBranchMoveError(branch, 'abandon'), undefined, 'conflict');
+  const live = rest.filter(isLivePlanBranch);
+  const tasks = openPlanTasks(app, owner);
+  for (const b of [branch, ...live]) refuse(abandonRunningError(b.name, planBranchTasks(tasks, b.repo_id)), undefined, 'conflict');
+  return { ...abandonOne(app, branch), others: live.map((b) => abandonOne(app, b)) };
 }
 
 export async function cutPlanBranch(app: App, repo: Repo, task: Pick<Task, 'target'>): Promise<void> {

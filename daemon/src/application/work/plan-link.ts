@@ -2,7 +2,6 @@
 import type { App } from '#application/ports/app.ts';
 import { type TaskId, parseId } from '#domain/shared/index.ts';
 import { type ParsedPlan, parsePlan } from '#domain/work/index.ts';
-import type { Repo } from '#domain/repos/index.ts';
 import { stepsNeedPlanError } from '#domain/work/index.ts';
 import { ActionError, refuse } from '#application/shared/input.ts';
 import { readPlanInput } from '#application/work/plans.ts';
@@ -24,12 +23,9 @@ function checkSteps(name: string, plan: ParsedPlan, steps: string[] | null): voi
   }
 }
 
-function planOwner(app: App, repo: Repo, on: TaskId): { owner: TaskId; name: string; plan: ParsedPlan } {
+function planOwner(app: App, on: TaskId): { owner: TaskId; name: string; plan: ParsedPlan } {
   const target = app.getTask(on);
   if (!target) throw new ActionError(`plan: there is no task #${on}`);
-  if (target.repo_id !== repo.id) {
-    throw new ActionError(`plan: #${on} is in ${app.getRepo(target.repo_id)?.name ?? 'another repo'}, not ${repo.name}`);
-  }
   for (const owner of [on, target.plan?.task ?? null]) {
     const own = owner === null ? undefined : app.ownPlan(owner);
     const plan = own && parsePlan(own.html);
@@ -53,7 +49,6 @@ export function planRequest(body: Record<string, unknown>): PlanRequest | undefi
 
 export function checkPlanLink(
   app: App,
-  repo: () => Repo,
   asked: PlanRequest,
   steps: string[] | null,
 ): { ownPlan: string; plan: ParsedPlan } | { owner: TaskId | null } {
@@ -63,7 +58,7 @@ export function checkPlanLink(
   }
   refuse(stepsNeedPlanError(asked.task, steps));
   if (asked.task === null) return { owner: null };
-  const linked = planOwner(app, repo(), asked.task);
+  const linked = planOwner(app, asked.task);
   checkSteps(linked.name, linked.plan, steps);
   return { owner: linked.owner };
 }

@@ -63,14 +63,14 @@ export async function addTask(
     );
   refuse(archivedRepoError(repo));
   const steps = stepList(input.plan_steps);
-  const checked = checkPlanLink(app, () => repo, planAsked ?? { task: null }, steps);
+  const checked = checkPlanLink(app, planAsked ?? { task: null }, steps);
   const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
   const owner = 'owner' in checked ? checked.owner : null;
   const askedTarget = textOrNull(body, 'target');
   const target = askedTarget === undefined ? planBranchTargetFor(app, repo, owner) : await checkedTarget(app, repo, askedTarget);
   refuseCrossTargets(
     app,
-    { id: null, repo_id: repo.id, target, base_branch: repo.base_branch },
+    targetEnd(app, { id: null, repo_id: repo.id, target }),
     links.filter((l) => l.kind === 'builds_on').map((l) => l.on),
   );
   const linked = owner !== null || own_plan !== undefined;
@@ -157,7 +157,7 @@ export async function editTask(
         `#${id} has a plan of its own, which can't be cleared: replace it with --plan <file>, or follow another task's plan with --plan <task number>`,
       );
     }
-    const checked = checkPlanLink(app, () => requireTaskRepo(app, task), asked, steps);
+    const checked = checkPlanLink(app, asked, steps);
     let link: TaskId | null;
     if ('ownPlan' in checked) {
       checkFollowers(app, id, checked.plan, id);

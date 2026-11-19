@@ -1,5 +1,5 @@
 // A task's status changes only here: through applyEvent, the claim and crash recovery included, guarded by the current status.
-import { type SQL, and, asc, desc, eq, exists, inArray, isNotNull, isNull, ne, notExists, notInArray, or } from 'drizzle-orm';
+import { type SQL, and, asc, desc, eq, exists, inArray, isNotNull, isNull, ne, not, notExists, notInArray, or } from 'drizzle-orm';
 import { type Draining, NOT_DRAINING } from '#domain/capacity/index.ts';
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
@@ -7,6 +7,7 @@ import type { TaskId } from '#domain/shared/index.ts';
 import { INTERRUPTED, type RunOutcome } from '#domain/runs/index.ts';
 import {
   type DomainEvent,
+  LIVE_PLAN_BRANCH_STATUSES,
   RUNNING_STATUSES,
   type Needs,
   type Task,
@@ -30,6 +31,9 @@ const t = alias(tasks, 't');
 const buildsOn = alias(taskLinks, 'l');
 const dep = alias(tasks, 'd');
 const depRepo = alias(repos, 'r');
+const taskRepo = alias(repos, 'tr');
+const depPlanBranch = alias(planBranches, 'dp');
+const taskPlanBranch = alias(planBranches, 'tp');
 
 export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId) => Task | undefined) {
   const inOpenRepo = (col: AnySQLiteColumn) =>
@@ -40,6 +44,48 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
         .from(repos)
         .where(and(isNull(repos.paused_reason), isNull(repos.archived_at))),
     );
+  const placeMet = () => {
+    const depAtBase = or(
+      isNull(dep.target),
+      exists(
+        orm
+          .select({ id: depRepo.id })
+          .from(depRepo)
+          .where(and(eq(depRepo.id, dep.repo_id), eq(depRepo.base_branch, dep.target))),
+      ),
+    );
+    const taskAtBase = or(
+      isNull(t.target),
+      exists(
+        orm
+          .select({ id: taskRepo.id })
+          .from(taskRepo)
+          .where(and(eq(taskRepo.id, t.repo_id), eq(taskRepo.base_branch, t.target))),
+      ),
+    );
+    const usesBase = or(
+      taskAtBase,
+      exists(
+        orm
+          .select({ id: taskPlanBranch.id })
+          .from(taskPlanBranch)
+          .where(
+            and(
+              eq(taskPlanBranch.repo_id, t.repo_id),
+              eq(taskPlanBranch.name, t.target),
+              inArray(taskPlanBranch.status, LIVE_PLAN_BRANCH_STATUSES),
+            ),
+          ),
+      ),
+    );
+    const depLanded = exists(
+      orm
+        .select({ id: depPlanBranch.id })
+        .from(depPlanBranch)
+        .where(and(eq(depPlanBranch.repo_id, dep.repo_id), eq(depPlanBranch.name, dep.target), eq(depPlanBranch.status, 'landed'))),
+    );
+    return or(and(depAtBase, usesBase), and(not(depAtBase), not(taskAtBase), eq(dep.target, t.target)), and(depLanded, usesBase));
+  };
   const notWaiting = () => {
     const met = and(
       eq(dep.status, 'done'),
@@ -56,6 +102,7 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
         ),
         and(eq(dep.done_by, 'person'), or(isNull(dep.pr_state), ne(dep.pr_state, 'open'))),
       ),
+      placeMet(),
     );
     const unmet = orm
       .select({ id: dep.id })

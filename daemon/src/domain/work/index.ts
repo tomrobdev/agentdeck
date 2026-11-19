@@ -87,6 +87,7 @@ export {
   abandonRunningError,
   isLivePlanBranch,
   mayResolvePlanBranch,
+  LIVE_PLAN_BRANCH_STATUSES,
   needsCut,
   nextPlanBranchStatus,
   planBranchConflict,
@@ -102,6 +103,7 @@ export {
   planBranchSyncMove,
   planBranchTarget,
   planBranchWait,
+  reposToOpen,
   tasksBackToBase,
   tasksToTarget,
 } from '#domain/work/plans/plan-branch.ts';
@@ -203,8 +205,8 @@ export {
   stateFields,
   stopReasonOf,
 } from '#domain/work/task/task.ts';
-export { buildsOnTargetError, missingTargetError, targetChangeError, targetOf } from '#domain/work/task/target.ts';
-export type { TargetEnd } from '#domain/work/task/target.ts';
+export { buildsOnTargetError, missingTargetError, placeAt, targetChangeError, targetOf } from '#domain/work/task/target.ts';
+export type { Place, TargetEnd } from '#domain/work/task/target.ts';
 export { PROMPT_SECTIONS, promptBrief, promptGoal, promptSection, shapePrompt } from '#domain/work/task/prompt.ts';
 export type {
   BlockedState,

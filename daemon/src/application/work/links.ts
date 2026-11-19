@@ -5,12 +5,14 @@ import { present } from '#domain/shared/index.ts';
 import {
   type Link,
   type LinkKind,
+  type Place,
   type TargetEnd,
   type Task,
   buildsOnError,
   buildsOnRepoError,
   buildsOnTargetError,
   linkError,
+  placeAt,
 } from '#domain/work/index.ts';
 import { ActionError, refuse, requireTask } from '#application/shared/input.ts';
 
@@ -20,9 +22,22 @@ function buildsOnRepoRefusal(app: App, other: { id: TaskId; repo_id: RepoId }): 
   return buildsOnRepoError(other.id, present(app.getRepo(other.repo_id), `#${other.id}'s repo`));
 }
 
-export function targetEnd(app: App, task: Pick<Task, 'id' | 'repo_id' | 'target'>): TargetEnd {
-  const repo = present(app.getRepo(task.repo_id), `#${task.id}'s repo`);
-  return { id: task.id, repo_id: task.repo_id, target: task.target, base_branch: repo.base_branch };
+const planBranchStatus = (app: App, task: Pick<Task, 'repo_id' | 'target'>) =>
+  task.target === null ? null : (app.planBranchNamed(task.repo_id, task.target)?.status ?? null);
+
+export function targetEnd(app: App, task: Pick<Task, 'repo_id' | 'target'> & { id: TaskId | null }): TargetEnd {
+  const repo = present(app.getRepo(task.repo_id), task.id === null ? 'the repo' : `#${task.id}'s repo`);
+  return {
+    id: task.id,
+    repo_id: task.repo_id,
+    target: task.target,
+    base_branch: repo.base_branch,
+    plan_branch: planBranchStatus(app, task),
+  };
+}
+
+export function placeOf(app: App, task: Pick<Task, 'repo_id' | 'target'>): Place {
+  return placeAt(task.target, app.getRepo(task.repo_id)?.base_branch ?? '', planBranchStatus(app, task));
 }
 
 export function refuseCrossTargets(app: App, end: TargetEnd, buildsOn: TaskId[], builders: TaskId[] = []): void {

@@ -57,11 +57,12 @@ Tasks
                       without --model: the repo's model, else the default_model setting
                       [--target <branch>]       start from and land on that branch (local or on origin), not the base
                       [--builds-on <tasks>]     start once those tasks (12,14) are done and merged
-                                                (refused when they have a different target)
+                                                where this task's target gets them, in any repo
+                                                (refused when their work never reaches its target)
                       [--after <tasks>]         run at once; the PR waits to merge until those tasks have landed
                       [--plan <file|task>] [--steps a,b]   carry out steps of a plan: a plan file anywhere on disk
                                                       (stored as this task's plan) or a task number (follow that
-                                                      task's plan, same repo); without --steps, every step not yet done
+                                                      task's plan, any repo); without --steps, every step not yet done
                       [--propose]               file it as a proposal that waits for \`agentdeck approve\`, like the planner's
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
                       [--plan <file|task>] [--steps a,b]   change the plan link ("" clears it)
@@ -77,10 +78,11 @@ Tasks
   agentdeck log <id> [--attempt n] [--raw]
   agentdeck attach <id> <plan.html>   store or replace the task's own plan (docs/plan-format.md), named
                                   <id>-<slug>.html after the task and the plan's title
-  agentdeck plan-branch open <plan task>   open a plan branch, plan/<id>-<slug>: the plan's tasks in its repo that
-                                  haven't started, and tasks added later with --plan, target it; the daemon cuts it from
-                                  the base and pushes it when the first of them starts
-  agentdeck plan-branch abandon <plan task>   close it: its tasks that haven't started move back to the base;
+  agentdeck plan-branch open <plan task>   open a plan branch, plan/<id>-<slug>, in each repo the plan's tasks are in
+                                  (run it again for a repo a later task brings): the tasks there that haven't started,
+                                  and tasks added later with --plan, target it; the daemon cuts it from that repo's base
+                                  and pushes it when the first of them starts
+  agentdeck plan-branch abandon <plan task>   close them all: their tasks that haven't started move back to the base;
                                   refused while one runs
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asTaskId } from '#domain/shared/index.ts';
+import { asRepoId, asTaskId } from '#domain/shared/index.ts';
 import {
   type PlanBranchMove,
   type PlanBranchStatus,
@@ -18,9 +18,17 @@ import {
   planBranchStatusesFor,
   planBranchTarget,
   planBranchTargetChanges,
+  reposToOpen,
   tasksBackToBase,
   tasksToTarget,
 } from '#domain/work/index.ts';
+
+test('a plan branch opens in the plan’s own repo and each repo its tasks are in, once each, skipping repos that have one', () => {
+  const [a, b, c] = [1, 2, 3].map(asRepoId);
+  assert.deepEqual(reposToOpen(a, [b, a, b, c], []), [a, b, c]);
+  assert.deepEqual(reposToOpen(a, [b, c], [a, c]), [b]);
+  assert.deepEqual(reposToOpen(a, [a], [a]), []);
+});
 
 const STATUSES: PlanBranchStatus[] = ['open', 'active', 'conflict', 'landing', 'landed', 'abandoned', 'partly_landed'];
 const MOVES: PlanBranchMove[] = ['cut', 'conflict', 'resolve', 'open_pr', 'close_pr', 'land', 'abandon'];
