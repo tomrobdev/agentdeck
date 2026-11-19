@@ -137,6 +137,45 @@ test('a merge that fails for good after another repo landed leaves the plan part
   assert.equal(planLandingQuestion(db, owner.id).question, null);
 });
 
+test('auto merges a plan PR once its check passes; a transient failure, an unreadable PR or a closed one under a person lands nothing', async () => {
+  host.merged.length = 0;
+  const { owner, urls } = await landingPlan('Auto');
+  setPlanLandingPolicy(db, owner.id, { policy: 'auto' });
+  const lines: string[] = [];
+  const before = host.merge;
+  const read = host.prDetails;
+  host.prDetails = async (url, cwd) => {
+    if (url === urls.api) throw new Error('gh: could not resolve host');
+    return read(url, cwd);
+  };
+  host.merge = async () => {
+    throw new Error('HTTP 502: Bad Gateway');
+  };
+  assert.equal(await landPlanBranches(db, (m) => lines.push(m)), 0);
+  assert.ok(lines.some((l) => /could not read its PR/.test(l)));
+  assert.deepEqual(statuses(owner.id), { shop: 'landing', api: 'landing' });
+  assert.ok(
+    db.planBranchesOfPlan(owner.id).every((b) => b.land_error === null),
+    'a transient failure is retried, not recorded',
+  );
+
+  host.prDetails = read;
+  host.merge = async (pr) => {
+    await before(pr);
+    host.details[pr.url] = { ...READY_PR, state: 'merged' };
+  };
+  host.details[urls.api] = { ...READY_PR, checks: { total: 1, failing: 0, pending: 1 } };
+  assert.equal(await landPlanBranches(db), 1, 'auto lands the one whose check passed and leaves the other');
+  assert.deepEqual(statuses(owner.id), { shop: 'landed', api: 'landing' });
+
+  setPlanLandingPolicy(db, owner.id, { policy: 'person' });
+  host.details[urls.api] = { ...READY_PR, state: 'closed' };
+  await landPlanBranches(db, (m) => lines.push(m));
+  host.merge = before;
+  assert.deepEqual(statuses(owner.id), { shop: 'landed', api: 'active' }, 'a person policy sends a closed plan PR back to active');
+  assert.ok(lines.some((l) => /closed unmerged, so it is active again/.test(l)));
+});
+
 test('finishing by hand hands the plan to a person, and a revert opens a revert PR where it landed and abandons the rest', async () => {
   const partly = async (title: string) => {
     const plan = await landingPlan(title);

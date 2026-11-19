@@ -143,7 +143,7 @@ test('a failed resolve leaves the plan branch where it was, in conflict, and its
 
   assert.equal(db.claimNextTask(), undefined, 'a task targeting it does not start');
   const [view] = taskViews(db, { limit: 50 }).filter((t) => t.id === waiting.id);
-  assert.deepEqual(view.wait, { kind: 'plan-branch', name: branch.name, base: 'main' });
+  assert.deepEqual(view.wait, { kind: 'plan-branch', name: branch.name, base: 'main', status: 'conflict' });
   const full = db.getTask(waiting.id);
   assert.ok(full);
   assert.match(fmtTask({ ...full, wait: view.wait }, 'shop'), new RegExp(`waits: ${branch.name} conflicts with main`));
