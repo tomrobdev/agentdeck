@@ -176,6 +176,18 @@ test('auto merges a plan PR once its check passes; a transient failure, an unrea
   assert.ok(lines.some((l) => /closed unmerged, so it is active again/.test(l)));
 });
 
+test('a plan PR whose check fails after another repo landed stops the saga partly landed; a plan that is not partly landed takes no answer', async () => {
+  const { owner, urls } = await landingPlan('Failing check');
+  await assert.rejects(answerPlanLanding(db, owner.id, { answer: 'retry' }), /is not partly landed/);
+  setPlanLandingPolicy(db, owner.id, { policy: 'in_order', order: ['shop', 'api'] });
+  host.details[urls.shop] = { ...READY_PR, state: 'merged' };
+  host.details[urls.api] = { ...READY_PR, checks: { total: 1, failing: 1, pending: 0 } };
+  await landPlanBranches(db);
+  assert.deepEqual(statuses(owner.id), { shop: 'landed', api: 'partly_landed' });
+  const api = db.planBranchesOfPlan(owner.id).find((b) => b.repo_id !== shop.id);
+  assert.match(api?.land_error ?? '', /needs a person/);
+});
+
 test('finishing by hand hands the plan to a person, and a revert opens a revert PR where it landed and abandons the rest', async () => {
   const partly = async (title: string) => {
     const plan = await landingPlan(title);
