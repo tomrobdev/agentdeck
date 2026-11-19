@@ -48,6 +48,7 @@ export interface AppliedEdits {
 export interface Workspace {
   prepareCheckout(repo: Repo, task: Task, target: string): Promise<Checkout>;
   cutBranch(repoPath: string, branch: string, from: string): Promise<{ sha: string; origin: boolean }>;
+  moveBranch(repoPath: string, branch: string, sha: string): Promise<{ origin: boolean }>;
   removeCheckout(repo: Repo, checkout: { worktree?: string | null; branch?: string | null }): Promise<void>;
   withScratchCheckout<T>(repo: Repo, branch: string, use: (checkout: { path: string } | { error: string }) => Promise<T>): Promise<T>;
 

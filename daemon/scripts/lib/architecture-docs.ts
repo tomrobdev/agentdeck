@@ -45,6 +45,8 @@ const SETTING_MEANINGS: Record<string, string> = {
   review_due_days: 'A repo is due for an area review once its oldest refs/reviewed/* mark is older than this many days',
   review_due_lines:
     'A repo is due for an area review once more than this many lines merged since its oldest mark (or, with none, since it was added)',
+  plan_branch_sync_minutes:
+    'How often the daemon syncs each active plan branch with its base, in minutes (a plan branch in conflict is retried without a resolve run)',
   reviews_due: 'The repos due for an area review as the daemon’s last check found them (JSON), for the headline',
   review_due_told:
     'When a person was last told each repo is due for an area review (JSON of repo id to ms since the epoch); at most once a day',

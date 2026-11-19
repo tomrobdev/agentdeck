@@ -2,6 +2,7 @@
 export {
   CODE_COMMENTS_MAX_TURNS,
   buildCodeCommentsPrompt,
+  buildPlanResolvePrompt,
   buildPrompt,
   buildResolvePrompt,
   buildResumePrompt,

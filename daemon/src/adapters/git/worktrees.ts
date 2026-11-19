@@ -28,6 +28,11 @@ export async function cutBranch(repoPath: string, branch: string, from: string):
   return { sha: await git(repoPath, 'rev-parse', `refs/heads/${branch}`), origin: await hasOrigin(repoPath) };
 }
 
+export async function moveBranch(repoPath: string, branch: string, sha: string): Promise<{ origin: boolean }> {
+  await git(repoPath, 'update-ref', `refs/heads/${branch}`, sha);
+  return { origin: await hasOrigin(repoPath) };
+}
+
 export async function commitLeftovers(worktree: string, message: string): Promise<boolean> {
   if (!(await git(worktree, 'status', '--porcelain'))) return false;
   await git(worktree, 'add', '-A');

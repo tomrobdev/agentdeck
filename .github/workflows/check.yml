@@ -113,7 +113,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: git config --global user.name ci && git config --global user.email ci@example.com
       - name: crash test
-        run: node daemon/scripts/crash-test.mjs 5
+        run: node daemon/scripts/crash-test.mjs 6
 
   # The dashboard end to end (app/e2e/): Playwright against the Vite dev server and a seeded scratch daemon.
   # ui:

@@ -19,6 +19,8 @@ export function describeWait(h: StartWait): string {
         : 'AgentDeck is draining: it finishes the work in flight, then pauses';
     case 'dependency':
       return h.stuck ? `Can't start: ${h.stuck}` : `Waits for ${h.on.map((id) => `#${id}`).join(', ')} to finish`;
+    case 'plan-branch':
+      return `Waits: ${h.name} conflicts with ${h.base}; it starts once a merge of ${h.base} into it is pushed`;
     case 'unblocking':
       return 'Waits for its unblock run to stop';
     case 'slots':

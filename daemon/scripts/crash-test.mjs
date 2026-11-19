@@ -20,8 +20,10 @@ const OWN_ROOT = !process.env.CRASH_ROOT;
 const ROOT = process.env.CRASH_ROOT ?? mkdtempSync(join(tmpdir(), 'agentdeck-crash-'));
 mkdirSync(ROOT, { recursive: true });
 const TASKS = 3;
-const PHASES = ['running', 'tests', 'pr', 'sync', 'resolve'];
-const CLAUDE_PHASES = new Set(['running', 'resolve']);
+const PHASES = ['running', 'tests', 'pr', 'sync', 'resolve', 'plan'];
+const CLAUDE_PHASES = new Set(['running', 'resolve', 'plan']);
+const PLAN_HTML = `<!doctype html><html data-agentdeck-plan="1"><head><title>Crash plan</title></head><body>
+<section data-plan-step id="a" data-status="todo"><h2>A</h2></section></body></html>`;
 const MARKER_TIMEOUT_MS = 30_000;
 const DRAIN_TIMEOUT_MS = 30_000;
 const TERMINAL = new Set(['done', 'blocked', 'failed', 'cancelled']);
@@ -70,6 +72,8 @@ const fails = {
   j_follow_ups_pending: [],
   k_cli_write_failed: [],
   l_phase_not_reached: [],
+  m_plan_branch_half_merged: [],
+  n_plan_resolve_unfinished: [],
 };
 const kills = Object.fromEntries(PHASES.map((p) => [p, 0]));
 let orphanTotal = 0,
@@ -108,10 +112,45 @@ function makeRepo(home) {
   return repo;
 }
 
+function divergePlanBranch(home, repo, cli) {
+  const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' }).trim();
+  const planFile = join(home, 'plan.html');
+  writeFileSync(planFile, PLAN_HTML);
+  const owner = /#(\d+)/.exec(cli('add', '--repo', 'demo', '--plan', planFile, 'the plan'))?.[1];
+  const name = /opened (\S+)/.exec(cli('plan-branch', 'open', owner))?.[1];
+  git(repo, 'checkout', '-q', '-b', name);
+  writeFileSync(join(repo, 'shared.txt'), 'plan side\n');
+  git(repo, 'add', '-A');
+  git(repo, 'commit', '-q', '-m', 'plan side');
+  git(repo, 'push', '-q', 'origin', name);
+  git(repo, 'checkout', '-q', 'main');
+  const pusher = join(home, 'pusher');
+  git(pusher, 'pull', '-q', '--ff-only', 'origin', 'main');
+  writeFileSync(join(pusher, 'shared.txt'), 'base side\n');
+  git(pusher, 'add', '-A');
+  git(pusher, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'base moved (plan)');
+  git(pusher, 'push', '-q', 'origin', 'main');
+  return { owner, name, diverged: git(repo, 'rev-parse', `refs/heads/${name}`) };
+}
+
+function planBranchProblems(home, plan) {
+  const origin = join(home, 'origin.git');
+  const git = (...a) => execFileSync('git', a, { cwd: origin, encoding: 'utf8' }).trim();
+  const head = git('rev-parse', `refs/heads/${plan.name}`);
+  const problems = [];
+  if (/^(<{7}|>{7})/m.test(git('show', `${head}:shared.txt`))) problems.push('its head has conflict markers');
+  try {
+    git('merge-base', '--is-ancestor', plan.diverged, head);
+  } catch {
+    problems.push('its head lost the plan side');
+  }
+  return problems;
+}
+
 for (let i = 1; i <= N; i++) {
   const stream = i % 2 === 1;
   const phase = PHASES[(i - 1) % PHASES.length];
-  const syncMode = phase === 'resolve' ? 'conflict' : phase === 'sync' ? 'clean' : i % 2 ? 'conflict' : 'clean';
+  const syncMode = phase === 'plan' ? '' : phase === 'resolve' ? 'conflict' : phase === 'sync' ? 'clean' : i % 2 ? 'conflict' : 'clean';
   const prWhen = kills.pr % 2 === 0 ? 'after' : 'before';
   const home = mkdtempSync(join(ROOT, `it${i}-`));
   const bin = join(home, 'bin');
@@ -135,7 +174,8 @@ for (let i = 1; i <= N; i++) {
   const hooks = (what) => `node ${quote(HOOKS)} ${what} ${quote(home)}`;
   cli('repo', 'add', repo, '--test', hooks('test'), '--setup', hooks('setup'));
   cli('repo', 'set', 'demo', 'pr_mode', 'ready');
-  for (let t = 0; t < TASKS; t++) cli('add', '--repo', 'demo', `task ${t}`);
+  const plan = phase === 'plan' ? divergePlanBranch(home, repo, cli) : null;
+  for (let t = 0; t < TASKS; t++) cli('add', '--repo', 'demo', ...(plan ? ['--plan', plan.owner] : []), `task ${t}`);
   writeFileSync(join(home, 'sync-mode'), syncMode);
   if (!CLAUDE_PHASES.has(phase)) writeFileSync(join(home, `hang-${phase}`), phase === 'pr' ? prWhen : '');
 
@@ -156,7 +196,10 @@ for (let i = 1; i <= N; i++) {
   })();
   const reached = () =>
     CLAUDE_PHASES.has(phase)
-      ? readJsonl(evPath).some((e) => e.kind === 'start' && e.run === (phase === 'running' ? 'work' : 'resolve'))
+      ? readJsonl(evPath).some(
+          (e) =>
+            e.kind === 'start' && e.run === (phase === 'running' ? 'work' : 'resolve') && (phase !== 'plan' || e.cwd.includes('/scratch-')),
+        )
       : readJsonl(join(home, 'hangs.jsonl')).some((h) => h.phase === phase);
   const t0 = Date.now();
   while (!reached() && Date.now() - t0 < MARKER_TIMEOUT_MS && d1.exitCode === null) await sleep(25);
@@ -290,7 +333,14 @@ for (let i = 1; i <= N; i++) {
         );
       }
     }
-  const onDisk = new Set(worktrees());
+  if (plan) {
+    for (const p of planBranchProblems(home, plan)) fails.m_plan_branch_half_merged.push(`it${i}: ${plan.name}: ${p}`);
+    const row = db.prepare('SELECT status FROM plan_branches WHERE name = ?').get(plan.name);
+    if (row?.status !== 'active') fails.m_plan_branch_half_merged.push(`it${i}: ${plan.name} is ${row?.status ?? 'missing'}`);
+  }
+  const unfinished = db.prepare("SELECT id FROM runs WHERE kind = 'plan_resolve' AND ended_at IS NULL").all();
+  if (unfinished.length) fails.n_plan_resolve_unfinished.push(`it${i}: plan resolve run(s) ${unfinished.map((r) => r.id)} never ended`);
+  const onDisk = new Set(worktrees().filter((d) => !d.startsWith('scratch-')));
   const expected = new Set(tasks.filter((t) => t.worktree).map((t) => t.worktree.split('/').pop()));
   const extra = [...onDisk].filter((d) => !expected.has(d)),
     missing = [...expected].filter((d) => !onDisk.has(d));

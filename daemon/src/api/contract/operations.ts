@@ -1,7 +1,7 @@
 // Operations: the daemon, its status, settings and notifications, and the change stream.
 import type { PlannerRunId, RepoId, TaskId } from '#domain/shared/index.ts';
 import type { AttentionWhy, HeadlineState, NotifyKind, RepoReviewDue } from '#domain/operations/index.ts';
-import type { TaskStatus } from '#domain/work/index.ts';
+import type { PlanBranchConflict, TaskStatus } from '#domain/work/index.ts';
 import type { QueueWait } from '#api/contract/work.ts';
 
 export interface UsageWindow {
@@ -69,6 +69,7 @@ export interface Headline {
   attention: { id: TaskId; title: string; why: AttentionWhy }[];
   /** The repos due for an area review, each with its line ("area review due: 9 days, 115 commits since the last"). */
   review_due: RepoReviewDue[];
+  plan_branches: PlanBranchConflict[];
 }
 
 export interface Status {
@@ -109,6 +110,7 @@ export interface Settings {
   reload_on_change: boolean;
   /** A repo is due for an area review when its oldest mark is older than `days`, or more than `lines` lines merged since it. */
   review_due: { days: number; lines: number };
+  plan_branch_sync_minutes: number;
 }
 
 /** POST /api/settings */
@@ -122,6 +124,7 @@ export interface SettingsPatch {
   review_model?: string;
   reload_on_change?: boolean;
   review_due?: Partial<Settings['review_due']>;
+  plan_branch_sync_minutes?: number;
 }
 
 export interface ServiceStatus {

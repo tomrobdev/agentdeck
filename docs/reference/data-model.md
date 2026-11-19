@@ -25,6 +25,7 @@ erDiagram
     text pr_url "nullable"
     text created_at
     text updated_at
+    text synced_at "nullable"
   }
   planner_runs {
     integer id PK

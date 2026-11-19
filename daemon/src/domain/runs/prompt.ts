@@ -179,18 +179,36 @@ const bullets = (subjects: string[]) =>
     : '- (none)';
 
 export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, ctx: ResolveContext): string {
+  return resolvePrompt(
+    `task #${task.id}: "${task.title}"`,
+    { branch: "this task's branch", goal: "The task's goal", side: "the task's side" },
+    task.prompt,
+    ctx,
+  );
+}
+
+export function buildPlanResolvePrompt(plan: Pick<Task, 'id' | 'title' | 'prompt'>, branch: string, ctx: ResolveContext): string {
+  return resolvePrompt(
+    `plan branch ${branch} (the plan of task #${plan.id}: "${plan.title}")`,
+    { branch: `the plan branch \`${branch}\``, goal: "The plan's goal", side: "the plan's side" },
+    plan.prompt,
+    ctx,
+  );
+}
+
+function resolvePrompt(heading: string, words: { branch: string; goal: string; side: string }, goal: string, ctx: ResolveContext): string {
   return [
-    `AgentDeck conflict resolution for task #${task.id}: "${task.title}".`,
+    `AgentDeck conflict resolution for ${heading}.`,
     '',
-    `AgentDeck is merging \`${ctx.base}\` into this task's branch, and the merge stopped on conflicts. It is still in progress in this worktree: the conflicting files hold conflict markers (<<<<<<<, =======, >>>>>>>).`,
+    `AgentDeck is merging \`${ctx.base}\` into ${words.branch}, and the merge stopped on conflicts. It is still in progress in this worktree: the conflicting files hold conflict markers (<<<<<<<, =======, >>>>>>>).`,
     '',
     'Conflicting files:',
     ...ctx.files.map((f) => `- ${f}`),
     '',
-    "The task's goal (what this branch is for):",
-    task.prompt.slice(0, 4000),
+    `${words.goal} (what this branch is for):`,
+    goal.slice(0, 4000),
     '',
-    `Commits on this branch (the task's side):`,
+    `Commits on this branch (${words.side}):`,
     bullets(ctx.ours),
     '',
     `Commits on ${ctx.base} (the other side):`,

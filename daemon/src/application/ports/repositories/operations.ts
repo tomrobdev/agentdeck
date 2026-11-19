@@ -34,6 +34,7 @@ export interface SettingsRepository {
   setAppSeenAt(at: number): void;
   budget(): Budget;
   maxConcurrent(): number;
+  planBranchSyncMinutes(): number;
   notifySettings(): NotifySettings;
   plannerSettings(): PlannerSettings;
   modelSettings(): Pick<Settings, 'default_model' | 'support_model' | 'review_model'>;

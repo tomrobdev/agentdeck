@@ -8,14 +8,14 @@ import type { Orm } from '#db/orm.ts';
 import { NOW_SQL } from '#db/sql.ts';
 import { plannerRuns, runs, tasks } from '#db/tables.ts';
 
-const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify'];
+const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify', 'plan_resolve'];
 
 export function runStore(orm: Orm) {
-  const runningOf = (kind: RunKind) =>
+  const runningOf = (...kinds: RunKind[]) =>
     orm
       .select({ n: count() })
       .from(runs)
-      .where(and(eq(runs.kind, kind), isNull(runs.ended_at)))
+      .where(and(inArray(runs.kind, kinds), isNull(runs.ended_at)))
       .get()?.n ?? 0;
   return {
     startRun(
@@ -81,7 +81,7 @@ export function runStore(orm: Orm) {
       return orm.select().from(runs).where(eq(runs.task_id, task_id)).orderBy(asc(runs.id)).all().map(toRun);
     },
     countRunningResolves(): number {
-      return runningOf('resolve');
+      return runningOf('resolve', 'plan_resolve');
     },
     countRunningUnblocks(): number {
       return runningOf('unblock');

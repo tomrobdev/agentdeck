@@ -4,7 +4,7 @@ import type { RepoId, TaskId } from '#domain/shared/index.ts';
 import { mayStart } from '#domain/capacity/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import type { StartState } from '#domain/work/index.ts';
-import { type QueueWait, type StartWait, startWait } from '#domain/work/index.ts';
+import { type QueueWait, type StartWait, planBranchWait, startWait } from '#domain/work/index.ts';
 import type { Task } from '#domain/work/index.ts';
 import { queueWait } from '#application/capacity/gate.ts';
 
@@ -26,9 +26,14 @@ export function queueWaits(app: App): { wait: QueueWait | null; paused_repos: Pa
   };
 }
 
-export function startWaits(app: App): (task: Pick<Task, 'id' | 'status' | 'repo_id'>, dependency: StartState) => StartWait | null {
+export function startWaits(
+  app: App,
+): (task: Pick<Task, 'id' | 'status' | 'repo_id' | 'target'>, dependency: StartState) => StartWait | null {
   const { wait: queue, used, max } = queueWait(app);
   const repos = new Map<RepoId, Repo>(app.listRepos().map((r) => [r.id, r]));
+  const planBranches = app.syncedPlanBranches();
+  const planBranchOf = (task: Pick<Task, 'repo_id' | 'target'>) =>
+    planBranchWait(planBranches.find((b) => b.repo_id === task.repo_id && b.name === task.target));
   const unblocks = app.liveRuns('unblock');
   const draining = app.draining();
   const ran = draining.daemon || draining.repos.length ? app.queuedThatRan() : new Set<TaskId>();
@@ -40,6 +45,7 @@ export function startWaits(app: App): (task: Pick<Task, 'id' | 'status' | 'repo_
       repoPaused: repos.get(task.repo_id)?.paused_reason ?? null,
       draining: drainOf(task),
       dependency,
+      planBranch: planBranchOf(task),
       unblocking: unblocks.has(task.id),
       running: used,
       max,

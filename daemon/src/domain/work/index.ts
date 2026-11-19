@@ -81,19 +81,33 @@ export {
 export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from '#domain/work/plans/plan.ts';
 export { matchPath, pathsNamedIn } from '#domain/work/plans/prompt-paths.ts';
 export {
+  DEFAULT_PLAN_BRANCH_SYNC_MINUTES,
   abandonRunningError,
   isLivePlanBranch,
+  mayResolvePlanBranch,
   needsCut,
   nextPlanBranchStatus,
+  planBranchConflict,
   planBranchMoveError,
   planBranchName,
   planBranchOpenError,
   planBranchStatusesFor,
+  planBranchSyncDue,
+  planBranchSyncMinutesError,
+  planBranchSyncMove,
   planBranchTarget,
+  planBranchWait,
   tasksBackToBase,
   tasksToTarget,
 } from '#domain/work/plans/plan-branch.ts';
-export type { PlanBranch, PlanBranchMove, PlanBranchStatus, PlanBranchTask } from '#domain/work/plans/plan-branch.ts';
+export type {
+  PlanBranch,
+  PlanBranchConflict,
+  PlanBranchMove,
+  PlanBranchStatus,
+  PlanBranchSyncOutcome,
+  PlanBranchTask,
+} from '#domain/work/plans/plan-branch.ts';
 export {
   BASE_LOG_FORMAT,
   CHECKED_STATUSES,

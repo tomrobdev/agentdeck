@@ -35,6 +35,7 @@ import { errorMessage } from '#domain/shared/index.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import { syncBranch } from '#application/runs/sync.ts';
+import { keepPlanBranchCurrent } from '#application/runs/plan-branch-sync.ts';
 import { pauseRepo } from '#application/repos/pause.ts';
 import { markSyncing } from '#application/work/checkout-locks.ts';
 import { cutPlanBranch, followedSteps, planForRun, takePlanFile } from '#application/work/plans.ts';
@@ -52,6 +53,8 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
   } catch (err) {
     return finish(app, task, null, { outcome: 'failed', reason: `plan branch ${task.target}: ${errorMessage(err)}` });
   }
+  const current = await keepPlanBranchCurrent(app, repo, task);
+  if (current?.reason) console.error(`task ${task.id}: plan branch ${task.target}: ${current.outcome} (${current.reason})`);
   let wt: Checkout;
   try {
     wt = await app.workspace.prepareCheckout(repo, task, targetOf(task, repo));

@@ -93,6 +93,7 @@ export function fmtRunSummary(s: RunSummary): string[] {
 export function fmtTask(
   t: Task & {
     waiting?: TaskView['waiting'];
+    wait?: TaskView['wait'];
     unblocks?: TaskId[];
     links?: TaskView['links'];
     auto_merge_view?: TaskView['auto_merge_view'];
@@ -106,6 +107,7 @@ export function fmtTask(
     extra += waiting.stuck
       ? `  can't start: ${waiting.stuck} (retry ${idsText(waiting.on)} or cancel this task)`
       : `  waiting on ${idsText(waiting.on)}`;
+  if (t.wait?.kind === 'plan-branch') extra += `  waits: ${t.wait.name} conflicts with ${t.wait.base}`;
   if (t.pr?.url) extra += `  PR ${t.pr.state}: ${t.pr.url}`;
   if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += `  ${t.auto_merge_view.label}`;
   for (const l of t.links ?? []) if (l.kind === 'after' || l.state !== 'waiting' || !waiting) extra += `  ${fmtLink(l)}`;

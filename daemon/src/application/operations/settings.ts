@@ -8,7 +8,7 @@ import type { DaemonState } from '#domain/operations/index.ts';
 import { type ReloadInput, reloadState, restartWait } from '#domain/operations/index.ts';
 import type { ReviewDueSettings, Settings } from '#domain/operations/index.ts';
 import { reviewDueDaysError, reviewDueLinesError } from '#domain/operations/index.ts';
-import { modelError } from '#domain/work/index.ts';
+import { type PlanBranchConflict, modelError, planBranchConflict, planBranchSyncMinutesError } from '#domain/work/index.ts';
 import type { RepoId } from '#domain/shared/index.ts';
 import { flag, list, number, object, refuse, text, whole } from '#application/shared/input.ts';
 import { startGate } from '#application/capacity/gate.ts';
@@ -79,6 +79,7 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
         need_you: { proposed: counts.proposed ?? 0, blocked: counts.blocked ?? 0, review },
         attention: app.attentionTasks(ATTENTION_LIMIT),
         review_due: app.reviewsDue(),
+        plan_branches: conflictingPlanBranches(app),
       },
       Date.now() / 1000,
     ),
@@ -89,6 +90,11 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
     planning: app.unfinishedPlannerRuns(),
     ...queueWaits(app),
   };
+}
+
+function conflictingPlanBranches(app: App): PlanBranchConflict[] {
+  const repos = new Map(app.listRepos().map((r) => [r.id, r.name]));
+  return app.syncedPlanBranches().flatMap((b) => (b.status === 'conflict' ? [planBranchConflict(b, repos.get(b.repo_id) ?? '?')] : []));
 }
 
 export function restartDaemon(app: App, request: () => void): { waiting: string | null } {
@@ -112,6 +118,7 @@ export interface SettingsPatch {
   review_model?: string;
   reload_on_change?: boolean;
   review_due?: Partial<ReviewDueSettings>;
+  plan_branch_sync_minutes?: number;
 }
 
 export function updateSettings(app: App, patch: SettingsPatch): Settings {
@@ -121,6 +128,8 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
 
   next.reload_on_change = flag(body, 'reload_on_change') ?? next.reload_on_change;
   next.max_concurrent = whole(body, 'max_concurrent', validateSlots) ?? next.max_concurrent;
+  next.plan_branch_sync_minutes =
+    whole(body, 'plan_branch_sync_minutes', (v) => planBranchSyncMinutesError(v as number)) ?? next.plan_branch_sync_minutes;
   for (const key of ['default_model', 'support_model', 'review_model'] as const) {
     const model = text(body, key);
     refuse(modelError(model));

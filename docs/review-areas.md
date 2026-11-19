@@ -11,6 +11,7 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 - daemon/src/domain/work/plans/plan-branch.ts
 - daemon/src/application/work/plans.ts
 - daemon/src/application/work/plan-link.ts
+- daemon/src/application/runs/plan-branch-sync.ts
 - daemon/src/adapters/local/plan-file.ts
 - daemon/src/db/work/plans.ts
 - daemon/src/db/work/plan-branches.ts
@@ -137,6 +138,7 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 ## sync
 
 - daemon/src/application/runs/sync.ts
+- daemon/src/application/runs/plan-branch-sync.ts
 - daemon/src/application/work/checkout-locks.ts
 - daemon/src/application/ports/workspace.ts
 - daemon/src/domain/work/task/branch.ts

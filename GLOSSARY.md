@@ -25,7 +25,7 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Target**: the branch a task's work starts from, syncs with and lands on: its pull request's base. A task names one, or takes its repo's base. It must exist locally or on origin, and is fixed once the task has a branch. A task can only build on one with the same target; an after link may cross targets.
 
-**Plan branch**: a branch a plan owns in a repo, which its tasks target and which lands on the base as one pull request. A plan has at most one per repo, named `plan/<id>-<slug>`: a person opens it, the daemon cuts it from the base when its first task starts, and a person may abandon it, which moves its tasks that haven't started back to the base.
+**Plan branch**: a branch a plan owns in a repo, which its tasks target and which lands on the base as one pull request. A plan has at most one per repo, named `plan/<id>-<slug>`: a person opens it, the daemon cuts it from the base when its first task starts and keeps it current with the base (hourly, and before each of its tasks starts; conflicts get a resolve run, and a plan branch whose resolve failed is in **conflict**, and its tasks wait), and a person may abandon it, which moves its tasks that haven't started back to the base.
 _Avoid_: feature branch
 
 ## Runs
