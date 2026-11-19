@@ -28,7 +28,7 @@ export type StartWait =
   | { kind: 'repo-paused'; reason: string }
   | { kind: 'draining'; repo: boolean }
   | ({ kind: 'dependency' } & Waiting)
-  | { kind: 'plan-branch'; name: string; base: string }
+  | { kind: 'plan-branch'; name: string; base: string; status: 'conflict' | 'partly_landed' }
   | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };
 
@@ -75,7 +75,7 @@ export function startWait(
     repoPaused: string | null;
     draining: 'daemon' | 'repo' | null;
     dependency: StartState;
-    planBranch?: { name: string; base: string } | null;
+    planBranch?: { name: string; base: string; status: 'conflict' | 'partly_landed' } | null;
     unblocking: boolean;
     running: number;
     max: number;

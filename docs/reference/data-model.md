@@ -27,6 +27,11 @@ erDiagram
     text updated_at
     text synced_at "nullable"
     integer ahead_lines "nullable"
+    text landing_policy
+    integer land_order "nullable"
+    text land_error "nullable"
+    text landed_commit "nullable"
+    text landed_from "nullable"
   }
   planner_runs {
     integer id PK

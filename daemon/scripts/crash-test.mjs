@@ -20,7 +20,7 @@ const OWN_ROOT = !process.env.CRASH_ROOT;
 const ROOT = process.env.CRASH_ROOT ?? mkdtempSync(join(tmpdir(), 'agentdeck-crash-'));
 mkdirSync(ROOT, { recursive: true });
 const TASKS = 3;
-const PHASES = ['running', 'tests', 'pr', 'sync', 'resolve', 'plan'];
+const PHASES = ['running', 'tests', 'pr', 'sync', 'resolve', 'plan', 'land'];
 const CLAUDE_PHASES = new Set(['running', 'resolve', 'plan']);
 const PLAN_HTML = `<!doctype html><html data-agentdeck-plan="1"><head><title>Crash plan</title></head><body>
 <section data-plan-step id="a" data-status="todo"><h2>A</h2></section></body></html>`;
@@ -74,6 +74,7 @@ const fails = {
   l_phase_not_reached: [],
   m_plan_branch_half_merged: [],
   n_plan_resolve_unfinished: [],
+  o_plan_saga_not_resumed: [],
 };
 const kills = Object.fromEntries(PHASES.map((p) => [p, 0]));
 let orphanTotal = 0,
@@ -133,6 +134,81 @@ function divergePlanBranch(home, repo, cli) {
   return { owner, name, diverged: git(repo, 'rev-parse', `refs/heads/${name}`) };
 }
 
+const FAKE_GH = join(DAEMON, 'scripts/fake-gh.mjs');
+const PASSING_PR = {
+  isDraft: false,
+  mergeStateStatus: 'CLEAN',
+  statusCheckRollup: [
+    {
+      __typename: 'CheckRun',
+      name: 'check',
+      status: 'COMPLETED',
+      conclusion: 'SUCCESS',
+      startedAt: '2026-11-08T17:40:38Z',
+      completedAt: '2026-11-08T17:42:38Z',
+      detailsUrl: 'https://github.com/demo/demo/actions/runs/1/job/1',
+      workflowName: 'check',
+    },
+  ],
+};
+
+function stagePlanLanding(home, env, cli) {
+  const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' }).trim();
+  const origin = join(home, 'origin2.git');
+  git(home, 'init', '-q', '--bare', '-b', 'develop', origin);
+  const second = join(home, 'demo2');
+  mkdirSync(second);
+  git(second, 'init', '-q', '-b', 'develop');
+  git(second, 'config', 'user.name', 't');
+  git(second, 'config', 'user.email', 't@t');
+  git(second, 'commit', '-q', '--allow-empty', '-m', 'init');
+  git(second, 'remote', 'add', 'origin', origin);
+  git(second, 'push', '-q', 'origin', 'develop');
+  cli('repo', 'add', second);
+  cli('repo', 'set', 'demo2', 'pr_mode', 'ready');
+  cli('repo', 'set', 'demo2', 'merge_method', 'merge');
+  const planFile = join(home, 'plan.html');
+  writeFileSync(planFile, PLAN_HTML);
+  const owner = /#(\d+)/.exec(cli('add', '--repo', 'demo', '--plan', planFile, 'the plan'))?.[1];
+  const other = /#(\d+)/.exec(cli('add', '--repo', 'demo2', '--plan', owner, 'its other repo'))?.[1];
+  const name = /opened (\S+)/.exec(cli('plan-branch', 'open', owner))?.[1];
+  for (const id of [owner, other]) cli('cancel', id);
+  cli('plan-branch', 'policy', owner, 'in_order', 'demo2,demo');
+  const db = new DatabaseSync(join(home, 'agentdeck.db'));
+  const urls = {};
+  for (const [repoName, dir, base] of [
+    ['demo2', second, 'develop'],
+    ['demo', join(home, 'demo'), 'main'],
+  ]) {
+    git(dir, 'checkout', '-q', '-b', name);
+    writeFileSync(join(dir, `${repoName}.txt`), 'the plan\n');
+    git(dir, 'add', '-A');
+    git(dir, 'commit', '-q', '-m', `the plan in ${repoName}`);
+    git(dir, 'push', '-q', 'origin', name);
+    git(dir, 'checkout', '-q', base);
+    const url = execFileSync(process.execPath, [FAKE_GH, 'pr', 'create', '--head', name, '--base', base], { env, encoding: 'utf8' }).trim();
+    writeFileSync(join(home, `pr-view-${url.split('/').at(-1)}.json`), JSON.stringify(PASSING_PR));
+    db.prepare(
+      "UPDATE plan_branches SET status = 'landing', pr_url = ?, head_commit = ? WHERE name = ? AND repo_id = (SELECT id FROM repos WHERE name = ?)",
+    ).run(url, git(dir, 'rev-parse', name), name, repoName);
+    urls[repoName] = url;
+  }
+  db.close();
+  return { name, order: [urls.demo2, urls.demo] };
+}
+
+function sagaProblems(home, db, landing) {
+  const problems = [];
+  const merges = readJsonl(join(home, 'gh-calls.jsonl'))
+    .filter((c) => c.kind === 'merged')
+    .map((c) => c.url);
+  if (merges.join(' ') !== landing.order.join(' '))
+    problems.push(`merged ${merges.join(', ') || 'nothing'}, not ${landing.order.join(', ')}`);
+  for (const row of db.prepare('SELECT status, pr_url, land_error FROM plan_branches WHERE name = ?').all(landing.name))
+    if (row.status !== 'landed') problems.push(`${row.pr_url} is ${row.status}${row.land_error ? ` (${row.land_error})` : ''}`);
+  return problems;
+}
+
 function planBranchProblems(home, plan) {
   const origin = join(home, 'origin.git');
   const git = (...a) => execFileSync('git', a, { cwd: origin, encoding: 'utf8' }).trim();
@@ -152,6 +228,7 @@ for (let i = 1; i <= N; i++) {
   const phase = PHASES[(i - 1) % PHASES.length];
   const syncMode = phase === 'plan' ? '' : phase === 'resolve' ? 'conflict' : phase === 'sync' ? 'clean' : i % 2 ? 'conflict' : 'clean';
   const prWhen = kills.pr % 2 === 0 ? 'after' : 'before';
+  const landWhen = kills.land % 2 === 0 ? 'merged' : 'between';
   const home = mkdtempSync(join(ROOT, `it${i}-`));
   const bin = join(home, 'bin');
   mkdirSync(bin);
@@ -175,9 +252,10 @@ for (let i = 1; i <= N; i++) {
   cli('repo', 'add', repo, '--test', hooks('test'), '--setup', hooks('setup'));
   cli('repo', 'set', 'demo', 'pr_mode', 'ready');
   const plan = phase === 'plan' ? divergePlanBranch(home, repo, cli) : null;
+  const landing = phase === 'land' ? stagePlanLanding(home, env, cli) : null;
   for (let t = 0; t < TASKS; t++) cli('add', '--repo', 'demo', ...(plan ? ['--plan', plan.owner] : []), `task ${t}`);
   writeFileSync(join(home, 'sync-mode'), syncMode);
-  if (!CLAUDE_PHASES.has(phase)) writeFileSync(join(home, `hang-${phase}`), phase === 'pr' ? prWhen : '');
+  if (!CLAUDE_PHASES.has(phase)) writeFileSync(join(home, `hang-${phase}`), phase === 'pr' ? prWhen : phase === 'land' ? landWhen : '');
 
   const evPath = join(home, 'fake-events.jsonl');
   const d1 = spawn(process.execPath, [CLI, 'run-once'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -338,6 +416,7 @@ for (let i = 1; i <= N; i++) {
     const row = db.prepare('SELECT status FROM plan_branches WHERE name = ?').get(plan.name);
     if (row?.status !== 'active') fails.m_plan_branch_half_merged.push(`it${i}: ${plan.name} is ${row?.status ?? 'missing'}`);
   }
+  if (landing) for (const p of sagaProblems(home, db, landing)) fails.o_plan_saga_not_resumed.push(`it${i}: ${landing.name}: ${p}`);
   const unfinished = db.prepare("SELECT id FROM runs WHERE kind = 'plan_resolve' AND ended_at IS NULL").all();
   if (unfinished.length) fails.n_plan_resolve_unfinished.push(`it${i}: plan resolve run(s) ${unfinished.map((r) => r.id)} never ended`);
   const onDisk = new Set(worktrees().filter((d) => !d.startsWith('scratch-')));
@@ -348,7 +427,7 @@ for (let i = 1; i <= N; i++) {
   db.close();
   const resolves = evs.filter((e) => e.kind === 'start' && e.run === 'resolve').length;
   process.stdout.write(
-    `it${i} phase=${phase}${phase === 'pr' ? `(${prWhen})` : ''} sync=${syncMode} stream=${stream} kill@${killAt}ms orphans=${orphans.length} half-merged=${halfMerged} resolves=${resolves} prs=${prs.length} drain=${drainMs}ms ${done ? '' : 'TIMEOUT'}\n`,
+    `it${i} phase=${phase}${phase === 'pr' ? `(${prWhen})` : phase === 'land' ? `(${landWhen})` : ''} sync=${syncMode} stream=${stream} kill@${killAt}ms orphans=${orphans.length} half-merged=${halfMerged} resolves=${resolves} prs=${prs.length} drain=${drainMs}ms ${done ? '' : 'TIMEOUT'}\n`,
   );
 }
 

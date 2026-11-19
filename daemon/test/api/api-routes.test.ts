@@ -144,6 +144,22 @@ const PLAN = `<!doctype html>
   <section data-plan-step id="a" data-status="todo"><h2>A</h2></section>
 </body></html>`;
 
+function planned(): TaskId {
+  const id = proposed();
+  actions.attachPlan(app, id, { html: PLAN });
+  actions.openPlanBranch(app, id);
+  return id;
+}
+
+function partlyLanded(): TaskId {
+  const id = planned();
+  const branch = app.planBranchesOfPlan(id)[0]!;
+  app.cutPlanBranch(branch.id, 'abc123');
+  app.openPlanBranchPr(branch.id, 'https://github.com/o/r/pull/9');
+  app.recordLanding(branch.id, { move: 'part_land', land_error: 'its plan PR was closed unmerged' });
+  return id;
+}
+
 type Method = 'GET' | 'POST' | 'DELETE';
 type Json = any;
 
@@ -760,6 +776,35 @@ const ROWS: Row[] = [
       assert.deepEqual(b.moved, [id]);
     },
   },
+  {
+    method: 'POST',
+    path: '/api/tasks/:task/plan-branch/policy',
+    params: task(planned),
+    body: { policy: 'in_order', order: ['repo-1'] },
+    shape: { each: [...PLAN_BRANCH, 'landing_policy', 'land_order'] },
+    check: (bs) => assert.deepEqual([bs[0].landing_policy, bs[0].land_order], ['in_order', 0]),
+  },
+  bad('POST', '/api/tasks/:task/plan-branch/policy', { policy: 'sometimes' }, task(planned)),
+  {
+    method: 'GET',
+    path: '/api/tasks/:task/plan-branch/question',
+    params: task(partlyLanded),
+    shape: ['question'],
+    check: (q) =>
+      assert.deepEqual(
+        q.question.options.map((o: { answer: string }) => o.answer),
+        ['retry', 'revert', 'by_hand'],
+      ),
+  },
+  {
+    method: 'POST',
+    path: '/api/tasks/:task/plan-branch/answer',
+    params: task(partlyLanded),
+    body: { answer: 'by_hand' },
+    shape: ['answer', 'branches', 'reverts', 'unreverted'],
+    check: (a) => assert.deepEqual([a.branches[0].status, a.branches[0].landing_policy], ['landing', 'person']),
+  },
+  bad('POST', '/api/tasks/:task/plan-branch/answer', { answer: 'shrug' }, task(partlyLanded)),
 
   { method: 'GET', path: '/api/tasks/:task/reviews', params: () => ({ task: draft().task_id }), shape: { each: REVIEW } },
   {

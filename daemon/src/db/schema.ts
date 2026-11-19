@@ -301,6 +301,13 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE plan_branches ADD COLUMN synced_at TEXT;',
   // 44: plan_branches.ahead_lines, the lines a plan branch is ahead of its base by as its last sync measured them; NULL until then.
   'ALTER TABLE plan_branches ADD COLUMN ahead_lines INTEGER;',
+  // 45: plan_branches' landing saga (domain/work/plans/landing-saga.ts): the plan's landing policy, the repo's place in an
+  // in_order plan, why the daemon's merge failed, and the commits a landing made, which a revert reads.
+  `ALTER TABLE plan_branches ADD COLUMN landing_policy TEXT NOT NULL DEFAULT 'person';
+   ALTER TABLE plan_branches ADD COLUMN land_order INTEGER;
+   ALTER TABLE plan_branches ADD COLUMN land_error TEXT;
+   ALTER TABLE plan_branches ADD COLUMN landed_commit TEXT;
+   ALTER TABLE plan_branches ADD COLUMN landed_from TEXT;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

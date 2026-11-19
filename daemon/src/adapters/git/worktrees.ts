@@ -5,7 +5,7 @@ import { WORKTREE_DIR } from '#src/config.ts';
 import { branchName } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import type { Task } from '#domain/work/index.ts';
-import { git } from '#adapters/git/exec.ts';
+import { DIFF_FLAGS, git, gitRead, gitWithInput } from '#adapters/git/exec.ts';
 import { branchExists, hasOrigin, refExists, startPoint } from '#adapters/git/refs.ts';
 
 export async function ensureWorktree(repo: Repo, task: Task, target: string): Promise<{ branch: string; path: string }> {
@@ -31,6 +31,15 @@ export async function cutBranch(repoPath: string, branch: string, from: string):
 export async function moveBranch(repoPath: string, branch: string, sha: string): Promise<{ origin: boolean }> {
   await git(repoPath, 'update-ref', `refs/heads/${branch}`, sha);
   return { origin: await hasOrigin(repoPath) };
+}
+
+export async function revertChange(worktree: string, branch: string, change: { from: string; to: string; message: string }) {
+  const patch = await gitRead(worktree, 'diff', '--binary', ...DIFF_FLAGS, change.to, change.from);
+  if (!patch.trim()) return null;
+  await gitWithInput(worktree, patch, ['apply', '--3way', '--index']);
+  await git(worktree, 'commit', '-q', '-m', change.message);
+  await git(worktree, 'branch', '-f', branch, 'HEAD');
+  return git(worktree, 'rev-parse', 'HEAD');
 }
 
 export async function commitLeftovers(worktree: string, message: string): Promise<boolean> {

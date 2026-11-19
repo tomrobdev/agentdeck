@@ -7,12 +7,23 @@ import { test } from 'node:test';
 
 const SCRIPT = join(import.meta.dirname, '../../scripts/github-e2e.mjs');
 
-function runScript(repo: string | undefined) {
-  const { AGENTDECK_GITHUB_E2E_REPO: _repo, GH_TOKEN: _gh, GITHUB_TOKEN: _github, ...env } = process.env;
+function runScript(repo: string | undefined, second: string | null = 'someone/throwaway-e2e-2') {
+  const {
+    AGENTDECK_GITHUB_E2E_REPO: _repo,
+    AGENTDECK_GITHUB_E2E_REPO_2: _second,
+    GH_TOKEN: _gh,
+    GITHUB_TOKEN: _github,
+    ...env
+  } = process.env;
   const config = mkdtempSync(join(tmpdir(), 'agentdeck-gh-config-'));
   try {
     const r = spawnSync(process.execPath, [SCRIPT], {
-      env: { ...env, GH_CONFIG_DIR: config, ...(repo === undefined ? {} : { AGENTDECK_GITHUB_E2E_REPO: repo }) },
+      env: {
+        ...env,
+        GH_CONFIG_DIR: config,
+        ...(repo === undefined ? {} : { AGENTDECK_GITHUB_E2E_REPO: repo }),
+        ...(second === null ? {} : { AGENTDECK_GITHUB_E2E_REPO_2: second }),
+      },
       encoding: 'utf8',
     });
     return { code: r.status, out: `${r.stdout}${r.stderr}` };
@@ -41,6 +52,16 @@ test('test:github refuses a repo that is not owner/name', () => {
   const { code, out } = runScript('not a repo');
   assert.equal(code, 2);
   assert.match(out, /must be owner\/name, got "not a repo"/);
+});
+
+test('test:github refuses to run without a second repo, or with the same repo twice', () => {
+  const missing = runScript('someone/throwaway-e2e', null);
+  assert.equal(missing.code, 2);
+  assert.match(missing.out, /AGENTDECK_GITHUB_E2E_REPO_2 is not set/);
+  const same = runScript('someone/throwaway-e2e', 'Someone/Throwaway-e2e');
+  assert.equal(same.code, 2);
+  assert.match(same.out, /must be another repo than AGENTDECK_GITHUB_E2E_REPO/);
+  assert.match(runScript('someone/throwaway-e2e', 'nope').out, /AGENTDECK_GITHUB_E2E_REPO_2 must be owner\/name/);
 });
 
 test("test:github refuses this checkout's own origin, whose main its reset would force-push", (t) => {

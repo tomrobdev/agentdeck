@@ -23,7 +23,7 @@ macOS daemon that works through a queue of coding tasks with `claude -p`, one gi
 
 **`pnpm check:task`** runs `check:fast`, then, against `origin/main`:
 
-- the crash test (6 runs, one per phase) when the branch changes `daemon/src/application/runs/`, `daemon/src/application/scheduler/`, `daemon/src/adapters/process/processes.ts`, `daemon/src/adapters/claude/claude.ts` or `daemon/src/db/`;
+- the crash test (7 runs, one per phase) when the branch changes `daemon/src/application/runs/`, `daemon/src/application/scheduler/`, `daemon/src/adapters/process/processes.ts`, `daemon/src/adapters/claude/claude.ts` or `daemon/src/db/`;
 - `check:rust` when it changes `app/src-tauri/`;
 - `test:ui` when it changes `app/src/`, `app/e2e/`, `app/playwright.config.ts`, `daemon/src/api/contract/` or `daemon/src/api/routes/`.
 

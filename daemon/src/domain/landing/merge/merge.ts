@@ -37,10 +37,17 @@ export interface PrDetails {
   check_list?: PrCheck[];
   /** The PR's head commit (`headRefOid`); null when GitHub didn't say. */
   head?: string | null;
+  /** The commit a merged PR made on its base (`mergeCommit`); null or missing before it merged, or when GitHub didn't say. */
+  merge_commit?: string | null;
   /** The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). */
   paths: string[];
   labels: string[];
   body?: string | null;
+}
+
+function mergeCommitOf(raw: unknown): string | null {
+  const oid = raw && typeof raw === 'object' ? (raw as Record<string, unknown>).oid : null;
+  return typeof oid === 'string' && oid ? oid : null;
 }
 
 export function parsePrDetails(json: string): PrDetails {
@@ -63,6 +70,7 @@ export function parsePrDetails(json: string): PrDetails {
     checks: countOf(check_list),
     check_list,
     head: typeof raw.headRefOid === 'string' && raw.headRefOid ? raw.headRefOid : null,
+    merge_commit: mergeCommitOf(raw.mergeCommit),
     paths: names(raw.files, 'path'),
     labels: names(raw.labels, 'name'),
     body: typeof raw.body === 'string' ? raw.body : null,
@@ -314,6 +322,9 @@ export function unattendedVerdict(input: MergeInput, extra: Partial<MergeReasons
   reasons.wait.push(...(extra.wait ?? []));
   return verdictOf(reasons, found);
 }
+
+export const planPrCheck = (pr: PrDetails, paused: string | null): AutoMergeCheck =>
+  unattendedVerdict({ pr_state: pr.state, pr, tests_passed: null }, { wait: paused ? [{ kind: 'paused', text: paused }] : [] });
 
 /** What a check says to a person: its verdict and reasons as text, as the API and the CLI show them. */
 export interface MergeVerdictView {

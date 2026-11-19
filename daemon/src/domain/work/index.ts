@@ -103,11 +103,13 @@ export {
   planBranchSyncMove,
   planBranchTarget,
   planBranchWait,
+  planBranchWaitText,
   reposToOpen,
   tasksBackToBase,
   tasksToTarget,
 } from '#domain/work/plans/plan-branch.ts';
 export type {
+  LandingPolicy,
   PlanBranch,
   PlanBranchConflict,
   PlanBranchMove,
@@ -116,11 +118,27 @@ export type {
   PlanBranchTask,
 } from '#domain/work/plans/plan-branch.ts';
 export {
+  DEFAULT_LANDING_POLICY,
+  LANDING_ANSWERS,
+  LANDING_POLICIES,
+  afterLandingMerge,
+  afterPlanPrState,
+  isLandingAnswer,
+  isLandingPolicy,
+  landingAnswerMove,
+  landingOrder,
+  landingOrderError,
+  landingQuestion,
+  nextLandingStep,
+  partlyLandedLine,
+  revertFrom,
+} from '#domain/work/plans/landing-saga.ts';
+export type { LandingAnswer, LandingBranch, LandingChange, LandingQuestion } from '#domain/work/plans/landing-saga.ts';
+export {
   isWaitingToLand,
   planLandingOf,
   planLandingText,
   planPrBody,
-  planPrMove,
   readyToLand,
   reviewVerdictOf,
 } from '#domain/work/plans/plan-landing.ts';

@@ -3,8 +3,11 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
 import {
+  type LandingChange,
+  type LandingPolicy,
   type PlanBranch,
   type PlanBranchMove,
+  type PlanBranchStatus,
   type PlanBranchSyncOutcome,
   type PlanBranchTask,
   RUNNING_STATUSES,
@@ -26,7 +29,20 @@ export interface NewPlanBranch {
   repo_id: RepoId;
   name: string;
   base: string;
+  landing_policy?: LandingPolicy;
 }
+
+type MoveFields = Partial<{
+  head_commit: string;
+  pr_url: string | null;
+  synced_at: typeof NOW_SQL;
+  ahead_lines: number;
+  land_error: string | null;
+  landed_commit: string | null;
+  landed_from: string | null;
+}>;
+
+const SAGA_STATUSES: PlanBranchStatus[] = ['landing', 'partly_landed'];
 
 export type AbandonOutcome = { abandoned: PlanBranch; moved: TaskId[] } | { refused: string };
 
@@ -50,11 +66,7 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
       .map((t) => t.id);
   };
 
-  const move = (
-    id: number,
-    to: PlanBranchMove,
-    fields: { head_commit?: string; pr_url?: string | null; synced_at?: typeof NOW_SQL; ahead_lines?: number } = {},
-  ) => {
+  const move = (id: number, to: PlanBranchMove, fields: MoveFields = {}) => {
     const row = orm.select({ status: planBranches.status }).from(planBranches).where(eq(planBranches.id, id)).get();
     const status = row && nextPlanBranchStatus(row.status, to);
     if (!status) return undefined;
@@ -131,7 +143,7 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
       return orm
         .select()
         .from(planBranches)
-        .where(eq(planBranches.status, 'landing'))
+        .where(inArray(planBranches.status, SAGA_STATUSES))
         .orderBy(asc(planBranches.id))
         .all()
         .map(toPlanBranch);
@@ -139,8 +151,60 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
     openPlanBranchPr(id: number, pr_url: string): PlanBranch | undefined {
       return move(id, 'open_pr', { pr_url });
     },
-    settlePlanBranchPr(id: number, to: 'land' | 'close_pr'): PlanBranch | undefined {
-      return move(id, to, to === 'close_pr' ? { pr_url: null } : {});
+    planBranchesOfPlan(plan_task: TaskId): PlanBranch[] {
+      return orm
+        .select()
+        .from(planBranches)
+        .where(eq(planBranches.plan_task, plan_task))
+        .orderBy(asc(planBranches.id))
+        .all()
+        .map(toPlanBranch);
+    },
+    setLandingPolicy(plan_task: TaskId, landing_policy: LandingPolicy, order: { id: number; land_order: number | null }[]): PlanBranch[] {
+      return atomically(db, () =>
+        order.flatMap(({ id, land_order }) =>
+          orm
+            .update(planBranches)
+            .set({ landing_policy, land_order, updated_at: NOW_SQL })
+            .where(and(eq(planBranches.id, id), eq(planBranches.plan_task, plan_task)))
+            .returning()
+            .all()
+            .map(toPlanBranch),
+        ),
+      );
+    },
+    recordLanding(
+      id: number,
+      change: LandingChange,
+      landed: { commit: string | null; from: string | null } | null = null,
+    ): PlanBranch | undefined {
+      const fields: MoveFields = {
+        land_error: change.land_error,
+        ...(change.move === 'close_pr' ? { pr_url: null } : {}),
+        ...(landed ? { landed_commit: landed.commit, landed_from: landed.from } : {}),
+      };
+      if (change.move) return move(id, change.move, fields);
+      return mapFound(
+        orm
+          .update(planBranches)
+          .set({ ...fields, updated_at: NOW_SQL })
+          .where(and(eq(planBranches.id, id), inArray(planBranches.status, SAGA_STATUSES)))
+          .returning()
+          .get(),
+        toPlanBranch,
+      );
+    },
+    answerLanding(branch: Pick<PlanBranch, 'id' | 'plan_task'>, to: 'retry' | 'by_hand'): PlanBranch | undefined {
+      return atomically(db, () => {
+        const answered = move(branch.id, to, { land_error: null });
+        if (!answered || to === 'retry') return answered;
+        orm
+          .update(planBranches)
+          .set({ landing_policy: 'person', updated_at: NOW_SQL })
+          .where(eq(planBranches.plan_task, branch.plan_task))
+          .run();
+        return { ...answered, landing_policy: 'person' };
+      });
     },
     abandonPlanBranch(branch: Pick<PlanBranch, 'id' | 'repo_id' | 'name'>): AbandonOutcome | undefined {
       return atomically(db, () => {

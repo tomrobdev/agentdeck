@@ -595,7 +595,9 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
       ],
     }),
   );
-  const { check_list, head, ...rest } = d;
+  const { check_list, head, merge_commit, ...rest } = d;
+  assert.equal(merge_commit, null, 'an open PR has no merge commit');
+  assert.equal(parsePrDetails(JSON.stringify({ state: 'MERGED', mergeCommit: { oid: 'f00d' } })).merge_commit, 'f00d');
   assert.deepEqual(rest, {
     state: 'open',
     draft: true,

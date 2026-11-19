@@ -20,7 +20,9 @@ export function describeWait(h: StartWait): string {
     case 'dependency':
       return h.stuck ? `Can't start: ${h.stuck}` : `Waits for ${h.on.map((id) => `#${id}`).join(', ')} to finish`;
     case 'plan-branch':
-      return `Waits: ${h.name} conflicts with ${h.base}; it starts once a merge of ${h.base} into it is pushed`;
+      return h.status === 'partly_landed'
+        ? `Waits: ${h.name} landed in only some repos, and its plan waits for a person's answer`
+        : `Waits: ${h.name} conflicts with ${h.base}; it starts once a merge of ${h.base} into it is pushed`;
     case 'unblocking':
       return 'Waits for its unblock run to stop';
     case 'slots':

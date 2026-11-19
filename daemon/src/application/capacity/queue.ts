@@ -31,9 +31,12 @@ export function startWaits(
 ): (task: Pick<Task, 'id' | 'status' | 'repo_id' | 'target'>, dependency: StartState) => StartWait | null {
   const { wait: queue, used, max } = queueWait(app);
   const repos = new Map<RepoId, Repo>(app.listRepos().map((r) => [r.id, r]));
-  const planBranches = app.syncedPlanBranches();
+  const planBranches = [...app.syncedPlanBranches(), ...app.landingPlanBranches()];
   const planBranchOf = (task: Pick<Task, 'repo_id' | 'target'>) =>
-    planBranchWait(planBranches.find((b) => b.repo_id === task.repo_id && b.name === task.target));
+    planBranchWait(
+      planBranches.find((b) => b.repo_id === task.repo_id && b.name === task.target),
+      planBranches.filter((b) => b.name === task.target),
+    );
   const unblocks = app.liveRuns('unblock');
   const draining = app.draining();
   const ran = draining.daemon || draining.repos.length ? app.queuedThatRan() : new Set<TaskId>();

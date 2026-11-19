@@ -17,6 +17,7 @@ import type { PromptPlan } from '#domain/runs/index.ts';
 import { hasPlanLink, otherPlanOwner, planOwnerOf } from '#domain/work/index.ts';
 import { PLAN_ATTACHABLE_STATUSES, RUNNING_STATUSES, type Task } from '#domain/work/index.ts';
 import {
+  DEFAULT_LANDING_POLICY,
   type PlanBranch,
   type PlanBranchTask,
   abandonRunningError,
@@ -140,6 +141,13 @@ function planOwnerTask(app: App, id: TaskId): { owner: Task; plan: OwnPlan } {
 
 const planBranchesOf = (app: App, owner: Task): PlanBranch[] => app.listRepos().flatMap((r) => app.planBranchOf(owner.id, r.id) ?? []);
 
+export function planBranchesFor(app: App, id: TaskId): { owner: Task; branches: PlanBranch[] } {
+  const owner = requireTask(app, planOwnerOf(requireTask(app, id)));
+  const branches = app.planBranchesOfPlan(owner.id);
+  if (!branches.length) throw new ActionError(`#${owner.id}'s plan has no plan branch`, undefined, 'not_found');
+  return { owner, branches };
+}
+
 const ownerFirst = <B extends { repo_id: RepoId }>(owner: Task, branches: B[]): B[] => [
   ...branches.filter((b) => b.repo_id === owner.repo_id),
   ...branches.filter((b) => b.repo_id !== owner.repo_id),
@@ -161,7 +169,7 @@ export function openPlanBranch(app: App, id: TaskId): OpenedBranch & { others: O
   const [first, ...others] = missing.map((repo_id): OpenedBranch => {
     const repo = present(app.getRepo(repo_id), `repo ${repo_id}`);
     const { opened, targeted } = app.openPlanBranch(
-      { plan_task: owner.id, repo_id, name, base: repo.base_branch },
+      { plan_task: owner.id, repo_id, name, base: repo.base_branch, landing_policy: existing[0]?.landing_policy ?? DEFAULT_LANDING_POLICY },
       tasksToTarget(planBranchTasks(tasks, repo_id)),
     );
     return { ...opened, targeted };

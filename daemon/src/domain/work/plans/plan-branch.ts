@@ -6,7 +6,8 @@ export type PlanBranchStatus = 'open' | 'active' | 'conflict' | 'landing' | 'lan
 
 export const PLAN_BRANCH_STATUSES: PlanBranchStatus[] = ['open', 'active', 'conflict', 'landing', 'landed', 'abandoned', 'partly_landed'];
 
-export type PlanBranchMove = 'cut' | 'conflict' | 'resolve' | 'open_pr' | 'close_pr' | 'land' | 'abandon';
+export type PlanBranchMove =
+  'cut' | 'conflict' | 'resolve' | 'open_pr' | 'close_pr' | 'land' | 'part_land' | 'retry' | 'by_hand' | 'abandon';
 
 export const PLAN_BRANCH_MOVES: Record<PlanBranchMove, Partial<Record<PlanBranchStatus, PlanBranchStatus>>> = {
   cut: { open: 'active' },
@@ -14,9 +15,19 @@ export const PLAN_BRANCH_MOVES: Record<PlanBranchMove, Partial<Record<PlanBranch
   resolve: { conflict: 'active' },
   open_pr: { active: 'landing' },
   close_pr: { landing: 'active' },
-  land: { landing: 'landed' },
-  abandon: { open: 'abandoned', active: 'abandoned', conflict: 'abandoned', landing: 'abandoned' },
+  land: { landing: 'landed', partly_landed: 'landed' },
+  part_land: { landing: 'partly_landed' },
+  retry: { partly_landed: 'landing' },
+  by_hand: { partly_landed: 'landing' },
+  abandon: { open: 'abandoned', active: 'abandoned', conflict: 'abandoned', landing: 'abandoned', partly_landed: 'abandoned' },
 };
+
+/**
+ * How a plan's plan branches land on their bases. `person`: a person merges each plan PR. `auto`: the daemon merges each
+ * once its check passes. `together`: the daemon merges none until every repo's plan PR is ready, then all. `in_order`:
+ * the daemon merges them one repo at a time, in the plan's order.
+ */
+export type LandingPolicy = 'person' | 'auto' | 'together' | 'in_order';
 
 export interface PlanBranch {
   id: number;
@@ -30,6 +41,16 @@ export interface PlanBranch {
   synced_at: string | null;
   /** The lines (added and removed) the plan branch is ahead of its base by, as the last sync measured them; null until one did. */
   ahead_lines: number | null;
+  /** The plan's landing policy, the same on each of its plan branches. */
+  landing_policy: LandingPolicy;
+  /** Where this repo lands in an `in_order` plan, lowest first; null lands after the numbered ones, oldest plan branch first. */
+  land_order: number | null;
+  /** Why the daemon's last merge of the plan PR failed for good; null once it merged or a person retried. */
+  land_error: string | null;
+  /** The commit the plan PR's merge made on the base, once it landed; null before, or when GitHub didn't say. */
+  landed_commit: string | null;
+  /** The base's commit just before the plan PR's merge, which a revert goes back to; null until it landed. */
+  landed_from: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,7 +63,7 @@ export const planBranchStatusesFor = (move: PlanBranchMove): PlanBranchStatus[] 
 
 export const planBranchName = (planTask: TaskId, title: string): string => `plan/${planTask}-${planSlug(title)}`;
 
-export const LIVE_PLAN_BRANCH_STATUSES: PlanBranchStatus[] = ['open', 'active', 'conflict', 'landing'];
+export const LIVE_PLAN_BRANCH_STATUSES: PlanBranchStatus[] = ['open', 'active', 'conflict', 'landing', 'partly_landed'];
 
 export const isLivePlanBranch = (branch: Pick<PlanBranch, 'status'>): boolean => LIVE_PLAN_BRANCH_STATUSES.includes(branch.status);
 
@@ -107,8 +128,27 @@ export interface PlanBranchConflict {
   line: string;
 }
 
-export const planBranchWait = (branch: Pick<PlanBranch, 'name' | 'base' | 'status'> | undefined): { name: string; base: string } | null =>
-  branch?.status === 'conflict' ? { name: branch.name, base: branch.base } : null;
+export interface PlanBranchWait {
+  name: string;
+  base: string;
+  status: 'conflict' | 'partly_landed';
+}
+
+export function planBranchWait(
+  branch: Pick<PlanBranch, 'name' | 'base' | 'status'> | undefined,
+  plan: Pick<PlanBranch, 'status'>[] = [],
+): PlanBranchWait | null {
+  if (!branch) return null;
+  if (branch.status === 'conflict') return { name: branch.name, base: branch.base, status: 'conflict' };
+  if ([branch, ...plan].some((b) => b.status === 'partly_landed')) return { name: branch.name, base: branch.base, status: 'partly_landed' };
+  return null;
+}
+
+export function planBranchWaitText(wait: PlanBranchWait): string {
+  return wait.status === 'conflict'
+    ? `${wait.name} conflicts with ${wait.base}`
+    : `${wait.name} is partly landed: its plan waits for a person's answer`;
+}
 
 export const planBranchConflict = (branch: Pick<PlanBranch, 'name' | 'base'>, repo: string): PlanBranchConflict => ({
   repo,

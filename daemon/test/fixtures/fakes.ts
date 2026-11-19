@@ -56,6 +56,7 @@ export const READY_PR: PrDetails = {
     },
   ],
   head: '0000000000000000000000000000000000000001',
+  merge_commit: null,
   paths: ['src/a.ts'],
   labels: [],
 };

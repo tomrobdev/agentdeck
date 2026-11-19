@@ -83,6 +83,7 @@ export {
   parseJobStart,
   parseJobSteps,
   parsePrDetails,
+  planPrCheck,
   syncingFirstLine,
   verdictView,
 } from '#domain/landing/merge/merge.ts';

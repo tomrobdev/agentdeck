@@ -52,7 +52,7 @@ test('the sync interval is from 5 minutes to a week', () => {
 
 test('a task targeting a plan branch in conflict waits for it, after its dependencies and before its slot', () => {
   const branch = { name: 'plan/7-pay', base: 'main', status: 'conflict' as const };
-  assert.deepEqual(planBranchWait(branch), { name: 'plan/7-pay', base: 'main' });
+  assert.deepEqual(planBranchWait(branch), { name: 'plan/7-pay', base: 'main', status: 'conflict' });
   assert.equal(planBranchWait({ ...branch, status: 'active' }), null);
   assert.equal(planBranchWait(undefined), null);
   const ctx = {
@@ -65,7 +65,7 @@ test('a task targeting a plan branch in conflict waits for it, after its depende
     running: 2,
     max: 2,
   };
-  assert.deepEqual(startWait({ status: 'queued' }, ctx), { kind: 'plan-branch', name: 'plan/7-pay', base: 'main' });
+  assert.deepEqual(startWait({ status: 'queued' }, ctx), { kind: 'plan-branch', name: 'plan/7-pay', base: 'main', status: 'conflict' });
   assert.equal(startWait({ status: 'queued' }, { ...ctx, dependency: { kind: 'waiting', on: [asTaskId(3)] } })?.kind, 'dependency');
   assert.equal(startWait({ status: 'running' }, ctx), null);
 });

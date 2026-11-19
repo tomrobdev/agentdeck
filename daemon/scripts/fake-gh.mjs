@@ -8,6 +8,7 @@ const dir = process.env.FAKE_GH_DIR;
 const FIXTURES = resolve(import.meta.dirname, '../test/fixtures/gh');
 const CALLS = join(dir, 'gh-calls.jsonl');
 const HANG = join(dir, 'hang-pr');
+const LAND_HANG = join(dir, 'hang-land');
 const args = process.argv.slice(2);
 const [cmd, sub] = args;
 const rec = (kind, more = {}) => appendFileSync(CALLS, JSON.stringify({ kind, pid: process.pid, t: Date.now(), ...more }) + '\n');
@@ -50,13 +51,16 @@ function fromGit(pr) {
   return { headRefOid: head, files, changedFiles: files.length, additions: sum('additions'), deletions: sum('deletions') };
 }
 
-async function hang(when) {
-  appendFileSync(join(dir, 'hangs.jsonl'), JSON.stringify({ phase: 'pr', when, pid: process.pid, t: Date.now() }) + '\n');
+async function hang(when, phase = 'pr') {
+  const file = phase === 'pr' ? HANG : LAND_HANG;
+  appendFileSync(join(dir, 'hangs.jsonl'), JSON.stringify({ phase, when, pid: process.pid, t: Date.now() }) + '\n');
   for (;;) {
     await new Promise((r) => setTimeout(r, 50));
-    if (!existsSync(HANG)) process.exit(1);
+    if (!existsSync(file)) process.exit(1);
   }
 }
+
+const landHang = () => (existsSync(LAND_HANG) ? readFileSync(LAND_HANG, 'utf8').trim() : null);
 
 async function create() {
   const head = flag('--head');
@@ -64,7 +68,7 @@ async function create() {
   rec('create_start', { head });
   const when = existsSync(HANG) ? readFileSync(HANG, 'utf8').trim() || 'before' : null;
   if (when === 'before') await hang(when);
-  const open = prs().find((p) => p.head === head && p.state === 'OPEN');
+  const open = prs().find((p) => p.head === head && p.base === base && p.state === 'OPEN');
   if (open) fail(`a pull request for branch "${head}" into branch "${base}" already exists:\n${open.url}`);
   rec('created', { head, base, draft: args.includes('--draft') });
   const mine = prs()
@@ -96,6 +100,7 @@ if (cmd === 'auth' && sub === 'status') {
   process.stdout.write(JSON.stringify(list) + '\n');
 } else if (cmd === 'pr' && sub === 'view') {
   const pr = named();
+  if (pr.state === 'MERGED' && landHang() === 'merged') await hang('merged', 'land');
   const recorded = JSON.parse(fixture(pr.state === 'MERGED' ? 'pr-view-merged.json' : 'pr-view-open.json'));
   const own = join(dir, `pr-view-${pr.number}.json`);
   const answer = {
@@ -109,6 +114,7 @@ if (cmd === 'auth' && sub === 'status') {
 } else if (cmd === 'pr' && sub === 'merge') {
   const pr = named();
   if (pr.state !== 'OPEN') fail(`Pull request #${pr.number} is not mergeable: the pull request is ${pr.state.toLowerCase()}`);
+  if (landHang() === 'between' && prs().some((p) => p.state === 'MERGED')) await hang('between', 'land');
   rec('merged', { url: pr.url });
 } else if (cmd === 'pr' && sub === 'close') {
   rec('closed', { url: named().url });

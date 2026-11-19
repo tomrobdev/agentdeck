@@ -22,6 +22,7 @@ import {
   pruneWorktrees,
   removeTempDir,
   removeWorktree,
+  revertChange,
 } from '#adapters/git/worktrees.ts';
 import {
   aheadBehind,
@@ -73,6 +74,9 @@ export const workspace = {
   cutBranch: (repoPath: string, branch: string, from: string) => cutBranch(repoPath, branch, from),
 
   moveBranch: (repoPath: string, branch: string, sha: string) => moveBranch(repoPath, branch, sha),
+
+  revertChange: (worktree: string, branch: string, change: { from: string; to: string; message: string }) =>
+    revertChange(worktree, branch, change),
 
   async removeCheckout(repo: Repo, checkout: { worktree?: string | null; branch?: string | null }): Promise<void> {
     if (checkout.worktree) await removeWorktree(repo, checkout.worktree);

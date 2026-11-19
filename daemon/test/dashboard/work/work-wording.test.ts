@@ -17,8 +17,12 @@ test('the dashboard words each wait of a queued task', () => {
   assert.equal(describeWait({ kind: 'dependency', on: [asTaskId(3)], stuck: null }), 'Waits for #3 to finish');
   assert.equal(describeWait({ kind: 'dependency', on: [asTaskId(3)], stuck: '#3 failed' }), "Can't start: #3 failed");
   assert.equal(
-    describeWait({ kind: 'plan-branch', name: 'plan/7-pay', base: 'main' }),
+    describeWait({ kind: 'plan-branch', name: 'plan/7-pay', base: 'main', status: 'conflict' }),
     'Waits: plan/7-pay conflicts with main; it starts once a merge of main into it is pushed',
+  );
+  assert.match(
+    describeWait({ kind: 'plan-branch', name: 'plan/7-pay', base: 'main', status: 'partly_landed' }),
+    /landed in only some repos/,
   );
   assert.equal(describeWait({ kind: 'unblocking' }), 'Waits for its unblock run to stop');
   assert.equal(describeWait({ kind: 'slots', running: 2, max: 2 }), 'Waiting for a free slot (2 of 2 in use)');
