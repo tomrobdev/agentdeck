@@ -41,6 +41,15 @@ test('a log with one result, or none, is unchanged', () => {
   assert.equal(sessionResult([{ type: 'system' }]), undefined);
 });
 
+test('addResult adds a figure only one result has', () => {
+  const total = addResult({ subtype: 'success', num_turns: 2 }, { subtype: 'success', usage: { input_tokens: 4 }, total_cost_usd: 1 });
+  assert.equal(total.num_turns, 2);
+  assert.equal(total.total_cost_usd, 1);
+  assert.deepEqual(total.usage, { input_tokens: 4 });
+  const back = addResult({ subtype: 'success', usage: { output_tokens: 3 } }, { subtype: 'success' });
+  assert.deepEqual(back.usage, { output_tokens: 3 });
+});
+
 test('addResult leaves a figure out when neither result has it', () => {
   const total = addResult({ subtype: 'success' }, { subtype: 'success' });
   assert.equal(total.num_turns, undefined);
