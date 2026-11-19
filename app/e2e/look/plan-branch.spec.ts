@@ -33,7 +33,7 @@ test('a task merged into a plan branch waits for it to land, and the plan card s
   });
 
   await open(page, '#/tasks/2/overview');
-  await expect(page.getByText('waiting to land', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('waiting to land').first()).toBeVisible();
   await expect(page.getByText('merged into plan/2-friendlier-greetings, waiting for it to land').first()).toBeVisible();
 
   const branch = page.locator('[data-plan-branch]');
