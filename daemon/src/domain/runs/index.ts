@@ -44,6 +44,7 @@ export { START_LIVE, liveView, nextLive, syncView } from '#domain/runs/translate
 export type { LiveView, SyncView } from '#domain/runs/translate/live.ts';
 export { CHANGE_MAX, costText, parseLogLine } from '#domain/runs/translate/log.ts';
 export type { LogEntry } from '#domain/runs/translate/log.ts';
+export { addResult } from '#domain/runs/translate/results.ts';
 export { isTestCommand, runSummary } from '#domain/runs/translate/summary.ts';
 export type { RunEnd, RunSummary, SummaryContext } from '#domain/runs/translate/summary.ts';
 export { normalizeNetwork, settingsPath, workerSettings } from '#domain/runs/translate/sandbox.ts';

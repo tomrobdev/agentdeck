@@ -5,7 +5,7 @@ import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { CANCEL_POLL_MS, RUN_MAX_MS, RUN_STALL_MS, claudeBin, withToolchainPath } from '#src/config.ts';
 import type { ClaudeResult, ClaudeRun, RunLimits, UsageWindow } from '#domain/runs/index.ts';
-import { advanceClock, heardLine, limitReached, limitReason, startClock } from '#domain/runs/index.ts';
+import { addResult, advanceClock, heardLine, limitReached, limitReason, startClock } from '#domain/runs/index.ts';
 import { activeChildren, killGroup } from '#adapters/process/processes.ts';
 
 function executable(path: string): boolean {
@@ -113,7 +113,7 @@ export async function runClaude(opts: {
       opts.onSession?.(ev.session_id);
       if (typeof ev.model === 'string' && ev.model) opts.onModel?.(ev.model);
     }
-    if (ev.type === 'result') run.result = ev as ClaudeResult;
+    if (ev.type === 'result') run.result = addResult(run.result, ev as ClaudeResult);
     if (ev.type === 'rate_limit_event') {
       const info = fields(ev.rate_limit_info);
       const status = typeof info.status === 'string' ? info.status : null;
