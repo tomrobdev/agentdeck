@@ -14,6 +14,7 @@ const { openDb } = await import('#db/index.ts');
 const { addTask, landPlanBranches, openPlanBranch, setPlanLandingPolicy } = await import('#application/actions.ts');
 const { cutPlanBranch } = await import('#application/work/plans.ts');
 const { startPlanBranchSync } = await import('#application/runs/plan-branch-sync.ts');
+const { runPlanReview } = await import('#application/runs/plan-review.ts');
 const { fakeAgent, fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 const { testApp } = await import('#test/fixtures/fixtures.ts');
 
@@ -129,4 +130,36 @@ test('a clean plan review lets an auto plan PR merge; one with no answer leaves 
   assert.equal(db.runsForTask(garbled.owner.id).find((r) => r.kind === 'plan_review')?.outcome, 'failed');
   assert.equal(await landPlanBranches(db), 0);
   assert.deepEqual(host.merged, [], 'a plan review that gave no answer leaves the plan PR to a person');
+});
+
+test('a plan review runs once at a time, ends cancelled or rate limited without a verdict, and a reviewed branch is stale', async () => {
+  const { owner, name } = await openPlanPr('Edges');
+  const branch = db.planBranchNamed(repo.id, name);
+  assert.ok(branch);
+  const run = agent.run.bind(agent);
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  agent.run = async (session) => {
+    await gate;
+    return { ...(await run(session)), cancelled: true };
+  };
+  const first = runPlanReview(db, branch);
+  assert.deepEqual(await runPlanReview(db, branch), { outcome: 'deferred', reason: 'a plan review of it is running' });
+  release();
+  assert.deepEqual(await first, { outcome: 'deferred', reason: 'cancelled' });
+  assert.equal(db.runsForTask(owner.id).find((r) => r.kind === 'plan_review')?.outcome, 'cancelled');
+
+  agent.run = async (session) => ({ ...(await run(session)), rateLimitedUntil: Date.now() + 60_000 });
+  assert.deepEqual(await runPlanReview(db, branch), { outcome: 'deferred', reason: 'rate_limited' });
+  assert.equal(db.planBranchNamed(repo.id, name)?.review, 'due', 'a cut-off plan review stays due');
+
+  agent.run = run;
+  answer.structured_output = { summary: 'Every step is met.', findings: [] };
+  const comment = host.commentOnPr;
+  host.commentOnPr = async () => {
+    throw new Error('gh is down');
+  };
+  assert.deepEqual(await runPlanReview(db, branch), { outcome: 'clean' });
+  host.commentOnPr = comment;
+  assert.deepEqual(await runPlanReview(db, branch), { outcome: 'stale' });
 });
