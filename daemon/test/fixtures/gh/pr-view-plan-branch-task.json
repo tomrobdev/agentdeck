@@ -1,0 +1,46 @@
+{
+ "additions": 4,
+ "baseRefName": "plan/4-e2e-plan-branch",
+ "changedFiles": 1,
+ "commits": [
+  {
+   "authoredDate": "2026-11-19T18:52:08Z",
+   "authors": [
+    {
+     "email": "person@example.com",
+     "id": "",
+     "login": "",
+     "name": "AgentDeck e2e"
+    }
+   ],
+   "committedDate": "2026-11-19T18:52:08Z",
+   "messageBody": "",
+   "messageHeadline": "fake: add output",
+   "oid": "cc719527b8889890382c54151cfefed1c27194b4"
+  }
+ ],
+ "deletions": 4,
+ "files": [
+  {
+   "path": "fake-output.txt",
+   "additions": 4,
+   "deletions": 4,
+   "changeType": "MODIFIED"
+  }
+ ],
+ "headRefName": "agentdeck/task-4",
+ "headRefOid": "cc719527b8889890382c54151cfefed1c27194b4",
+ "isDraft": false,
+ "labels": [
+  {
+   "id": "LA_kwDOVnr1-88AAAADB2nhkA",
+   "name": "agentdeck:auto-merge",
+   "description": "AgentDeck merges this PR once its checks pass",
+   "color": "0e8a16"
+  }
+ ],
+ "mergeStateStatus": "CLEAN",
+ "mergeable": "MERGEABLE",
+ "state": "OPEN",
+ "statusCheckRollup": []
+}
