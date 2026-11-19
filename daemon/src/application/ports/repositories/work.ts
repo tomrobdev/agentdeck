@@ -138,6 +138,7 @@ export interface PlanBranchRepository {
     branch: Pick<PlanBranch, 'id' | 'status'>,
     outcome: PlanBranchSyncOutcome,
     head_commit: string | null,
+    ahead_lines?: number | null,
   ): PlanBranch | undefined;
   landingPlanBranches(): PlanBranch[];
   openPlanBranchPr(id: number, pr_url: string): PlanBranch | undefined;

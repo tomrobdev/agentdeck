@@ -2,7 +2,8 @@
 import type { App } from '#application/ports/app.ts';
 import { lastLine } from '#domain/shared/index.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '#src/config.ts';
-import type { Repo } from '#domain/repos/index.ts';
+import type { Repo, WorkflowFile } from '#domain/repos/index.ts';
+import { planBranchCiWarning } from '#domain/repos/index.ts';
 import { refusedCommands } from '#domain/repos/index.ts';
 import { detectToolchain } from '#domain/repos/index.ts';
 import { allowedTools } from '#domain/repos/index.ts';
@@ -11,6 +12,31 @@ export interface Check {
   name: string;
   ok: boolean;
   reason: string;
+}
+
+const WORKFLOWS_DIR = '.github/workflows';
+const WORKFLOW_LIMIT = 200_000;
+const LIVE_TARGET_STATUSES = ['proposed', 'queued', 'running', 'blocked'];
+
+async function workflowsAt(app: App, repo: Repo, ref: string): Promise<WorkflowFile[]> {
+  const entries = await app.workspace.listTree(repo.path, ref, WORKFLOWS_DIR).catch(() => []);
+  const files = (entries ?? []).filter((e) => e.type === 'file' && /\.ya?ml$/.test(e.name));
+  const read = await Promise.all(
+    files.map(async (e) => ({
+      path: e.path,
+      file: await app.workspace.readFile(repo.path, ref, e.path, WORKFLOW_LIMIT).catch(() => null),
+    })),
+  );
+  return read.flatMap((r) => (r.file ? [{ path: r.path, text: r.file.bytes.toString('utf8') }] : []));
+}
+
+async function missingOnOrigin(app: App, repo: Repo): Promise<string[]> {
+  const names = new Set([
+    ...app.syncedPlanBranches().flatMap((b) => (b.repo_id === repo.id ? [b.name] : [])),
+    ...app.tasksForRepo(repo.id).flatMap((t) => (t.target && LIVE_TARGET_STATUSES.includes(t.status) ? [t.target] : [])),
+  ]);
+  const missing = await Promise.all([...names].map(async (name) => ((await app.workspace.onOrigin(repo.path, name)) ? null : name)));
+  return missing.filter((name) => name !== null);
 }
 
 export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
@@ -32,6 +58,23 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
     true,
     toolchain ? `${toolchain}${repo.toolchain ? '' : ' (detected)'}` : 'none detected: no setup step, generic tool rules only',
   );
+
+  if (base) {
+    const warning = await planBranchCiWarning(await workflowsAt(app, repo, base));
+    add(
+      'ci on plan branches',
+      true,
+      warning ? `warning: ${warning}` : 'pull requests into a plan branch run the checks, or the repo has no pull_request workflow',
+    );
+    if (git.origin) {
+      const missing = await missingOnOrigin(app, repo);
+      add(
+        'targets on origin',
+        missing.length === 0,
+        missing.length ? `not on origin: ${missing.join(', ')}` : 'every plan branch and target in use is on origin',
+      );
+    }
+  }
 
   const claude = await app.agent.find();
   add('claude binary', !!claude, claude ?? `${claudeBin()} not found; install Claude Code or set AGENTDECK_CLAUDE_BIN`);

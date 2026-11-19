@@ -67,7 +67,7 @@ async function syncIn(app: App, at: SyncPlace, allowResolve: boolean): Promise<P
   if (resolved.outcome === 'done') return land(app, at, 'resolved', merge.files);
   if (resolved.outcome === 'rate_limited' || resolved.outcome === 'cancelled')
     return { outcome: 'deferred', files: merge.files, reason: resolved.reason || resolved.outcome, pushed: false };
-  return { ...settled(app, at, 'conflict', null, merge.files), reason: resolved.reason };
+  return { ...(await settled(app, at, 'conflict', null, merge.files)), reason: resolved.reason };
 }
 
 async function resolve(
@@ -113,11 +113,22 @@ async function land(app: App, at: SyncPlace, outcome: 'clean' | 'resolved', file
       return { outcome: 'error', files, reason: `push: ${errorMessage(err)}`, pushed: false };
     }
   }
-  return { ...settled(app, at, outcome, head.sha, files), pushed: moved.origin };
+  return { ...(await settled(app, at, outcome, head.sha, files)), pushed: moved.origin };
 }
 
-function settled(app: App, at: SyncPlace, outcome: PlanBranchSyncOutcome, head: string | null, files: string[]): PlanBranchSyncReport {
-  app.recordPlanBranchSync(at.branch, outcome, head);
+async function aheadLines(app: App, at: SyncPlace): Promise<number | null> {
+  const { files } = await app.workspace.compare(at.repo.path, at.branch.base, at.branch.name).catch(() => ({ files: null }));
+  return files ? files.reduce((sum, f) => sum + f.additions + f.deletions, 0) : null;
+}
+
+async function settled(
+  app: App,
+  at: SyncPlace,
+  outcome: PlanBranchSyncOutcome,
+  head: string | null,
+  files: string[],
+): Promise<PlanBranchSyncReport> {
+  app.recordPlanBranchSync(at.branch, outcome, head, outcome === 'conflict' ? null : await aheadLines(app, at));
   return { outcome, files, pushed: false };
 }
 

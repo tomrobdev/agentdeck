@@ -47,6 +47,8 @@ const SETTING_MEANINGS: Record<string, string> = {
     'A repo is due for an area review once more than this many lines merged since its oldest mark (or, with none, since it was added)',
   plan_branch_sync_minutes:
     'How often the daemon syncs each active plan branch with its base, in minutes (a plan branch in conflict is retried without a resolve run)',
+  plan_branch_max_days: 'A plan branch older than this many days is listed in attention',
+  plan_branch_max_lines: 'A plan branch more than this many lines ahead of its base is listed in attention',
   reviews_due: 'The repos due for an area review as the daemon’s last check found them (JSON), for the headline',
   review_due_told:
     'When a person was last told each repo is due for an area review (JSON of repo id to ms since the epoch); at most once a day',

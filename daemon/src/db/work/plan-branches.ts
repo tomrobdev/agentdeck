@@ -53,7 +53,7 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
   const move = (
     id: number,
     to: PlanBranchMove,
-    fields: { head_commit?: string; pr_url?: string | null; synced_at?: typeof NOW_SQL } = {},
+    fields: { head_commit?: string; pr_url?: string | null; synced_at?: typeof NOW_SQL; ahead_lines?: number } = {},
   ) => {
     const row = orm.select({ status: planBranches.status }).from(planBranches).where(eq(planBranches.id, id)).get();
     const status = row && nextPlanBranchStatus(row.status, to);
@@ -112,8 +112,9 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
       branch: Pick<PlanBranch, 'id' | 'status'>,
       outcome: PlanBranchSyncOutcome,
       head_commit: string | null,
+      ahead_lines: number | null = null,
     ): PlanBranch | undefined {
-      const fields = { synced_at: NOW_SQL, ...(head_commit ? { head_commit } : {}) };
+      const fields = { synced_at: NOW_SQL, ...(head_commit ? { head_commit } : {}), ...(ahead_lines === null ? {} : { ahead_lines }) };
       const to = planBranchSyncMove(branch, outcome);
       if (to) return move(branch.id, to, fields);
       return mapFound(

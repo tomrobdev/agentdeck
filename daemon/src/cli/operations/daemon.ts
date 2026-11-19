@@ -109,6 +109,8 @@ export const daemonCommands: Record<string, Command> = {
     console.log(`review_due_days  ${st.review_due.days} (an area review is due once the oldest mark is older)`);
     console.log(`review_due_lines ${st.review_due.lines} (or once more lines merged since it)`);
     console.log(`plan_branch_sync_minutes ${st.plan_branch_sync_minutes} (how often each plan branch is synced with its base)`);
+    console.log(`plan_branch_max_days ${st.plan_branch_max_days} (a plan branch older than this is listed in attention)`);
+    console.log(`plan_branch_max_lines ${st.plan_branch_max_lines} (so is one further ahead of its base)`);
     console.log(
       `\ngovernor        ${d.allow ? 'allowing work' : 'on hold'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
     );

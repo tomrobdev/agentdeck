@@ -66,7 +66,7 @@ test('doctor passes on a healthy repo, clears a pause, and leaves no worktree be
   assert.equal(report.ok, true, JSON.stringify(report.checks));
   assert.deepEqual(
     report.checks.map((c) => c.name),
-    ['git repo', 'base branch', 'toolchain', 'claude binary', 'setup', 'tests', 'tool rules'],
+    ['git repo', 'base branch', 'toolchain', 'ci on plan branches', 'claude binary', 'setup', 'tests', 'tool rules'],
   );
   assert.ok(
     report.checks.every((c) => c.reason),
@@ -153,6 +153,62 @@ test('doctor reports a missing repo, a missing claude binary, and PR mode withou
   assert.equal(pr['origin remote'].ok, false);
   assert.ok(pr['gh auth'], 'gh auth is checked too');
   assert.equal(byName(await runDoctor(db, { ...r, pr_mode: 'off' } as typeof r))['gh auth'], undefined);
+});
+
+const KOC_CI = 'name: ci\non:\n  pull_request:\n    branches: [develop, main]\njobs: {}\n';
+const OPEN_CI = 'name: check\non:\n  pull_request:\n  push:\n    branches: [main]\njobs: {}\n';
+const PLAN_CI = "name: ci\non:\n  pull_request:\n    branches: [develop, main, 'plan/**']\njobs: {}\n";
+
+function withWorkflow(name: string, text: string) {
+  const r = repo(name);
+  mkdirSync(join(r.path, '.github/workflows'), { recursive: true });
+  writeFileSync(join(r.path, '.github/workflows/ci.yml'), text);
+  writeFileSync(join(r.path, '.github/workflows/README.md'), 'not a workflow\n');
+  sh(r.path, 'add', '-A');
+  sh(r.path, 'commit', '-q', '-m', 'ci');
+  return r;
+}
+
+test('the doctor warns, without failing, when CI will not run on pull requests into a plan branch', async () => {
+  const warn = byName(await runDoctor(db, withWorkflow('ci-koc', KOC_CI)))['ci on plan branches'];
+  assert.equal(warn.ok, true, 'a warning does not fail the doctor or pause the repo');
+  assert.match(warn.reason, /^warning: \.github\/workflows\/ci\.yml runs on pull_request only into develop, main/);
+  assert.match(warn.reason, /add 'plan\/\*\*'/);
+
+  const open = byName(await runDoctor(db, withWorkflow('ci-open', OPEN_CI)))['ci on plan branches'];
+  assert.doesNotMatch(open.reason, /^warning/);
+  const plan = byName(await runDoctor(db, withWorkflow('ci-plan', PLAN_CI)))['ci on plan branches'];
+  assert.doesNotMatch(plan.reason, /^warning/);
+  const none = byName(await runDoctor(db, repo('ci-none')))['ci on plan branches'];
+  assert.doesNotMatch(none.reason, /^warning/);
+});
+
+test('the doctor fails when a plan branch in use is not on origin', async () => {
+  const r = repo('origin-missing');
+  const remote = join(home, 'origin-missing.git');
+  sh(home, 'init', '-q', '--bare', remote);
+  sh(r.path, 'remote', 'add', 'origin', remote);
+  sh(r.path, 'push', '-q', 'origin', 'main');
+  assert.equal(byName(await runDoctor(db, r))['targets on origin'].ok, true);
+
+  const plan = db.addTask({ repo_id: r.id, title: 'plan', prompt: 'x' });
+  db.openPlanBranch({ plan_task: plan.id, repo_id: r.id, name: 'plan/1-x', base: 'main' }, []);
+  const opened = db.planBranchNamed(r.id, 'plan/1-x');
+  assert.ok(opened);
+  db.cutPlanBranch(opened.id, sh(r.path, 'rev-parse', 'main'));
+  const missing = byName(await runDoctor(db, r))['targets on origin'];
+  assert.equal(missing.ok, false);
+  assert.match(missing.reason, /not on origin: plan\/1-x/);
+
+  db.addTask({ repo_id: r.id, title: 'on release', prompt: 'x', target: 'release' });
+  db.addTask({ repo_id: r.id, title: 'on main', prompt: 'x' });
+  assert.match(byName(await runDoctor(db, r))['targets on origin'].reason, /not on origin: plan\/1-x, release$/);
+
+  sh(r.path, 'branch', 'plan/1-x');
+  sh(r.path, 'branch', 'release');
+  sh(r.path, 'push', '-q', 'origin', 'plan/1-x', 'release');
+  assert.equal(byName(await runDoctor(db, r))['targets on origin'].ok, true);
+  db.setRepoPaused(r.id, 'test over');
 });
 
 test("a paused repo's tasks are not claimed; resuming releases them", async () => {

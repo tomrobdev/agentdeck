@@ -14,5 +14,7 @@ export type { MergeMethod, PrMode, Repo } from '#domain/repos/repo.ts';
 export { goalsError, networkError, repoNameError, toolRulesError } from '#domain/repos/rules.ts';
 export { refusedCommands } from '#domain/repos/tool-rules.ts';
 export { detectToolchain } from '#domain/repos/toolchain.ts';
+export { planBranchCiWarning } from '#domain/repos/workflow-triggers.ts';
+export type { WorkflowFile } from '#domain/repos/workflow-triggers.ts';
 export { ALWAYS_DISALLOWED_TOOLS, allowedTools, parseToolRules, toolRulesSource } from '#domain/repos/tools.ts';
 export type { ToolRulesSource } from '#domain/repos/tools.ts';

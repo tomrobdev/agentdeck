@@ -111,6 +111,8 @@ export interface Settings {
   /** A repo is due for an area review when its oldest mark is older than `days`, or more than `lines` lines merged since it. */
   review_due: { days: number; lines: number };
   plan_branch_sync_minutes: number;
+  plan_branch_max_days: number;
+  plan_branch_max_lines: number;
 }
 
 /** POST /api/settings */
@@ -125,6 +127,8 @@ export interface SettingsPatch {
   reload_on_change?: boolean;
   review_due?: Partial<Settings['review_due']>;
   plan_branch_sync_minutes?: number;
+  plan_branch_max_days?: number;
+  plan_branch_max_lines?: number;
 }
 
 export interface ServiceStatus {

@@ -131,6 +131,21 @@ test('autoMergeOn: the task wins, else the repo; a planner proposal only when a 
   assert.equal(autoMergeOn({ auto_merge: true, source: 'planner' }, { ...on, auto_approve: true }), true);
 });
 
+test('autoMergeCheck: a PR into a plan branch with no checks waits with "no checks ran on this PR"', () => {
+  const none = { checks: { total: 0, failing: 0, pending: 0 }, check_list: [] };
+  const into = (pr: Partial<PrDetails>) => verdictView(autoMergeCheck({ ...base(pr), into_target: true }));
+  const base = (pr: Partial<PrDetails>) => ({
+    repo: repoRow,
+    pr_state: 'open' as const,
+    pr: { ...ready, ...pr },
+    tests_passed: true,
+    paused: null,
+  });
+  assert.deepEqual(into(none), { verdict: 'wait', reasons: ['no checks ran on this PR'] });
+  assert.deepEqual(into({}), { verdict: 'merge', reasons: [] }, 'a PR into a target with checks is judged as before');
+  assert.deepEqual(verdictView(autoMergeCheck(base(none))), { verdict: 'merge', reasons: [] }, 'into the base, no checks stays as it was');
+});
+
 test('autoMergeCheck: a clean, tested, labelled PR merges; a draft too', () => {
   assert.deepEqual(check(), { verdict: 'merge', reasons: [] });
   assert.deepEqual(check({ draft: true, merge_state: 'DRAFT' }), { verdict: 'merge', reasons: [] });

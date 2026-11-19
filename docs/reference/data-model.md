@@ -26,6 +26,7 @@ erDiagram
     text created_at
     text updated_at
     text synced_at "nullable"
+    integer ahead_lines "nullable"
   }
   planner_runs {
     integer id PK

@@ -81,6 +81,8 @@ export {
 export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from '#domain/work/plans/plan.ts';
 export { matchPath, pathsNamedIn } from '#domain/work/plans/prompt-paths.ts';
 export {
+  DEFAULT_PLAN_BRANCH_MAX_DAYS,
+  DEFAULT_PLAN_BRANCH_MAX_LINES,
   DEFAULT_PLAN_BRANCH_SYNC_MINUTES,
   abandonRunningError,
   isLivePlanBranch,
@@ -88,9 +90,12 @@ export {
   needsCut,
   nextPlanBranchStatus,
   planBranchConflict,
+  planBranchMaxDaysError,
+  planBranchMaxLinesError,
   planBranchMoveError,
   planBranchName,
   planBranchOpenError,
+  planBranchOverLimitEntry,
   planBranchStatusesFor,
   planBranchSyncDue,
   planBranchSyncMinutesError,

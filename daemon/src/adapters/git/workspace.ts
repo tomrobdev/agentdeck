@@ -175,6 +175,8 @@ export const workspace = {
 
   branchHead: (repoPath: string, branch: string) => branchCommit(repoPath, branch),
 
+  onOrigin: (repoPath: string, branch: string) => refExists(repoPath, `refs/remotes/origin/${branch}`),
+
   diffBase: (repoPath: string, base: string, head: string) => diffBase(repoPath, base, head),
 
   async diffHash(repoPath: string, base: string, head: string) {

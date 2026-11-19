@@ -9,9 +9,12 @@ import {
   isLivePlanBranch,
   needsCut,
   nextPlanBranchStatus,
+  planBranchMaxDaysError,
+  planBranchMaxLinesError,
   planBranchMoveError,
   planBranchName,
   planBranchOpenError,
+  planBranchOverLimitEntry,
   planBranchStatusesFor,
   planBranchTarget,
   planBranchTargetChanges,
@@ -128,4 +131,40 @@ test('abandoning moves the tasks on it that have not started back to the base, a
     abandonRunningError('plan/1-x', [task(5, 'plan/1-x', true, true), task(6, 'plan/1-x', true, true), task(7, 'other', true, true)]),
     '#5, #6 are running on plan/1-x; abandon it once they end',
   );
+});
+
+const limits = { days: 14, lines: 3000 };
+const measured = (created_at: string, ahead_lines: number | null, status: PlanBranchStatus = 'active') => ({
+  name: 'plan/1-x',
+  base: 'develop',
+  status,
+  created_at,
+  ahead_lines,
+});
+const NOW = Date.parse('2026-11-30T00:00:00Z');
+
+test('a live plan branch past plan_branch_max_days or plan_branch_max_lines is listed, with why', () => {
+  assert.equal(planBranchOverLimitEntry(measured('2026-11-20 00:00:00', 100), 'koc', limits, NOW), null);
+  assert.equal(planBranchOverLimitEntry(measured('2026-11-16 00:00:00', 3000), 'koc', limits, NOW), null, 'at the limits is within them');
+  assert.deepEqual(planBranchOverLimitEntry(measured('2026-11-01 00:00:00', null), 'koc', limits, NOW), {
+    repo: 'koc',
+    name: 'plan/1-x',
+    line: 'plan/1-x is 29 days old, over the limit of 14: land it, or split what is left',
+  });
+  assert.equal(
+    planBranchOverLimitEntry(measured('2026-11-29 00:00:00', 3001), 'koc', limits, NOW)?.line,
+    'plan/1-x is 3001 lines ahead of develop, over the limit of 3000: land it, or split what is left',
+  );
+  assert.match(
+    planBranchOverLimitEntry(measured('2026-11-01 00:00:00', 9000), 'koc', limits, NOW)?.line ?? '',
+    /29 days old.* and 9000 lines/,
+  );
+  assert.equal(planBranchOverLimitEntry(measured('2026-11-01 00:00:00', 9000, 'landed'), 'koc', limits, NOW), null);
+});
+
+test('the limits are whole numbers in range', () => {
+  assert.equal(planBranchMaxDaysError(14), null);
+  assert.match(planBranchMaxDaysError(0) ?? '', /plan_branch_max_days/);
+  assert.equal(planBranchMaxLinesError(3000), null);
+  assert.match(planBranchMaxLinesError(5) ?? '', /plan_branch_max_lines/);
 });

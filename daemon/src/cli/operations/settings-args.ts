@@ -26,6 +26,8 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
   if (key === 'review_due_days') return { review_due: { days: Number(value) } };
   if (key === 'review_due_lines') return { review_due: { lines: Number(value) } };
   if (key === 'plan_branch_sync_minutes') return { plan_branch_sync_minutes: Number(value) };
+  if (key === 'plan_branch_max_days') return { plan_branch_max_days: Number(value) };
+  if (key === 'plan_branch_max_lines') return { plan_branch_max_lines: Number(value) };
   throw new ActionError(`unknown setting "${key}"; see agentdeck help`);
 }
 
