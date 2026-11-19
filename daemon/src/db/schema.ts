@@ -299,6 +299,8 @@ export const MIGRATIONS: Migration[] = [
    CREATE UNIQUE INDEX plan_branches_plan_repo ON plan_branches(plan_task, repo_id);`,
   // 43: plan_branches.synced_at, when the daemon last synced a plan branch with its base or tried to; NULL until then.
   'ALTER TABLE plan_branches ADD COLUMN synced_at TEXT;',
+  // 44: plan_branches.ahead_lines, the lines a plan branch is ahead of its base by as its last sync measured them; NULL until then.
+  'ALTER TABLE plan_branches ADD COLUMN ahead_lines INTEGER;',
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

@@ -140,7 +140,9 @@ Daemon
                                   reload_on_change (on|off): restart onto new daemon/src code once nothing is running,
                                   review_due_days, review_due_lines: a repo is due for an area review once its oldest
                                   refs/reviewed/* mark is older than that many days, or more lines merged since it,
-                                  plan_branch_sync_minutes (default 60): how often each plan branch is synced with its base
+                                  plan_branch_sync_minutes (default 60): how often each plan branch is synced with its base,
+                                  plan_branch_max_days (default 14), plan_branch_max_lines (default 3000): a plan branch older
+                                  than that, or further ahead of its base, is listed in attention
   agentdeck stats [--repo r] [--since <date>] [--by week|model] [--failures] [--json]  the pilot scorecard measures per repo: tasks done on
                                   the first run (with a Wilson 95% interval), permission denials per run, cost and minutes per
                                   done task, then interventions, median minutes queued, running and in review, PRs green on CI

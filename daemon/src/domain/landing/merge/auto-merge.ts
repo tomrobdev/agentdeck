@@ -95,7 +95,11 @@ export interface AutoMergeFacts {
    * auto-merge waits on review runs: a person's merge and a merge request do not.
    */
   review?: ReviewFacts | null;
+  /** True when the task's PR goes into a target other than the repo's base: no checks on it is not a pass. */
+  into_target?: boolean;
 }
+
+export const NO_CHECKS_TEXT = 'no checks ran on this PR';
 
 export function autoMergeCheck(input: MergeInput & AutoMergeFacts): AutoMergeCheck {
   const { repo, pr, tests_passed, measured } = input;
@@ -118,7 +122,11 @@ export function autoMergeCheck(input: MergeInput & AutoMergeFacts): AutoMergeChe
   never.push(...pathReasons(paths, repo.auto_merge_skip));
   const gate = input.review ? reviewGate(input.review) : { never: [], wait: [] };
   never.push(...gate.never);
-  const wait: MergeReason[] = [...gate.wait, ...(input.paused ? [{ kind: 'paused' as const, text: input.paused }] : [])];
+  const wait: MergeReason[] = [
+    ...(input.into_target && pr.checks.total === 0 ? [{ kind: 'no_checks' as const, text: NO_CHECKS_TEXT }] : []),
+    ...gate.wait,
+    ...(input.paused ? [{ kind: 'paused' as const, text: input.paused }] : []),
+  ];
   return unattendedVerdict(input, { never, wait });
 }
 

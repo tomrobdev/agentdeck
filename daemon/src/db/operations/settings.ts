@@ -6,7 +6,12 @@ import { DEFAULT_REVIEW_DUE, NOTIFY_KINDS, type NotifyKind, type NotifySettings,
 import type { RepoId } from '#domain/shared/index.ts';
 import type { PlannerSettings } from '#domain/proposals/index.ts';
 import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '#domain/runs/index.ts';
-import { DEFAULT_MODEL, DEFAULT_PLAN_BRANCH_SYNC_MINUTES } from '#domain/work/index.ts';
+import {
+  DEFAULT_MODEL,
+  DEFAULT_PLAN_BRANCH_MAX_DAYS,
+  DEFAULT_PLAN_BRANCH_MAX_LINES,
+  DEFAULT_PLAN_BRANCH_SYNC_MINUTES,
+} from '#domain/work/index.ts';
 import type { Settings } from '#domain/operations/index.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET, type Draining } from '#domain/capacity/index.ts';
 import type { Orm } from '#db/orm.ts';
@@ -37,6 +42,8 @@ export const SETTING_DEFAULTS = {
   review_due_days: String(DEFAULT_REVIEW_DUE.days),
   review_due_lines: String(DEFAULT_REVIEW_DUE.lines),
   plan_branch_sync_minutes: String(DEFAULT_PLAN_BRANCH_SYNC_MINUTES),
+  plan_branch_max_days: String(DEFAULT_PLAN_BRANCH_MAX_DAYS),
+  plan_branch_max_lines: String(DEFAULT_PLAN_BRANCH_MAX_LINES),
   reviews_due: '[]',
   review_due_told: '{}',
   ...Object.fromEntries(BUDGET_KEYS.map((k) => [k, String(DEFAULT_BUDGET[k])])),
@@ -88,6 +95,8 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
       reload_on_change: get('reload_on_change') === '1',
       review_due: { days: Number(get('review_due_days')), lines: Number(get('review_due_lines')) },
       plan_branch_sync_minutes: Number(get('plan_branch_sync_minutes')),
+      plan_branch_max_days: Number(get('plan_branch_max_days')),
+      plan_branch_max_lines: Number(get('plan_branch_max_lines')),
     }),
     writeSettings: (s: Settings): void =>
       atomically(db, () => {
@@ -108,6 +117,8 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
         set('review_due_days', String(s.review_due.days));
         set('review_due_lines', String(s.review_due.lines));
         set('plan_branch_sync_minutes', String(s.plan_branch_sync_minutes));
+        set('plan_branch_max_days', String(s.plan_branch_max_days));
+        set('plan_branch_max_lines', String(s.plan_branch_max_lines));
       }),
     reviewsDue: (): ReviewDue[] => json<ReviewDue[]>('reviews_due', []),
     setReviewsDue: (dues: ReviewDue[]): void => set('reviews_due', JSON.stringify(dues)),

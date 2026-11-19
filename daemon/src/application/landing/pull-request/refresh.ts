@@ -44,7 +44,7 @@ async function autoMergeFacts(app: App, task: Task, repo: Repo, pr: PrDetails): 
     branch && pr.head ? measureBranch(app, repo, task, branch, pr.head) : null,
     repo.auto_review ? reviewFacts(app, task, repo, pr) : null,
   ]);
-  return { repo, paused: pausedReason(app.isPaused(), repo), measured, review };
+  return { repo, paused: pausedReason(app.isPaused(), repo), measured, review, into_target: task.target !== null };
 }
 
 async function reviewFacts(app: App, task: Task, repo: Repo, pr: PrDetails): Promise<ReviewFacts> {

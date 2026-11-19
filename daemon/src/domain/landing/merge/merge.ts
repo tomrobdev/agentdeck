@@ -233,6 +233,7 @@ export type MergeReasonKind =
   | 'no_door'
   | 'tests_not_run'
   | 'untested'
+  | 'no_checks'
   | 'too_many_lines'
   | 'too_many_code_comments'
   | 'files_unlisted'

@@ -72,6 +72,7 @@ export interface Workspace {
   writeGivenPlan(worktree: string, html: string | null): Promise<void>;
 
   branchHead(repoPath: string, branch: string): Promise<string | null>;
+  onOrigin(repoPath: string, branch: string): Promise<boolean>;
   diffBase(repoPath: string, base: string, head: string): Promise<{ ref: string; sha: string } | null>;
   diffHash(repoPath: string, base: string, head: string): Promise<string | null>;
   compare(repoPath: string, base: string, head: string): Promise<{ files: ChangedFile[]; commits: Commit[] }>;

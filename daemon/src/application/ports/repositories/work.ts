@@ -137,6 +137,7 @@ export interface PlanBranchRepository {
     branch: Pick<PlanBranch, 'id' | 'status'>,
     outcome: PlanBranchSyncOutcome,
     head_commit: string | null,
+    ahead_lines?: number | null,
   ): PlanBranch | undefined;
   abandonPlanBranch(
     branch: Pick<PlanBranch, 'id' | 'repo_id' | 'name'>,

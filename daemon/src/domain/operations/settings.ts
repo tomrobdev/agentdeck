@@ -20,4 +20,6 @@ export interface Settings {
   /** When a repo is due for an area review (review_due_days, review_due_lines). */
   review_due: ReviewDueSettings;
   plan_branch_sync_minutes: number;
+  plan_branch_max_days: number;
+  plan_branch_max_lines: number;
 }

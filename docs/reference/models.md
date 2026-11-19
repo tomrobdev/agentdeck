@@ -341,12 +341,13 @@ Whether a merge goes ahead, waits or needs a person, and why: auto-merge's check
 
 What only auto-merge's check reads, beside the merge input: the repo's limits, a pause, and the branch as measured.
 
-| Field       | Type                                                                                                 | Comment                                                                                                                                                                                      |
-| ----------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `repo`      | `Pick<Repo, "test_cmd" \| "auto_merge_max_lines" \| "auto_merge_skip"> & Partial<CodeCommentLimits>` |                                                                                                                                                                                              |
-| `paused`    | `string \| null`                                                                                     | Why the daemon or the repo is paused; null when neither is.                                                                                                                                  |
-| `measured?` | `AutoMergeMeasured \| null \| undefined`                                                             | The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be.                                                                                    |
-| `review?`   | `ReviewFacts \| null \| undefined`                                                                   | What the review gate reads (`reviewGate`), in a repo with auto_review on; null or missing when it is off. Only auto-merge waits on review runs: a person's merge and a merge request do not. |
+| Field          | Type                                                                                                 | Comment                                                                                                                                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repo`         | `Pick<Repo, "test_cmd" \| "auto_merge_max_lines" \| "auto_merge_skip"> & Partial<CodeCommentLimits>` |                                                                                                                                                                                              |
+| `paused`       | `string \| null`                                                                                     | Why the daemon or the repo is paused; null when neither is.                                                                                                                                  |
+| `measured?`    | `AutoMergeMeasured \| null \| undefined`                                                             | The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be.                                                                                    |
+| `review?`      | `ReviewFacts \| null \| undefined`                                                                   | What the review gate reads (`reviewGate`), in a repo with auto_review on; null or missing when it is off. Only auto-merge waits on review runs: a person's merge and a merge request do not. |
+| `into_target?` | `boolean \| undefined`                                                                               | True when the task's PR goes into a target other than the repo's base: no checks on it is not a pass.                                                                                        |
 
 ### AutoMergeMeasured
 
@@ -1146,6 +1147,8 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `reload_on_change`         | `boolean`           | Restart the daemon onto new code when daemon/src changes and nothing is running.                                            |
 | `review_due`               | `ReviewDueSettings` | When a repo is due for an area review (review_due_days, review_due_lines).                                                  |
 | `plan_branch_sync_minutes` | `number`            |                                                                                                                             |
+| `plan_branch_max_days`     | `number`            |                                                                                                                             |
+| `plan_branch_max_lines`    | `number`            |                                                                                                                             |
 
 ## `domain/proposals/`
 
@@ -1233,6 +1236,13 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `setup_cmd` | `string`         |                                                                        |
 | `test_cmd`  | `string \| null` | null when a JS repo has no test script                                 |
 | `tools`     | `string[]`       | Bash rules for this toolchain only; the generic rules live in tools.ts |
+
+### WorkflowFile
+
+| Field  | Type     | Comment |
+| ------ | -------- | ------- |
+| `path` | `string` |         |
+| `text` | `string` |         |
 
 ## `domain/runs/`
 
@@ -2045,19 +2055,20 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 
 ### PlanBranch
 
-| Field         | Type               | Comment |
-| ------------- | ------------------ | ------- |
-| `id`          | `number`           |         |
-| `plan_task`   | `TaskId`           |         |
-| `repo_id`     | `RepoId`           |         |
-| `name`        | `string`           |         |
-| `base`        | `string`           |         |
-| `status`      | `PlanBranchStatus` |         |
-| `head_commit` | `string \| null`   |         |
-| `pr_url`      | `string \| null`   |         |
-| `synced_at`   | `string \| null`   |         |
-| `created_at`  | `string`           |         |
-| `updated_at`  | `string`           |         |
+| Field         | Type               | Comment                                                                                                                    |
+| ------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | `number`           |                                                                                                                            |
+| `plan_task`   | `TaskId`           |                                                                                                                            |
+| `repo_id`     | `RepoId`           |                                                                                                                            |
+| `name`        | `string`           |                                                                                                                            |
+| `base`        | `string`           |                                                                                                                            |
+| `status`      | `PlanBranchStatus` |                                                                                                                            |
+| `head_commit` | `string \| null`   |                                                                                                                            |
+| `pr_url`      | `string \| null`   |                                                                                                                            |
+| `synced_at`   | `string \| null`   |                                                                                                                            |
+| `ahead_lines` | `number \| null`   | The lines (added and removed) the plan branch is ahead of its base by, as the last sync measured them; null until one did. |
+| `created_at`  | `string`           |                                                                                                                            |
+| `updated_at`  | `string`           |                                                                                                                            |
 
 ### PlanBranchConflict
 
@@ -2066,6 +2077,13 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 | `repo` | `string` |         |
 | `name` | `string` |         |
 | `line` | `string` |         |
+
+### PlanBranchLimits
+
+| Field   | Type     | Comment |
+| ------- | -------- | ------- |
+| `days`  | `number` |         |
+| `lines` | `number` |         |
 
 ### PlanBranchTask
 

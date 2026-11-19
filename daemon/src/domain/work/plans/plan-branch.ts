@@ -28,6 +28,8 @@ export interface PlanBranch {
   head_commit: string | null;
   pr_url: string | null;
   synced_at: string | null;
+  /** The lines (added and removed) the plan branch is ahead of its base by, as the last sync measured them; null until one did. */
+  ahead_lines: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -110,6 +112,40 @@ export const planBranchConflict = (branch: Pick<PlanBranch, 'name' | 'base'>, re
   name: branch.name,
   line: `${branch.name} conflicts with ${branch.base} and no resolve run settled it; its tasks wait until a merge of ${branch.base} into it is pushed`,
 });
+
+export const DEFAULT_PLAN_BRANCH_MAX_DAYS = 14;
+export const DEFAULT_PLAN_BRANCH_MAX_LINES = 3000;
+
+export const planBranchMaxDaysError = (days: number): string | null =>
+  days >= 1 && days <= 365 ? null : 'plan_branch_max_days must be from 1 to 365';
+
+export const planBranchMaxLinesError = (lines: number): string | null =>
+  lines >= 100 && lines <= 1_000_000 ? null : 'plan_branch_max_lines must be from 100 to 1000000';
+
+export interface PlanBranchLimits {
+  days: number;
+  lines: number;
+}
+
+type MeasuredPlanBranch = Pick<PlanBranch, 'name' | 'base' | 'status' | 'created_at' | 'ahead_lines'>;
+
+export function planBranchOverLimitEntry(
+  branch: MeasuredPlanBranch,
+  repo: string,
+  limits: PlanBranchLimits,
+  now: number,
+): PlanBranchConflict | null {
+  if (!isLivePlanBranch(branch)) return null;
+  const ageDays = Math.floor((now - sqliteMs(branch.created_at)) / 86_400_000);
+  const reasons = [
+    ageDays > limits.days ? `${ageDays} days old, over the limit of ${limits.days}` : null,
+    branch.ahead_lines !== null && branch.ahead_lines > limits.lines
+      ? `${branch.ahead_lines} lines ahead of ${branch.base}, over the limit of ${limits.lines}`
+      : null,
+  ].filter((r) => r !== null);
+  if (!reasons.length) return null;
+  return { repo, name: branch.name, line: `${branch.name} is ${reasons.join(' and ')}: land it, or split what is left` };
+}
 
 export const planBranchTarget = (branch: Pick<PlanBranch, 'name' | 'status'> | undefined): string | null =>
   branch && isLivePlanBranch(branch) ? branch.name : null;

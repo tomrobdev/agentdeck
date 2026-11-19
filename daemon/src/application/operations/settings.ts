@@ -8,7 +8,15 @@ import type { DaemonState } from '#domain/operations/index.ts';
 import { type ReloadInput, reloadState, restartWait } from '#domain/operations/index.ts';
 import type { ReviewDueSettings, Settings } from '#domain/operations/index.ts';
 import { reviewDueDaysError, reviewDueLinesError } from '#domain/operations/index.ts';
-import { type PlanBranchConflict, modelError, planBranchConflict, planBranchSyncMinutesError } from '#domain/work/index.ts';
+import {
+  type PlanBranchConflict,
+  modelError,
+  planBranchConflict,
+  planBranchMaxDaysError,
+  planBranchMaxLinesError,
+  planBranchOverLimitEntry,
+  planBranchSyncMinutesError,
+} from '#domain/work/index.ts';
 import type { RepoId } from '#domain/shared/index.ts';
 import { flag, list, number, object, refuse, text, whole } from '#application/shared/input.ts';
 import { startGate } from '#application/capacity/gate.ts';
@@ -94,7 +102,13 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
 
 function conflictingPlanBranches(app: App): PlanBranchConflict[] {
   const repos = new Map(app.listRepos().map((r) => [r.id, r.name]));
-  return app.syncedPlanBranches().flatMap((b) => (b.status === 'conflict' ? [planBranchConflict(b, repos.get(b.repo_id) ?? '?')] : []));
+  const { plan_branch_max_days: days, plan_branch_max_lines: lines } = app.readSettings();
+  const now = Date.now();
+  return app.syncedPlanBranches().flatMap((b) => {
+    const repo = repos.get(b.repo_id) ?? '?';
+    const over = planBranchOverLimitEntry(b, repo, { days, lines }, now);
+    return [...(b.status === 'conflict' ? [planBranchConflict(b, repo)] : []), ...(over ? [over] : [])];
+  });
 }
 
 export function restartDaemon(app: App, request: () => void): { waiting: string | null } {
@@ -119,6 +133,8 @@ export interface SettingsPatch {
   reload_on_change?: boolean;
   review_due?: Partial<ReviewDueSettings>;
   plan_branch_sync_minutes?: number;
+  plan_branch_max_days?: number;
+  plan_branch_max_lines?: number;
 }
 
 export function updateSettings(app: App, patch: SettingsPatch): Settings {
@@ -130,6 +146,9 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
   next.max_concurrent = whole(body, 'max_concurrent', validateSlots) ?? next.max_concurrent;
   next.plan_branch_sync_minutes =
     whole(body, 'plan_branch_sync_minutes', (v) => planBranchSyncMinutesError(v as number)) ?? next.plan_branch_sync_minutes;
+  next.plan_branch_max_days = whole(body, 'plan_branch_max_days', (v) => planBranchMaxDaysError(v as number)) ?? next.plan_branch_max_days;
+  next.plan_branch_max_lines =
+    whole(body, 'plan_branch_max_lines', (v) => planBranchMaxLinesError(v as number)) ?? next.plan_branch_max_lines;
   for (const key of ['default_model', 'support_model', 'review_model'] as const) {
     const model = text(body, key);
     refuse(modelError(model));
