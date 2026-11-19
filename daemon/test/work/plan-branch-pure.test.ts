@@ -1,4 +1,3 @@
-// Pure tests of a plan branch: its rule table, a seeded walk through it, its name and which tasks move onto or off it.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { asTaskId } from '#domain/shared/index.ts';

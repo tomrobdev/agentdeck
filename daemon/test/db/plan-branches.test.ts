@@ -1,4 +1,3 @@
-// The plan branch store: its guarded moves, the targets it sets and clears, and its rows going with their repo.
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 
