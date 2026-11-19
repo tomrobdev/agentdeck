@@ -614,22 +614,23 @@ A PR's checks: the latest ones read, and the counts kept from when they first se
 
 What `gh pr view` says about a PR that decides whether and how it merges.
 
-| Field         | Type                          | Comment                                                                                       |
-| ------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| `state`       | `PrState`                     | GitHub's `state`, as the daemon names it.                                                     |
-| `draft`       | `boolean`                     |                                                                                               |
-| `mergeable`   | `string`                      | GitHub's `mergeable`: MERGEABLE, CONFLICTING or UNKNOWN.                                      |
-| `merge_state` | `string`                      | GitHub's `mergeStateStatus`: CLEAN, BEHIND, DIRTY, BLOCKED, UNSTABLE, DRAFT, …                |
-| `commits`     | `number`                      |                                                                                               |
-| `files`       | `number`                      |                                                                                               |
-| `additions`   | `number`                      |                                                                                               |
-| `deletions`   | `number`                      |                                                                                               |
-| `checks`      | `CheckCounts`                 |                                                                                               |
-| `check_list?` | `PrCheck[] \| undefined`      | Each check, as `checks` counts them. Missing where a caller made the details up.              |
-| `head?`       | `string \| null \| undefined` | The PR's head commit (`headRefOid`); null when GitHub didn't say.                             |
-| `paths`       | `string[]`                    | The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). |
-| `labels`      | `string[]`                    |                                                                                               |
-| `body?`       | `string \| null \| undefined` |                                                                                               |
+| Field           | Type                          | Comment                                                                                                               |
+| --------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `state`         | `PrState`                     | GitHub's `state`, as the daemon names it.                                                                             |
+| `draft`         | `boolean`                     |                                                                                                                       |
+| `mergeable`     | `string`                      | GitHub's `mergeable`: MERGEABLE, CONFLICTING or UNKNOWN.                                                              |
+| `merge_state`   | `string`                      | GitHub's `mergeStateStatus`: CLEAN, BEHIND, DIRTY, BLOCKED, UNSTABLE, DRAFT, …                                        |
+| `commits`       | `number`                      |                                                                                                                       |
+| `files`         | `number`                      |                                                                                                                       |
+| `additions`     | `number`                      |                                                                                                                       |
+| `deletions`     | `number`                      |                                                                                                                       |
+| `checks`        | `CheckCounts`                 |                                                                                                                       |
+| `check_list?`   | `PrCheck[] \| undefined`      | Each check, as `checks` counts them. Missing where a caller made the details up.                                      |
+| `head?`         | `string \| null \| undefined` | The PR's head commit (`headRefOid`); null when GitHub didn't say.                                                     |
+| `merge_commit?` | `string \| null \| undefined` | The commit a merged PR made on its base (`mergeCommit`); null or missing before it merged, or when GitHub didn't say. |
+| `paths`         | `string[]`                    | The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`).                         |
+| `labels`        | `string[]`                    |                                                                                                                       |
+| `body?`         | `string \| null \| undefined` |                                                                                                                       |
 
 ### PrFields
 
@@ -1843,6 +1844,39 @@ A task that ran out of attempts.
 | `patch`     | `string`  |         |
 | `truncated` | `boolean` |         |
 
+### LandingBranch
+
+One repo's plan branch as the landing saga reads it.
+
+| Field        | Type                                   | Comment                                                                                                                  |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `repo`       | `string`                               | The repo's name, for a person.                                                                                           |
+| `verdict`    | `"merge" \| "wait" \| "never" \| null` | The plan PR's check, as the daemon read it this pass; null when there is no open plan PR or it was not read.             |
+| `reason?`    | `string \| null \| undefined`          | The check's first reason, when it waits or needs a person.                                                               |
+| `id`         | `number`                               |                                                                                                                          |
+| `name`       | `string`                               |                                                                                                                          |
+| `status`     | `PlanBranchStatus`                     |                                                                                                                          |
+| `land_order` | `number \| null`                       | Where this repo lands in an `in_order` plan, lowest first; null lands after the numbered ones, oldest plan branch first. |
+| `land_error` | `string \| null`                       | Why the daemon's last merge of the plan PR failed for good; null once it merged or a person retried.                     |
+
+### LandingChange
+
+What one plan branch's row takes after a landing event: its move (if any), and its land_error.
+
+| Field        | Type                     | Comment |
+| ------------ | ------------------------ | ------- |
+| `move`       | `PlanBranchMove \| null` |         |
+| `land_error` | `string \| null`         |         |
+
+### LandingQuestion
+
+The question a partly landed plan asks a person, with the answers it takes.
+
+| Field     | Type                                         | Comment |
+| --------- | -------------------------------------------- | ------- |
+| `text`    | `string`                                     |         |
+| `options` | `{ answer: LandingAnswer; text: string; }[]` |         |
+
 ### Link
 
 `task_id` depends on `on`.
@@ -1915,12 +1949,12 @@ A task at the end of a link: what its link states are read from.
 | `repo_id`     | `RepoId`                                                                                                                  |         |
 | `id`          | `TaskId`                                                                                                                  |         |
 | `waiting`     | `Waiting \| null`                                                                                                         |         |
+| `status`      | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
 | `title`       | `string`                                                                                                                  |         |
 | `source`      | `TaskSource`                                                                                                              |         |
 | `updated_at`  | `string`                                                                                                                  |         |
 | `priority`    | `number`                                                                                                                  |         |
 | `model`       | `string`                                                                                                                  |         |
-| `status`      | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
 | `stop_reason` | `string \| null`                                                                                                          |         |
 | `park_reason` | `string \| null`                                                                                                          |         |
 | `pr_url`      | `string \| null`                                                                                                          |         |
@@ -2067,20 +2101,25 @@ Where a task's work lands, for a link across repos: every repo's base is one pla
 
 ### PlanBranch
 
-| Field         | Type               | Comment                                                                                                                    |
-| ------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `id`          | `number`           |                                                                                                                            |
-| `plan_task`   | `TaskId`           |                                                                                                                            |
-| `repo_id`     | `RepoId`           |                                                                                                                            |
-| `name`        | `string`           |                                                                                                                            |
-| `base`        | `string`           |                                                                                                                            |
-| `status`      | `PlanBranchStatus` |                                                                                                                            |
-| `head_commit` | `string \| null`   |                                                                                                                            |
-| `pr_url`      | `string \| null`   |                                                                                                                            |
-| `synced_at`   | `string \| null`   |                                                                                                                            |
-| `ahead_lines` | `number \| null`   | The lines (added and removed) the plan branch is ahead of its base by, as the last sync measured them; null until one did. |
-| `created_at`  | `string`           |                                                                                                                            |
-| `updated_at`  | `string`           |                                                                                                                            |
+| Field            | Type               | Comment                                                                                                                    |
+| ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | `number`           |                                                                                                                            |
+| `plan_task`      | `TaskId`           |                                                                                                                            |
+| `repo_id`        | `RepoId`           |                                                                                                                            |
+| `name`           | `string`           |                                                                                                                            |
+| `base`           | `string`           |                                                                                                                            |
+| `status`         | `PlanBranchStatus` |                                                                                                                            |
+| `head_commit`    | `string \| null`   |                                                                                                                            |
+| `pr_url`         | `string \| null`   |                                                                                                                            |
+| `synced_at`      | `string \| null`   |                                                                                                                            |
+| `ahead_lines`    | `number \| null`   | The lines (added and removed) the plan branch is ahead of its base by, as the last sync measured them; null until one did. |
+| `landing_policy` | `LandingPolicy`    | The plan's landing policy, the same on each of its plan branches.                                                          |
+| `land_order`     | `number \| null`   | Where this repo lands in an `in_order` plan, lowest first; null lands after the numbered ones, oldest plan branch first.   |
+| `land_error`     | `string \| null`   | Why the daemon's last merge of the plan PR failed for good; null once it merged or a person retried.                       |
+| `landed_commit`  | `string \| null`   | The commit the plan PR's merge made on the base, once it landed; null before, or when GitHub didn't say.                   |
+| `landed_from`    | `string \| null`   | The base's commit just before the plan PR's merge, which a revert goes back to; null until it landed.                      |
+| `created_at`     | `string`           |                                                                                                                            |
+| `updated_at`     | `string`           |                                                                                                                            |
 
 ### PlanBranchConflict
 
@@ -2114,6 +2153,14 @@ Where a task's work lands, for a link across repos: every repo's base is one pla
 | `target`  | `string \| null` |         |
 | `started` | `boolean`        |         |
 | `running` | `boolean`        |         |
+
+### PlanBranchWait
+
+| Field    | Type                            | Comment |
+| -------- | ------------------------------- | ------- |
+| `name`   | `string`                        |         |
+| `base`   | `string`                        |         |
+| `status` | `"conflict" \| "partly_landed"` |         |
 
 ### PlanFollower
 

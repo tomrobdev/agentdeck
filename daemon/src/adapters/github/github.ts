@@ -100,7 +100,7 @@ export const github = {
   },
 
   async prDetails(url: string, cwd: string, opts: { withFiles?: boolean } = {}): Promise<PrDetails> {
-    const fields = `state,headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup${opts.withFiles ? ',files,labels,body' : ''}`;
+    const fields = `state,headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,mergeCommit${opts.withFiles ? ',files,labels,body' : ''}`;
     return parsePrDetails(await gh(['pr', 'view', url, '--json', fields], { cwd, maxBuffer: 16 * 1024 * 1024 }));
   },
 

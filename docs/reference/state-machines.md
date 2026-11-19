@@ -138,17 +138,24 @@ stateDiagram-v2
   landing --> active: close_pr
   landing --> landed: land
   landing --> abandoned: abandon
+  landing --> partly_landed: part_land
+  partly_landed --> landing: retry, by_hand
+  partly_landed --> landed: land
+  partly_landed --> abandoned: abandon
 ```
 
-| Move       | Moves                                                                           |
-| ---------- | ------------------------------------------------------------------------------- |
-| `cut`      | open → active                                                                   |
-| `conflict` | active → conflict                                                               |
-| `resolve`  | conflict → active                                                               |
-| `open_pr`  | active → landing                                                                |
-| `close_pr` | landing → active                                                                |
-| `land`     | landing → landed                                                                |
-| `abandon`  | open → abandoned, active → abandoned, conflict → abandoned, landing → abandoned |
+| Move        | Moves                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| `cut`       | open → active                                                                                              |
+| `conflict`  | active → conflict                                                                                          |
+| `resolve`   | conflict → active                                                                                          |
+| `open_pr`   | active → landing                                                                                           |
+| `close_pr`  | landing → active                                                                                           |
+| `land`      | landing → landed, partly_landed → landed                                                                   |
+| `part_land` | landing → partly_landed                                                                                    |
+| `retry`     | partly_landed → landing                                                                                    |
+| `by_hand`   | partly_landed → landing                                                                                    |
+| `abandon`   | open → abandoned, active → abandoned, conflict → abandoned, landing → abandoned, partly_landed → abandoned |
 
 ## Follow-ups
 

@@ -5,7 +5,7 @@ import { type TaskId, asTaskId, cut, oneLine } from '#domain/shared/index.ts';
 import type { AutoMergeView } from '#domain/landing/index.ts';
 import type { ChecksSummary } from '#domain/landing/index.ts';
 import type { TaskStatus } from '#domain/work/index.ts';
-import { type ProposalCheck, parseTaskIds, planLandingText, proposalCheckLine } from '#domain/work/index.ts';
+import { type ProposalCheck, parseTaskIds, planBranchWaitText, planLandingText, proposalCheckLine } from '#domain/work/index.ts';
 import type { Task } from '#domain/work/index.ts';
 import type { RunSummary, VerifyFinding } from '#domain/runs/index.ts';
 import { costText, findingPlace, verifyLine } from '#domain/runs/index.ts';
@@ -108,7 +108,7 @@ export function fmtTask(
     extra += waiting.stuck
       ? `  can't start: ${waiting.stuck} (retry ${idsText(waiting.on)} or cancel this task)`
       : `  waiting on ${idsText(waiting.on)}`;
-  if (t.wait?.kind === 'plan-branch') extra += `  waits: ${t.wait.name} conflicts with ${t.wait.base}`;
+  if (t.wait?.kind === 'plan-branch') extra += `  waits: ${planBranchWaitText(t.wait)}`;
   if (t.pr?.url) extra += `  PR ${t.pr.state}: ${t.pr.url}`;
   if (t.plan_landing) extra += `  ${planLandingText(t.plan_landing)}`;
   if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += `  ${t.auto_merge_view.label}`;

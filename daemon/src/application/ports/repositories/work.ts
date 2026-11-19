@@ -8,6 +8,8 @@ import type {
   BlockedTask,
   Dependent,
   DomainEvent,
+  LandingChange,
+  LandingPolicy,
   Link,
   LinkKind,
   LinkedTask,
@@ -126,6 +128,7 @@ export interface NewPlanBranch {
   repo_id: RepoId;
   name: string;
   base: string;
+  landing_policy?: LandingPolicy;
 }
 
 export interface PlanBranchRepository {
@@ -142,7 +145,10 @@ export interface PlanBranchRepository {
   ): PlanBranch | undefined;
   landingPlanBranches(): PlanBranch[];
   openPlanBranchPr(id: number, pr_url: string): PlanBranch | undefined;
-  settlePlanBranchPr(id: number, to: 'land' | 'close_pr'): PlanBranch | undefined;
+  planBranchesOfPlan(plan_task: TaskId): PlanBranch[];
+  setLandingPolicy(plan_task: TaskId, policy: LandingPolicy, order: { id: number; land_order: number | null }[]): PlanBranch[];
+  recordLanding(id: number, change: LandingChange, landed?: { commit: string | null; from: string | null } | null): PlanBranch | undefined;
+  answerLanding(branch: Pick<PlanBranch, 'id' | 'plan_task'>, to: 'retry' | 'by_hand'): PlanBranch | undefined;
   abandonPlanBranch(
     branch: Pick<PlanBranch, 'id' | 'repo_id' | 'name'>,
   ): { abandoned: PlanBranch; moved: TaskId[] } | { refused: string } | undefined;

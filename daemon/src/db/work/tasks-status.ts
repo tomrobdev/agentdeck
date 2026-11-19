@@ -138,7 +138,12 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
       orm
         .select({ id: planBranches.id })
         .from(planBranches)
-        .where(and(eq(planBranches.repo_id, t.repo_id), eq(planBranches.name, t.target), eq(planBranches.status, 'conflict'))),
+        .where(
+          or(
+            and(eq(planBranches.repo_id, t.repo_id), eq(planBranches.name, t.target), eq(planBranches.status, 'conflict')),
+            and(eq(planBranches.name, t.target), eq(planBranches.status, 'partly_landed')),
+          ),
+        ),
     );
   const claimable = (d: Draining) =>
     and(

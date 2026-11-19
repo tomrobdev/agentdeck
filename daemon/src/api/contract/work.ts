@@ -32,7 +32,8 @@ export type StartWait =
   | { kind: 'draining'; repo: boolean }
   /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
   | { kind: 'dependency'; on: TaskId[]; stuck: string | null }
-  | { kind: 'plan-branch'; name: string; base: string }
+  /** `status`: why tasks on the plan branch wait, a conflict with its base or a plan that landed in only some repos. */
+  | { kind: 'plan-branch'; name: string; base: string; status: 'conflict' | 'partly_landed' }
   /** An unblock run for the task is still going: a person retried it meanwhile, and it starts once that run stops. */
   | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };

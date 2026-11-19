@@ -9,7 +9,7 @@ import type { TaskEventType } from '#domain/work/index.ts';
 import type { LinkKind } from '#domain/work/index.ts';
 import type { TaskStatus } from '#domain/work/index.ts';
 import type { TaskSource } from '#domain/work/index.ts';
-import type { PlanBranchStatus } from '#domain/work/index.ts';
+import type { LandingPolicy, PlanBranchStatus } from '#domain/work/index.ts';
 import { index, integer, primaryKey, real, sqliteTable, text, unique, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // guard: a column default is an expression SQLite evaluates on insert, which the builder can only take as raw SQL
@@ -253,6 +253,11 @@ export const planBranches = sqliteTable(
     updated_at: text().default(NOW_DEFAULT).notNull(),
     synced_at: text(),
     ahead_lines: integer(),
+    landing_policy: text().$type<LandingPolicy>().default('person').notNull(),
+    land_order: integer(),
+    land_error: text(),
+    landed_commit: text(),
+    landed_from: text(),
   },
   (table) => [uniqueIndex('plan_branches_plan_repo').on(table.plan_task, table.repo_id)],
 );
