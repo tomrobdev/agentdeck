@@ -951,13 +951,14 @@ An open task as the digest shows it.
 
 ### Headline
 
-| Field        | Type              | Comment                                                                                             |
-| ------------ | ----------------- | --------------------------------------------------------------------------------------------------- |
-| `state`      | `HeadlineState`   |                                                                                                     |
-| `until`      | `number \| null`  | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
-| `need_you`   | `number`          |                                                                                                     |
-| `attention`  | `AttentionTask[]` |                                                                                                     |
-| `review_due` | `RepoReviewDue[]` |                                                                                                     |
+| Field           | Type                   | Comment                                                                                             |
+| --------------- | ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `state`         | `HeadlineState`        |                                                                                                     |
+| `until`         | `number \| null`       | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
+| `need_you`      | `number`               |                                                                                                     |
+| `attention`     | `AttentionTask[]`      |                                                                                                     |
+| `review_due`    | `RepoReviewDue[]`      |                                                                                                     |
+| `plan_branches` | `PlanBranchConflict[]` |                                                                                                     |
 
 ### HeadlineFacts
 
@@ -970,6 +971,7 @@ An open task as the digest shows it.
 | `need_you`           | `{ proposed: number; blocked: number; review: number; }` | Proposed, blocked and in-review tasks.                                               |
 | `attention`          | `AttentionCandidate[]`                                   | Tasks that need a person; any number, in any order.                                  |
 | `review_due?`        | `RepoReviewDue[] \| undefined`                           | The repos due for an area review, as the daemon's last check found them.             |
+| `plan_branches?`     | `PlanBranchConflict[] \| undefined`                      |                                                                                      |
 
 ### HealthFacts
 
@@ -1132,17 +1134,18 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Settings
 
-| Field              | Type                | Comment                                                                                                                     |
-| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `max_concurrent`   | `number`            |                                                                                                                             |
-| `budget`           | `Budget`            |                                                                                                                             |
-| `notify`           | `NotifySettings`    |                                                                                                                             |
-| `planner`          | `PlannerSettings`   |                                                                                                                             |
-| `default_model`    | `string`            | The model a new task takes when neither it nor its repo names one.                                                          |
-| `support_model`    | `string`            | The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts).                        |
-| `review_model`     | `string`            | The model review runs use (`runModel` in domain/runs/run.ts); opus by default, a reviewer at least as strong as the worker. |
-| `reload_on_change` | `boolean`           | Restart the daemon onto new code when daemon/src changes and nothing is running.                                            |
-| `review_due`       | `ReviewDueSettings` | When a repo is due for an area review (review_due_days, review_due_lines).                                                  |
+| Field                      | Type                | Comment                                                                                                                     |
+| -------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `max_concurrent`           | `number`            |                                                                                                                             |
+| `budget`                   | `Budget`            |                                                                                                                             |
+| `notify`                   | `NotifySettings`    |                                                                                                                             |
+| `planner`                  | `PlannerSettings`   |                                                                                                                             |
+| `default_model`            | `string`            | The model a new task takes when neither it nor its repo names one.                                                          |
+| `support_model`            | `string`            | The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts).                        |
+| `review_model`             | `string`            | The model review runs use (`runModel` in domain/runs/run.ts); opus by default, a reviewer at least as strong as the worker. |
+| `reload_on_change`         | `boolean`           | Restart the daemon onto new code when daemon/src changes and nothing is running.                                            |
+| `review_due`               | `ReviewDueSettings` | When a repo is due for an area review (review_due_days, review_due_lines).                                                  |
+| `plan_branch_sync_minutes` | `number`            | How often the daemon syncs each active plan branch with its base, in minutes (`planBranchSyncDue` in domain/work/).         |
 
 ## `domain/proposals/`
 
@@ -2052,8 +2055,17 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 | `status`      | `PlanBranchStatus` |         |
 | `head_commit` | `string \| null`   |         |
 | `pr_url`      | `string \| null`   |         |
+| `synced_at`   | `string \| null`   |         |
 | `created_at`  | `string`           |         |
 | `updated_at`  | `string`           |         |
+
+### PlanBranchConflict
+
+| Field  | Type     | Comment |
+| ------ | -------- | ------- |
+| `repo` | `string` |         |
+| `name` | `string` |         |
+| `line` | `string` |         |
 
 ### PlanBranchTask
 

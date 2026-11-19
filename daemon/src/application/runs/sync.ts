@@ -102,7 +102,7 @@ async function resolveConflicts(
   return syncResultOf(outcome, files, reason);
 }
 
-function resolutionProblem(finish: SyncFinish): string {
+export function resolutionProblem(finish: SyncFinish): string {
   switch (finish.kind) {
     case 'markers':
       return `conflict markers are still in ${finish.files.join(', ')}`;

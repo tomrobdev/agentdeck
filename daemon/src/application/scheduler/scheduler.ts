@@ -9,6 +9,7 @@ import { REVIEW_CHECK_MS, checkReviewsDue } from '#application/operations/review
 import { releaseRestartPause } from '#application/operations/restart.ts';
 import { proposeNow, plannerDue } from '#application/proposals/planner.ts';
 import { resolveConflicting } from '#application/runs/sync.ts';
+import { startPlanBranchSync } from '#application/runs/plan-branch-sync.ts';
 import { autoMerge } from '#application/landing/merge/auto-merge.ts';
 import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '#application/landing/pull-request/refresh.ts';
 import { followUpPending, hasFollowUpsToRun } from '#application/landing/settle.ts';
@@ -213,6 +214,8 @@ export class Scheduler {
         });
         this.running.add(p);
       }
+      const planSync = this.opts.once || this.gate().free <= 0 ? null : startPlanBranchSync(this.app, this.opts.log);
+      if (planSync) this.track(planSync, 'sync');
       this.maybeUnblock();
       this.maybeReview();
       if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(draining);

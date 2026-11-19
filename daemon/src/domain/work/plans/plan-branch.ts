@@ -1,5 +1,5 @@
 // A plan branch: a branch a plan owns in a repo, which the plan's tasks target and which lands on the base as one pull request.
-import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import { type RepoId, type TaskId, sqliteMs } from '#domain/shared/index.ts';
 import { planSlug } from '#domain/work/plans/plan.ts';
 
 export type PlanBranchStatus = 'open' | 'active' | 'conflict' | 'landing' | 'landed' | 'abandoned' | 'partly_landed';
@@ -27,6 +27,7 @@ export interface PlanBranch {
   status: PlanBranchStatus;
   head_commit: string | null;
   pr_url: string | null;
+  synced_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +73,43 @@ export function abandonRunningError(name: string, tasks: PlanBranchTask[]): stri
 }
 
 export const needsCut = (branch: Pick<PlanBranch, 'status'>): boolean => branch.status === 'open';
+
+export const DEFAULT_PLAN_BRANCH_SYNC_MINUTES = 60;
+
+export const planBranchSyncMinutesError = (minutes: number): string | null =>
+  minutes >= 5 && minutes <= 7 * 24 * 60 ? null : 'plan_branch_sync_minutes must be from 5 to 10080 (a week)';
+
+const SYNCED: PlanBranchStatus[] = ['active', 'conflict'];
+
+export function planBranchSyncDue(branch: Pick<PlanBranch, 'status' | 'synced_at'>, now: number, everyMinutes: number): boolean {
+  if (!SYNCED.includes(branch.status)) return false;
+  return branch.synced_at === null || now - sqliteMs(branch.synced_at) >= everyMinutes * 60_000;
+}
+
+export const mayResolvePlanBranch = (branch: Pick<PlanBranch, 'status'>, repo: { auto_resolve: boolean }): boolean =>
+  branch.status === 'active' && repo.auto_resolve;
+
+export type PlanBranchSyncOutcome = 'up_to_date' | 'clean' | 'resolved' | 'conflict';
+
+export function planBranchSyncMove(branch: Pick<PlanBranch, 'status'>, outcome: PlanBranchSyncOutcome): PlanBranchMove | null {
+  if (outcome === 'conflict') return branch.status === 'active' ? 'conflict' : null;
+  return branch.status === 'conflict' ? 'resolve' : null;
+}
+
+export interface PlanBranchConflict {
+  repo: string;
+  name: string;
+  line: string;
+}
+
+export const planBranchWait = (branch: Pick<PlanBranch, 'name' | 'base' | 'status'> | undefined): { name: string; base: string } | null =>
+  branch?.status === 'conflict' ? { name: branch.name, base: branch.base } : null;
+
+export const planBranchConflict = (branch: Pick<PlanBranch, 'name' | 'base'>, repo: string): PlanBranchConflict => ({
+  repo,
+  name: branch.name,
+  line: `${branch.name} conflicts with ${branch.base} and no resolve run settled it; its tasks wait until a merge of ${branch.base} into it is pushed`,
+});
 
 export const planBranchTarget = (branch: Pick<PlanBranch, 'name' | 'status'> | undefined): string | null =>
   branch && isLivePlanBranch(branch) ? branch.name : null;

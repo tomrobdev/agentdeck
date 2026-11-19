@@ -297,6 +297,8 @@ export const MIGRATIONS: Migration[] = [
      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
    );
    CREATE UNIQUE INDEX plan_branches_plan_repo ON plan_branches(plan_task, repo_id);`,
+  // 43: plan_branches.synced_at, when the daemon last synced a plan branch with its base or tried to; NULL until then.
+  'ALTER TABLE plan_branches ADD COLUMN synced_at TEXT;',
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

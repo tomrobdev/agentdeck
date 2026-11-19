@@ -1,5 +1,6 @@
 // The daemon's headline: what state it is in, and what needs a person.
 import type { TaskId } from '#domain/shared/index.ts';
+import type { PlanBranchConflict } from '#domain/work/index.ts';
 
 export type HeadlineState = 'paused' | 'rate_limited' | 'hold' | 'working' | 'idle';
 /** Why a task needs a person, in the order the attention list shows them. */
@@ -32,6 +33,7 @@ export interface HeadlineFacts {
   attention: AttentionCandidate[];
   /** The repos due for an area review, as the daemon's last check found them. */
   review_due?: RepoReviewDue[];
+  plan_branches?: PlanBranchConflict[];
 }
 
 /** A repo due for an area review, as the headline shows it. */
@@ -48,6 +50,7 @@ export interface Headline {
   need_you: number;
   attention: AttentionTask[];
   review_due: RepoReviewDue[];
+  plan_branches: PlanBranchConflict[];
 }
 
 export function attentionList(candidates: AttentionCandidate[]): AttentionTask[] {
@@ -63,6 +66,7 @@ export function headline(facts: HeadlineFacts, now: number): Headline {
     need_you: proposed + blocked + review,
     attention: attentionList(facts.attention),
     review_due: (facts.review_due ?? []).map(({ repo, line }) => ({ repo, line })),
+    plan_branches: facts.plan_branches ?? [],
   };
   if (facts.paused) return { state: 'paused', until: null, ...rest };
   const limited = facts.rate_limited_until && facts.rate_limited_until > now ? facts.rate_limited_until : null;

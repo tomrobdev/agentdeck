@@ -251,6 +251,7 @@ export const planBranches = sqliteTable(
     pr_url: text(),
     created_at: text().default(NOW_DEFAULT).notNull(),
     updated_at: text().default(NOW_DEFAULT).notNull(),
+    synced_at: text(),
   },
   (table) => [uniqueIndex('plan_branches_plan_repo').on(table.plan_task, table.repo_id)],
 );

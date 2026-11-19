@@ -19,4 +19,5 @@ export interface Settings {
   reload_on_change: boolean;
   /** When a repo is due for an area review (review_due_days, review_due_lines). */
   review_due: ReviewDueSettings;
+  plan_branch_sync_minutes: number;
 }

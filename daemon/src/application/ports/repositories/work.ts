@@ -15,6 +15,7 @@ import type {
   OwnPlan,
   PendingFollowUp,
   PlanBranch,
+  PlanBranchSyncOutcome,
   PlanFollower,
   PlanSource,
   PrEvent,
@@ -131,6 +132,12 @@ export interface PlanBranchRepository {
   planBranchNamed(repo_id: RepoId, name: string): PlanBranch | undefined;
   openPlanBranch(branch: NewPlanBranch, retarget: TaskId[]): { opened: PlanBranch; targeted: TaskId[] };
   cutPlanBranch(id: number, head_commit: string): PlanBranch | undefined;
+  syncedPlanBranches(): PlanBranch[];
+  recordPlanBranchSync(
+    branch: Pick<PlanBranch, 'id' | 'status'>,
+    outcome: PlanBranchSyncOutcome,
+    head_commit: string | null,
+  ): PlanBranch | undefined;
   abandonPlanBranch(
     branch: Pick<PlanBranch, 'id' | 'repo_id' | 'name'>,
   ): { abandoned: PlanBranch; moved: TaskId[] } | { refused: string } | undefined;

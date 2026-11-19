@@ -7,9 +7,9 @@ import type { RunEnd, RunSummary } from '#domain/runs/translate/summary.ts';
  * `unblock` reads why a blocked task stopped and retries it with a note or asks a question (domain/runs/unblock.ts), and
  * never uses an attempt either; `review` reads a done task's changes against its Current problem, Expected outcome and plan steps,
  * and answers with findings (domain/runs/review.ts); `verify` checks a proposed or queued task's prompt against the base,
- * claim by claim (domain/runs/verify.ts). Neither uses an attempt.
+ * claim by claim (domain/runs/verify.ts). Neither uses an attempt, nor does `plan_resolve`, a resolve run on a plan branch.
  */
-export type RunKind = 'work' | 'resolve' | 'unblock' | 'review' | 'verify';
+export type RunKind = 'work' | 'resolve' | 'unblock' | 'review' | 'verify' | 'plan_resolve';
 
 /** A run (or planner run) with a recorded pid: where a claude process may still be. */
 export interface PidRun {
@@ -30,7 +30,15 @@ export interface RunningTaskRun {
 }
 
 export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
-  run.kind === 'resolve' ? 'Resolve conflicts' : run.kind === 'review' ? 'Review' : run.kind === 'verify' ? 'Verify' : `Run ${run.attempt}`;
+  run.kind === 'resolve'
+    ? 'Resolve conflicts'
+    : run.kind === 'plan_resolve'
+      ? 'Resolve plan branch conflicts'
+      : run.kind === 'review'
+        ? 'Review'
+        : run.kind === 'verify'
+          ? 'Verify'
+          : `Run ${run.attempt}`;
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
 

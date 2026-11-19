@@ -28,6 +28,7 @@ export type StartWait =
   | { kind: 'repo-paused'; reason: string }
   | { kind: 'draining'; repo: boolean }
   | ({ kind: 'dependency' } & Waiting)
+  | { kind: 'plan-branch'; name: string; base: string }
   | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };
 
@@ -74,6 +75,7 @@ export function startWait(
     repoPaused: string | null;
     draining: 'daemon' | 'repo' | null;
     dependency: StartState;
+    planBranch?: { name: string; base: string } | null;
     unblocking: boolean;
     running: number;
     max: number;
@@ -85,6 +87,7 @@ export function startWait(
   if (ctx.draining) return { kind: 'draining', repo: ctx.draining === 'repo' };
   const waiting = waitingOf(ctx.dependency);
   if (waiting) return { kind: 'dependency', ...waiting };
+  if (ctx.planBranch) return { kind: 'plan-branch', ...ctx.planBranch };
   if (ctx.unblocking) return { kind: 'unblocking' };
   if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max };
   return null;

@@ -18,6 +18,7 @@ import {
   mergeInProgress,
   mergeRef,
   mergeSides,
+  moveBranch,
   pruneWorktrees,
   removeTempDir,
   removeWorktree,
@@ -69,6 +70,8 @@ export const workspace = {
   prepareCheckout: (repo: Repo, task: Task, target: string) => ensureWorktree(repo, task, target),
 
   cutBranch: (repoPath: string, branch: string, from: string) => cutBranch(repoPath, branch, from),
+
+  moveBranch: (repoPath: string, branch: string, sha: string) => moveBranch(repoPath, branch, sha),
 
   async removeCheckout(repo: Repo, checkout: { worktree?: string | null; branch?: string | null }): Promise<void> {
     if (checkout.worktree) await removeWorktree(repo, checkout.worktree);

@@ -108,6 +108,7 @@ export const daemonCommands: Record<string, Command> = {
     console.log(`review_model    ${st.review_model} (review runs)`);
     console.log(`review_due_days  ${st.review_due.days} (an area review is due once the oldest mark is older)`);
     console.log(`review_due_lines ${st.review_due.lines} (or once more lines merged since it)`);
+    console.log(`plan_branch_sync_minutes ${st.plan_branch_sync_minutes} (how often each plan branch is synced with its base)`);
     console.log(
       `\ngovernor        ${d.allow ? 'allowing work' : 'on hold'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
     );
@@ -133,6 +134,7 @@ export const daemonCommands: Record<string, Command> = {
         `repo       ${r.name} PAUSED (${r.queued} queued): ${r.reason.split('\n')[0].slice(0, 100)}  → agentdeck repo resume ${r.name}`,
       );
     for (const r of st.headline.review_due) console.log(`repo       ${r.repo}: ${r.line}`);
+    for (const b of st.headline.plan_branches) console.log(`repo       ${b.repo}: ${b.line}`);
     console.log(
       `tasks      ${
         Object.entries(st.counts)

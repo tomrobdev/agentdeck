@@ -19,7 +19,7 @@ import {
 import { TASK_COLUMNS, mapFound, stateColumns, toTask } from '#db/mappers.ts';
 import type { Orm } from '#db/orm.ts';
 import { NOW_SQL, atomically } from '#db/sql.ts';
-import { plannerRuns, repos, runs, taskLinks, tasks } from '#db/tables.ts';
+import { planBranches, plannerRuns, repos, runs, taskLinks, tasks } from '#db/tables.ts';
 import { recordEvent } from '#db/work/task-events.ts';
 import { columns } from '#db/work/tasks-columns.ts';
 
@@ -86,8 +86,22 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
     if (d.daemon) return hasRun();
     return d.repos.length ? or(hasRun(), notInArray(t.repo_id, d.repos)) : undefined;
   };
+  const planBranchClear = () =>
+    notExists(
+      orm
+        .select({ id: planBranches.id })
+        .from(planBranches)
+        .where(and(eq(planBranches.repo_id, t.repo_id), eq(planBranches.name, t.target), eq(planBranches.status, 'conflict'))),
+    );
   const claimable = (d: Draining) =>
-    and(inArray(t.status, fromStatuses({ type: 'claim' })), notWaiting(), noRunBeside(), inOpenRepo(t.repo_id), outsideDrain(d));
+    and(
+      inArray(t.status, fromStatuses({ type: 'claim' })),
+      notWaiting(),
+      noRunBeside(),
+      planBranchClear(),
+      inOpenRepo(t.repo_id),
+      outsideDrain(d),
+    );
 
   const applyEvent = (
     id: TaskId,

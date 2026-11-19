@@ -57,6 +57,13 @@ const reviewDue = computed(() => {
   return { label: due.length === 1 ? `${due[0].repo}: ${due[0].line}` : `area review due in ${due.length} repos`, title };
 });
 
+const planConflicts = computed(() => {
+  const found = props.offline ? [] : (props.status?.headline.plan_branches ?? []);
+  if (!found.length) return null;
+  const title = found.map((b) => `${b.repo}: ${b.line}`).join('\n');
+  return { label: found.length === 1 ? `${found[0].name} conflicts with its base` : `${found.length} plan branches conflict`, title };
+});
+
 const toggleTitle = computed(() => {
   const action = props.status?.paused ? 'Resume: let new tasks start' : 'Pause: no new tasks start';
   return state.value.title ? `${state.value.title} · ${action}` : action;
@@ -146,6 +153,7 @@ const toggleTitle = computed(() => {
       On hold: {{ status.governor.reason }}
     </span>
     <span v-if="reviewDue" class="truncate text-blocked" :title="reviewDue.title">{{ reviewDue.label }}</span>
+    <span v-if="planConflicts" class="truncate text-blocked" :title="planConflicts.title">{{ planConflicts.label }}</span>
     <Chip as="button" variant="tint" size="xs" title="The daemon's health, and restart" @click="openPanel('daemon')">Daemon</Chip>
   </footer>
 </template>
