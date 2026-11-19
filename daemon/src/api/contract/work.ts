@@ -209,13 +209,11 @@ export interface PlanBranch {
 
 export interface OpenedPlanBranch extends PlanBranch {
   targeted: TaskId[];
-  /** The plan branches opened with it in the plan's other repos, all with its name. */
   others: (PlanBranch & { targeted: TaskId[] })[];
 }
 
 export interface AbandonedPlanBranch extends PlanBranch {
   moved: TaskId[];
-  /** The plan's plan branches abandoned with it in its other repos. */
   others: (PlanBranch & { moved: TaskId[] })[];
 }
 
