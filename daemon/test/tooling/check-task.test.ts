@@ -91,7 +91,7 @@ test('a branch changing both runs both, the crash test first, each with the path
   );
 });
 
-test('the crash test runs 5 times', () => {
+test('the crash test runs 6 times, once per phase', () => {
   assert.deepEqual(EXTRA_CHECKS[0].command, ['node', 'daemon/scripts/crash-test.mjs', '6']);
 });
 

@@ -216,6 +216,21 @@ test('a plan branch that is gone, or not active, is not synced', async () => {
   assert.equal(await keepPlanBranchCurrent(db, repo, { id: branch.plan_task, target: branch.name }), null);
 });
 
+test('two syncs of one plan branch run one after the other, and a base that is gone is an error', async () => {
+  const { branch } = await activePlanBranch();
+  moveBase('twice.txt', 'synced once\n');
+  const [first, second] = await Promise.all([
+    syncPlanBranch(db, branch, { allowResolve: true }),
+    syncPlanBranch(db, branch, { allowResolve: true }),
+  ]);
+  assert.deepEqual([first.outcome, second.outcome], ['clean', 'up_to_date']);
+  db.raw.prepare("UPDATE plan_branches SET base = 'gone' WHERE id = ?").run(branch.id);
+  const report = await syncPlanBranch(db, branch, { allowResolve: true });
+  assert.equal(report.outcome, 'error');
+  assert.match(report.reason ?? '', /gone/);
+  db.raw.prepare("UPDATE plan_branches SET status = 'abandoned' WHERE id = ?").run(branch.id);
+});
+
 test('the daemon syncs a plan branch on its schedule', async () => {
   const { branch } = await activePlanBranch();
   moveBase('scheduled.txt', 'moved before the schedule\n');
