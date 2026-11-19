@@ -16,10 +16,9 @@ const { openDb } = await import('#db/index.ts');
 const { Scheduler } = await import('#application/scheduler/scheduler.ts');
 const { addTask, approveTask, openPlanBranch, status, taskViews, updateSettings } = await import('#application/actions.ts');
 const { cutPlanBranch } = await import('#application/work/plans.ts');
-const { nextPlanBranchSync, syncPlanBranch } = await import('#application/runs/plan-branch-sync.ts');
+const { keepPlanBranchCurrent, nextPlanBranchSync, syncPlanBranch } = await import('#application/runs/plan-branch-sync.ts');
 const { fmtTask } = await import('#cli/format.ts');
-const { testApp } = await import('#test/fixtures/fixtures.ts');
-
+const { testApp, waitFor } = await import('#test/fixtures/fixtures.ts');
 const db = testApp(openDb(join(home, 'agentdeck.db')));
 db.setSetting('max_concurrent', '1');
 db.setPaused(false);
@@ -145,7 +144,9 @@ test('a failed resolve leaves the plan branch where it was, in conflict, and its
   assert.equal(db.claimNextTask(), undefined, 'a task targeting it does not start');
   const [view] = taskViews(db, { limit: 50 }).filter((t) => t.id === waiting.id);
   assert.deepEqual(view.wait, { kind: 'plan-branch', name: branch.name, base: 'main' });
-  assert.match(fmtTask(view, 'shop'), new RegExp(`waits: ${branch.name} conflicts with main`));
+  const full = db.getTask(waiting.id);
+  assert.ok(full);
+  assert.match(fmtTask({ ...full, wait: view.wait }, 'shop'), new RegExp(`waits: ${branch.name} conflicts with main`));
   assert.deepEqual(
     status(db).headline.plan_branches.map((b) => b.name),
     [branch.name],
@@ -182,4 +183,52 @@ test('a task targeting a plan branch syncs it with the base before it starts', a
   const own = db.getTask(task.id)?.checkout?.branch;
   assert.ok(own);
   assert.equal(sh(dir, 'show', `${own}:later.txt`), 'base moved after the cut', 'its branch started from the synced plan branch');
+});
+
+test('a repo with auto_resolve off leaves a conflicting plan branch in conflict, with no resolve run', async () => {
+  const { owner, branch } = await activePlanBranch();
+  const before = commitOn(branch.name, 'shared.txt', 'line one\nplan side three\n');
+  moveBase('shared.txt', 'line one\nbase side three\n');
+  db.raw.prepare('UPDATE repos SET auto_resolve = 0 WHERE id = ?').run(repo.id);
+  try {
+    const report = await syncPlanBranch(db, branch, { allowResolve: true });
+    assert.deepEqual(report, { outcome: 'conflict', files: ['shared.txt'], pushed: false });
+    assert.equal(onOrigin(branch.name), before);
+    assert.equal(db.runsForTask(owner.id).length, 0);
+    assert.equal(db.planBranchNamed(repo.id, branch.name)?.status, 'conflict');
+  } finally {
+    db.raw.prepare('UPDATE repos SET auto_resolve = 1 WHERE id = ?').run(repo.id);
+  }
+});
+
+test('a plan branch that is gone, or not active, is not synced', async () => {
+  const { branch } = await activePlanBranch();
+  const gone = await syncPlanBranch(db, { ...branch, name: 'plan/nowhere' }, { allowResolve: true });
+  assert.deepEqual(gone, { outcome: 'error', files: [], reason: 'plan/nowhere is gone', pushed: false });
+  assert.equal(await keepPlanBranchCurrent(db, repo, { id: branch.plan_task, target: null }), null);
+  db.raw.prepare("UPDATE plan_branches SET status = 'landing' WHERE id = ?").run(branch.id);
+  assert.deepEqual(await syncPlanBranch(db, branch, { allowResolve: true }), {
+    outcome: 'deferred',
+    files: [],
+    reason: 'landing',
+    pushed: false,
+  });
+  assert.equal(await keepPlanBranchCurrent(db, repo, { id: branch.plan_task, target: branch.name }), null);
+});
+
+test('the daemon syncs a plan branch on its schedule', async () => {
+  const { branch } = await activePlanBranch();
+  moveBase('scheduled.txt', 'moved before the schedule\n');
+  db.raw.prepare("UPDATE plan_branches SET synced_at = datetime('now', '-2 days') WHERE id = ?").run(branch.id);
+  const logs: string[] = [];
+  const scheduler = new Scheduler(db, { once: false, tickMs: 50, autoPropose: false, log: (line) => logs.push(line) });
+  const ran = scheduler.run();
+  try {
+    await waitFor(() => logs.some((l) => l.startsWith(`plan branch ${branch.name}: clean`)), { what: 'the scheduled plan branch sync' });
+  } finally {
+    scheduler.stop();
+    await ran;
+  }
+  assert.ok(logs.some((l) => l === `plan branch ${branch.name}: clean, pushed`));
+  assert.equal(fileOnOrigin(branch.name, 'scheduled.txt'), 'moved before the schedule');
 });
