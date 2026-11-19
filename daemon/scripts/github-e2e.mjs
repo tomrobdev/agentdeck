@@ -319,7 +319,12 @@ try {
   });
 
   const first = addTask('e2e: the first task', 'FAKE_DONE FAKE_TWO_WAY write fake-output.txt');
-  const second = addTask('e2e: a task that conflicts with the first', 'FAKE_DONE FAKE_TWO_WAY write fake-output.txt too', '--after', String(first));
+  const second = addTask(
+    'e2e: a task that conflicts with the first',
+    'FAKE_DONE FAKE_TWO_WAY write fake-output.txt too',
+    '--after',
+    String(first),
+  );
   cli('resume');
   let firstUrl = '';
   let secondUrl = '';
@@ -498,7 +503,9 @@ try {
     mainSha = git('rev-parse', 'HEAD');
     note(`gh: main is ${mainSha.slice(0, 7)}, with a change to fake-output.txt the plan branch also changed`);
     await waitFor('a resolve run for the plan branch', () => {
-      const failedRun = database().prepare("SELECT * FROM runs WHERE kind = 'plan_resolve' AND outcome IS NOT NULL AND outcome != 'done'").get();
+      const failedRun = database()
+        .prepare("SELECT * FROM runs WHERE kind = 'plan_resolve' AND outcome IS NOT NULL AND outcome != 'done'")
+        .get();
       if (failedRun) throw fatal(`a resolve run ended ${failedRun.outcome}`);
       return runsDone() > before;
     });
