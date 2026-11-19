@@ -24,6 +24,7 @@ import {
   removeWorktree,
 } from '#adapters/git/worktrees.ts';
 import {
+  aheadBehind,
   aheadOfRemote,
   branchCommit,
   checkedOutBranch,
@@ -120,6 +121,8 @@ export const workspace = {
   commitsAhead: (cwd: string, base: string) => commitsAhead(cwd, base),
 
   unpushedCommits: (worktree: string, branch: string) => aheadOfRemote(worktree, branch),
+
+  aheadBehind: (repoPath: string, base: string, branch: string) => aheadBehind(repoPath, base, branch),
 
   reviewFacts: (repoPath: string, base: string, since: number) => reviewFacts(repoPath, base, since),
 

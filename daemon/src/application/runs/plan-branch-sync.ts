@@ -14,6 +14,7 @@ import {
 } from '#domain/work/index.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 import { resolutionProblem } from '#application/runs/sync.ts';
+import { nextPlanBranchToLand, openPlanBranchPr } from '#application/landing/pull-request/plan-branch-pr.ts';
 
 export interface PlanBranchSyncReport {
   outcome: PlanBranchSyncOutcome | 'deferred' | 'error';
@@ -143,8 +144,19 @@ export function nextPlanBranchSync(app: App, now: number): PlanBranch | null {
   return app.syncedPlanBranches().find((b) => open.has(b.repo_id) && !isPlanBranchSyncing(b) && planBranchSyncDue(b, now, every)) ?? null;
 }
 
-export function startPlanBranchSync(app: App, log: (msg: string) => void): Promise<void> | null {
-  const branch = nextPlanBranchSync(app, Date.now());
+export async function landPlanBranch(app: App, branch: PlanBranch): Promise<string> {
+  const synced = await syncPlanBranch(app, branch, { allowResolve: true });
+  const sync = `${synced.outcome}${synced.reason ? ` (${synced.reason})` : ''}`;
+  if (synced.outcome !== 'up_to_date' && synced.outcome !== 'clean' && synced.outcome !== 'resolved')
+    return `synced before landing: ${sync}, so its PR waits`;
+  const { url, error } = await openPlanBranchPr(app, branch);
+  return url ? `synced (${sync}) and its PR opened into ${branch.base}: ${url}` : `synced (${sync}), but its PR did not open: ${error}`;
+}
+
+export function startPlanBranchSync(app: App, log: (msg: string) => void, now: number = Date.now()): Promise<void> | null {
+  const ready = nextPlanBranchToLand(app, now, isPlanBranchSyncing);
+  if (ready) return landPlanBranch(app, ready).then((line) => log(`plan branch ${ready.name}: ${line}`));
+  const branch = nextPlanBranchSync(app, now);
   if (!branch) return null;
   return syncPlanBranch(app, branch, { allowResolve: true }).then((r) =>
     log(`plan branch ${branch.name}: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}${r.pushed ? ', pushed' : ''}`),

@@ -60,6 +60,7 @@ export interface TaskRepository {
   ) => { task: Task; event: DomainEvent; pending: number[] } | undefined;
   listTasks(): Task[];
   tasksForRepo(repo_id: RepoId, limit?: number): Task[];
+  tasksOnTarget(repo_id: RepoId, target: string): Task[];
   countOpen(repo_id: RepoId): number;
   countRunning(): number;
   runningTasks(): { id: TaskId; title: string }[];
@@ -139,6 +140,9 @@ export interface PlanBranchRepository {
     head_commit: string | null,
     ahead_lines?: number | null,
   ): PlanBranch | undefined;
+  landingPlanBranches(): PlanBranch[];
+  openPlanBranchPr(id: number, pr_url: string): PlanBranch | undefined;
+  settlePlanBranchPr(id: number, to: 'land' | 'close_pr'): PlanBranch | undefined;
   abandonPlanBranch(
     branch: Pick<PlanBranch, 'id' | 'repo_id' | 'name'>,
   ): { abandoned: PlanBranch; moved: TaskId[] } | { refused: string } | undefined;

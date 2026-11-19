@@ -95,6 +95,7 @@ const API_FIELDS = [
   'model',
   'needs',
   'park_reason',
+  'plan_landing',
   'plan_steps',
   'plan_task',
   'plan_unfinished',

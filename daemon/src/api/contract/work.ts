@@ -1,6 +1,15 @@
 // Work: tasks, their links and waits, events and plans.
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
-import type { LinkKind, NeedsKind, PlanBranchStatus, PlanSource, PlanStepStatus, TaskSource, TaskStatus } from '#domain/work/index.ts';
+import type {
+  LinkKind,
+  NeedsKind,
+  PlanBranchStatus,
+  PlanLanding,
+  PlanSource,
+  PlanStepStatus,
+  TaskSource,
+  TaskStatus,
+} from '#domain/work/index.ts';
 import type { MergeMethod } from '#domain/repos/index.ts';
 import type { PrRetry, PrState } from '#domain/landing/index.ts';
 import type { LiveView, SyncView, Run } from '#api/contract/runs.ts';
@@ -113,6 +122,8 @@ export interface TaskSummary {
    * its retries are used up. Null for any other task.
    */
   pr_retry: PrRetry | null;
+  /** For a done task whose PR merged into a plan branch: that plan branch, and whether it has landed on its base yet. */
+  plan_landing: PlanLanding | null;
   created_at: string;
   updated_at: string;
 }
@@ -210,7 +221,13 @@ export interface TaskDetail extends Task {
   runs: Run[];
   events: TaskEventRow[];
   plans: TaskPlan[];
-  plan_branch: PlanBranch | null;
+  plan_branch: PlanBranchView | null;
+}
+
+/** A plan branch on a task's page, with how far it is ahead of and behind its base; each null once it has landed, or when git could not say. */
+export interface PlanBranchView extends PlanBranch {
+  ahead: number | null;
+  behind: number | null;
 }
 
 /** The reply to adding or editing a task: the task, and what is worth a second look in its prompt (the task is saved either way). */

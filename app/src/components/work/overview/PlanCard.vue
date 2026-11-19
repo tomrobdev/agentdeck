@@ -3,11 +3,12 @@ import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { ago } from '#lib/shared/time.ts';
 import { planHtmlQuery, workApi } from '#api/work.ts';
-import type { PlanBranch, PlanStep, TaskPlan } from '#api/types.ts';
+import type { PlanBranchView, PlanStep, TaskPlan } from '#api/types.ts';
 import { useAction } from '#composables/shared/useActions.ts';
 import { planProgress } from '#daemon/domain/work/index.ts';
 import { plural } from '#daemon/domain/shared/index.ts';
 import { mode } from '#platform/theme.ts';
+import { openExternal } from '#platform/native.ts';
 import { withBaseStyle } from '#lib/work/plan-page.ts';
 import planCss from '#docs/plans/plan.css?raw';
 import Disclosure from '#components/ui/disclosure/Disclosure.vue';
@@ -15,7 +16,7 @@ import DisclosureContent from '#components/ui/disclosure/DisclosureContent.vue';
 import DisclosureTrigger from '#components/ui/disclosure/DisclosureTrigger.vue';
 import Progress from '#components/ui/status/Progress.vue';
 
-const props = defineProps<{ taskId: number; plan: TaskPlan; planBranch?: PlanBranch | null; followed?: boolean }>();
+const props = defineProps<{ taskId: number; plan: TaskPlan; planBranch?: PlanBranchView | null; followed?: boolean }>();
 const emit = defineEmits<{ open: [path: string] }>();
 const { pending, run } = useAction();
 const openPlanBranch = () =>
@@ -120,8 +121,17 @@ function onFrameLoad() {
     <footer class="flex flex-wrap items-center gap-2 border-t border-border px-3.5 py-2 text-sm">
       <DisclosureTrigger class="px-2 py-0 text-sm">{{ full ? 'Hide the plan' : 'Read the plan' }}</DisclosureTrigger>
       <button v-if="plan.source === 'branch'" class="px-2 py-0 text-sm" @click="emit('open', plan.name)">Open file</button>
-      <span v-if="planBranch" class="text-muted" :title="`Plan branch from ${planBranch.base}`">
+      <span v-if="planBranch" class="text-muted" :title="`Plan branch from ${planBranch.base}`" data-plan-branch>
         <code>{{ planBranch.name }}</code> · {{ planBranch.status }}
+        <template v-if="planBranch.ahead !== null && planBranch.behind !== null">
+          · {{ planBranch.ahead }} ahead, {{ planBranch.behind }} behind {{ planBranch.base }}
+        </template>
+        <template v-if="planBranch.pr_url">
+          ·
+          <button class="btn-ghost text-accent" @click="planBranch.pr_url && openExternal(planBranch.pr_url)">
+            PR into {{ planBranch.base }} ↗
+          </button>
+        </template>
       </span>
       <button v-else-if="followed" class="px-2 py-0 text-sm" :disabled="pending" @click="openPlanBranch">Open a plan branch</button>
       <span class="ml-auto text-muted">

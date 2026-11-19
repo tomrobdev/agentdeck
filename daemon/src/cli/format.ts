@@ -5,7 +5,7 @@ import { type TaskId, asTaskId, cut, oneLine } from '#domain/shared/index.ts';
 import type { AutoMergeView } from '#domain/landing/index.ts';
 import type { ChecksSummary } from '#domain/landing/index.ts';
 import type { TaskStatus } from '#domain/work/index.ts';
-import { type ProposalCheck, parseTaskIds, proposalCheckLine } from '#domain/work/index.ts';
+import { type ProposalCheck, parseTaskIds, planLandingText, proposalCheckLine } from '#domain/work/index.ts';
 import type { Task } from '#domain/work/index.ts';
 import type { RunSummary, VerifyFinding } from '#domain/runs/index.ts';
 import { costText, findingPlace, verifyLine } from '#domain/runs/index.ts';
@@ -97,6 +97,7 @@ export function fmtTask(
     unblocks?: TaskId[];
     links?: TaskView['links'];
     auto_merge_view?: TaskView['auto_merge_view'];
+    plan_landing?: TaskView['plan_landing'];
   },
   repoName: string,
 ): string {
@@ -109,6 +110,7 @@ export function fmtTask(
       : `  waiting on ${idsText(waiting.on)}`;
   if (t.wait?.kind === 'plan-branch') extra += `  waits: ${t.wait.name} conflicts with ${t.wait.base}`;
   if (t.pr?.url) extra += `  PR ${t.pr.state}: ${t.pr.url}`;
+  if (t.plan_landing) extra += `  ${planLandingText(t.plan_landing)}`;
   if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += `  ${t.auto_merge_view.label}`;
   for (const l of t.links ?? []) if (l.kind === 'after' || l.state !== 'waiting' || !waiting) extra += `  ${fmtLink(l)}`;
   if (t.unblocks?.length) extra += `  unblocks ${idsText(t.unblocks)}`;

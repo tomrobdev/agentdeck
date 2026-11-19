@@ -39,6 +39,7 @@ const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   pr_url: null,
   pr_state: null,
   pr_retry: null,
+  plan_landing: null,
   merge_method: null,
   plan_task: null,
   plan_steps: null,

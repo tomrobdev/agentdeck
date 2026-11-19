@@ -6,7 +6,7 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 
 | Group                      | Holds                                                                                    | Lines | Branches |
 | -------------------------- | ---------------------------------------------------------------------------------------- | ----- | -------- |
-| `adapters`                 | `adapters/`                                                                              | 88%   | 85%      |
+| `adapters`                 | `adapters/`                                                                              | 88%   | 87%      |
 | `api`                      | `api/`                                                                                   | 98%   | 93%      |
 | `application`              | the files directly in `application/` (`actions.ts`)                                      | 100%  | 100%     |
 | `application/capacity`     | `application/capacity/`                                                                  | 100%  | 100%     |

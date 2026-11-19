@@ -2085,6 +2085,15 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 | `days`  | `number` |         |
 | `lines` | `number` |         |
 
+### PlanBranchMember
+
+| Field    | Type                                               | Comment |
+| -------- | -------------------------------------------------- | ------- |
+| `id`     | `TaskId`                                           |         |
+| `title`  | `string`                                           |         |
+| `status` | `TaskStatus`                                       |         |
+| `pr`     | `{ state: PrState; url: string \| null; } \| null` |         |
+
 ### PlanBranchTask
 
 | Field     | Type             | Comment |
@@ -2111,6 +2120,16 @@ A task that follows a plan, with the step ids it links (null for every step).
 | ------- | ------------------ | ------- |
 | `id`    | `number`           |         |
 | `steps` | `string[] \| null` |         |
+
+### PlanLanding
+
+Where a done task merged into a plan branch stands: waiting for the plan branch to land, landed with it, or left on an abandoned one.
+
+| Field   | Type                                   | Comment |
+| ------- | -------------------------------------- | ------- |
+| `name`  | `string`                               |         |
+| `base`  | `string`                               |         |
+| `state` | `"waiting" \| "landed" \| "abandoned"` |         |
 
 ### PlanLink
 
@@ -2154,6 +2173,17 @@ What the dashboard and `agentdeck show` say about a proposal before it is approv
 | `staleness` | `Staleness \| null` | Null when git can't say (no base, an unreadable repo).      |
 | `notes`     | `string[]`          | promptWarnings' lines: named paths that aren't on the base. |
 | `overlaps`  | `Overlap[]`         |                                                             |
+
+### PunchLine
+
+| Field        | Type                                               | Comment |
+| ------------ | -------------------------------------------------- | ------- |
+| `review`     | `ReviewVerdict \| null`                            |         |
+| `unfinished` | `string[]`                                         |         |
+| `id`         | `TaskId`                                           |         |
+| `title`      | `string`                                           |         |
+| `status`     | `TaskStatus`                                       |         |
+| `pr`         | `{ state: PrState; url: string \| null; } \| null` |         |
 
 ### QueueState
 
