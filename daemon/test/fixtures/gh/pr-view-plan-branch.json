@@ -1,0 +1,84 @@
+{
+ "additions": 2,
+ "baseRefName": "main",
+ "changedFiles": 1,
+ "commits": [
+  {
+   "authoredDate": "2026-11-19T18:52:34Z",
+   "authors": [
+    {
+     "email": "person@example.com",
+     "id": "U_kgDOFIdF3A",
+     "login": "tomrobdev",
+     "name": "tomrobdev"
+    }
+   ],
+   "committedDate": "2026-11-19T18:52:34Z",
+   "messageBody": "Wrote fake-output.txt and committed.\nDoor: two-way\n\n<details><summary>Plan and runs</summary>\n\n## Plan: `4-e2e-plan-branch.html`\n\n**One** (todo)\n\n| Attempt | Outcome | Turns | Cost | Tests |\n| --- | --- | --- | --- | --- |\n| 1 | done | 3 | $0.01 | - |\n| 1 (review) | done | 3 | $0.01 | - |\n\n</details>\n\nMade by AgentDeck task #4.",
+   "messageHeadline": "e2e: plan step one",
+   "oid": "3079079ff568e9a84d3a601a101c9f05c86e1338"
+  },
+  {
+   "authoredDate": "2026-11-19T18:52:57Z",
+   "authors": [
+    {
+     "email": "person@example.com",
+     "id": "U_kgDOFIdF3A",
+     "login": "tomrobdev",
+     "name": "tomrobdev"
+    }
+   ],
+   "committedDate": "2026-11-19T18:52:57Z",
+   "messageBody": "Wrote fake-output.txt and committed.\nDoor: two-way\n\n<details><summary>Plan and runs</summary>\n\n## Plan: `4-e2e-plan-branch.html`\n\n**Two** (todo)\n\n| Attempt | Outcome | Turns | Cost | Tests |\n| --- | --- | --- | --- | --- |\n| 1 | done | 3 | $0.01 | - |\n| 1 (review) | done | 3 | $0.01 | - |\n\n</details>\n\nMade by AgentDeck task #5.",
+   "messageHeadline": "e2e: plan step two",
+   "oid": "925514331e3ab39b1a32e66fe23550b7dd1fd51d"
+  },
+  {
+   "authoredDate": "2026-11-19T18:53:02Z",
+   "authors": [
+    {
+     "email": "person@example.com",
+     "id": "",
+     "login": "",
+     "name": "AgentDeck e2e"
+    }
+   ],
+   "committedDate": "2026-11-19T18:53:02Z",
+   "messageBody": "# Conflicts:\n#\tfake-output.txt",
+   "messageHeadline": "Merge remote-tracking branch 'origin/main' into HEAD",
+   "oid": "c5766bca390e97906529e96927c2c7f0bbf35f67"
+  },
+  {
+   "authoredDate": "2026-11-19T18:53:29Z",
+   "authors": [
+    {
+     "email": "person@example.com",
+     "id": "U_kgDOFIdF3A",
+     "login": "tomrobdev",
+     "name": "tomrobdev"
+    }
+   ],
+   "committedDate": "2026-11-19T18:53:29Z",
+   "messageBody": "Wrote fake-output.txt and committed.\nDoor: two-way\n\n<details><summary>Plan and runs</summary>\n\n## Plan: `4-e2e-plan-branch.html`\n\n**Three** (todo)\n\n| Attempt | Outcome | Turns | Cost | Tests |\n| --- | --- | --- | --- | --- |\n| 1 | done | 3 | $0.01 | - |\n| 1 (review) | done | 3 | $0.01 | - |\n\n</details>\n\nMade by AgentDeck task #6.",
+   "messageHeadline": "e2e: plan step three",
+   "oid": "2738386da1693c275eaac1f44aeff4ce67d5c823"
+  }
+ ],
+ "deletions": 1,
+ "files": [
+  {
+   "path": "fake-output.txt",
+   "additions": 2,
+   "deletions": 1,
+   "changeType": "MODIFIED"
+  }
+ ],
+ "headRefName": "plan/4-e2e-plan-branch",
+ "headRefOid": "2738386da1693c275eaac1f44aeff4ce67d5c823",
+ "isDraft": false,
+ "labels": [],
+ "mergeStateStatus": "CLEAN",
+ "mergeable": "MERGEABLE",
+ "state": "OPEN",
+ "statusCheckRollup": []
+}

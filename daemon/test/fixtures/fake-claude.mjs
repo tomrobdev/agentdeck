@@ -293,5 +293,6 @@ if (given.startsWith('AgentDeck counted the code comments')) {
   const labels = [...prompt.matchAll(/^(c\d+) — /gm)].map((m) => m[1]);
   const answered = prompt.includes('FAKE_ANSWER_FIRST') ? labels.slice(0, 1) : prompt.includes('FAKE_ANSWER') ? labels : [];
   const answers = answered.map((l) => `ANSWER ${l}: handled ${l}\n`).join('');
-  result(`Wrote fake-output.txt and committed.\n${answers}STATUS: DONE`);
+  const door = prompt.includes('FAKE_TWO_WAY') ? 'Door: two-way\n' : '';
+  result(`Wrote fake-output.txt and committed.\n${door}${answers}STATUS: DONE`);
 }

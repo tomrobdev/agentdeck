@@ -318,8 +318,8 @@ try {
     note(`daemon pid ${daemon.pid}, api on port ${port}, log ${DAEMON_LOG}`);
   });
 
-  const first = addTask('e2e: the first task', 'FAKE_DONE write fake-output.txt');
-  const second = addTask('e2e: a task that conflicts with the first', 'FAKE_DONE write fake-output.txt too', '--after', String(first));
+  const first = addTask('e2e: the first task', 'FAKE_DONE FAKE_TWO_WAY write fake-output.txt');
+  const second = addTask('e2e: a task that conflicts with the first', 'FAKE_DONE FAKE_TWO_WAY write fake-output.txt too', '--after', String(first));
   cli('resume');
   let firstUrl = '';
   let secondUrl = '';
@@ -392,7 +392,7 @@ try {
     note(`db: ${reviewed} review run(s) read #${second}'s changes`);
   });
 
-  const third = addTask('e2e: a task whose PR a person closes', 'FAKE_DONE write fake-output.txt once more');
+  const third = addTask('e2e: a task whose PR a person closes', 'FAKE_DONE FAKE_TWO_WAY write fake-output.txt once more');
   cli('auto-merge', String(third), 'off');
 
   await step(`#${third}'s PR closed by hand`, async (note) => {
@@ -417,7 +417,7 @@ try {
   writeFileSync(planFile, PLAN_HTML);
   const planOwner = addTask(
     'e2e: plan step one',
-    'FAKE_DONE write fake-output.txt for the plan',
+    'FAKE_DONE FAKE_TWO_WAY write fake-output.txt for the plan',
     '--plan',
     planFile,
     '--steps',
@@ -430,7 +430,7 @@ try {
   expect(planName?.startsWith(`plan/${planOwner}-`), `plan-branch open left ${JSON.stringify(branchRow())}`);
   const planSecond = addTask(
     'e2e: plan step two',
-    'FAKE_DONE write fake-output.txt for the plan again',
+    'FAKE_DONE FAKE_TWO_WAY write fake-output.txt for the plan again',
     '--plan',
     String(planOwner),
     '--steps',
@@ -441,7 +441,7 @@ try {
   );
   const planThird = addTask(
     'e2e: plan step three',
-    'FAKE_DONE write fake-output.txt for the plan a third time',
+    'FAKE_DONE FAKE_TWO_WAY write fake-output.txt for the plan a third time',
     '--plan',
     String(planOwner),
     '--steps',
@@ -483,7 +483,7 @@ try {
     note(`gh: ${planName} still there, main still the default branch`);
   });
 
-  const runsDone = () => database().prepare("SELECT COUNT(*) AS n FROM runs WHERE kind = 'resolve' AND outcome = 'done'").get().n;
+  const runsDone = () => database().prepare("SELECT COUNT(*) AS n FROM runs WHERE kind = 'plan_resolve' AND outcome = 'done'").get().n;
   let mainSha = '';
 
   await step(`a commit on main that conflicts with ${planName}, a resolve run syncs it`, async (note) => {
@@ -498,7 +498,7 @@ try {
     mainSha = git('rev-parse', 'HEAD');
     note(`gh: main is ${mainSha.slice(0, 7)}, with a change to fake-output.txt the plan branch also changed`);
     await waitFor('a resolve run for the plan branch', () => {
-      const failedRun = database().prepare("SELECT * FROM runs WHERE kind = 'resolve' AND outcome IS NOT NULL AND outcome != 'done'").get();
+      const failedRun = database().prepare("SELECT * FROM runs WHERE kind = 'plan_resolve' AND outcome IS NOT NULL AND outcome != 'done'").get();
       if (failedRun) throw fatal(`a resolve run ended ${failedRun.outcome}`);
       return runsDone() > before;
     });
@@ -514,7 +514,15 @@ try {
 
   await step(`#${planSecond} and #${planThird} merge into ${planName}`, async (note) => {
     for (const id of [planSecond, planThird]) {
-      planUrls[id] = await prOpened(id, note, { label: true, base: planName });
+      const task = await waitFor(`#${id} done with its PR`, () => {
+        const t = taskRow(id);
+        if (['blocked', 'failed', 'cancelled'].includes(t.status)) throw fatal(`#${id} is ${t.status}: ${t.stop_reason}`);
+        return t.status === 'done' && t.pr_url && t;
+      });
+      const pr = prView(task.pr_url, 'headRefName,baseRefName');
+      expect(pr.baseRefName === planName, `#${id}'s PR is ${pr.headRefName} → ${pr.baseRefName}, not into ${planName}`);
+      note(`gh: #${id}'s PR is ${pr.headRefName} → ${planName}`);
+      planUrls[id] = task.pr_url;
       await merged(id, planUrls[id], note);
     }
     expect(remoteBranches().includes(planName), `${planName} was deleted before it landed`);
