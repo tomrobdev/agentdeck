@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { bashPatterns, matchesRule, refusedCommands, splitCommand } from '#domain/repos/tool-rules.ts';
+import { ALWAYS_DISALLOWED_TOOLS } from '#domain/repos/tools.ts';
+import { claudeArgs, workerSystemPrompt } from '#domain/runs/prompt.ts';
+
+test('every run is started without the tools that schedule a wake-up', () => {
+  for (const tool of ['ScheduleWakeup', 'CronCreate', 'CronDelete']) assert.ok(ALWAYS_DISALLOWED_TOOLS.includes(tool), tool);
+  const args = claudeArgs({ model: 'm', max_turns: 5 }, ['Read'], 'p', null, 's');
+  const disallowed = args.slice(args.indexOf('--disallowedTools') + 1);
+  for (const tool of ['ScheduleWakeup', 'CronCreate', 'CronDelete']) assert.ok(disallowed.includes(tool), tool);
+});
+
+test("the worker's system prompt says to wait for a background command by its completion notice", () => {
+  assert.match(workerSystemPrompt(null), /completion notice[^\n]*never[^\n]*ScheduleWakeup/);
+});
 
 test('splitCommand splits on &&, ||, ; and |', () => {
   const table: [string, string[]][] = [

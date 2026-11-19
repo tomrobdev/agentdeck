@@ -23,7 +23,14 @@ export const DEFAULT_ALLOWED_TOOLS = [
   'Bash(node *)',
 ];
 
-export const ALWAYS_DISALLOWED_TOOLS = ['Bash(git push*)', 'Bash(git remote*)', 'Bash(rm -rf*)'];
+export const ALWAYS_DISALLOWED_TOOLS = [
+  'Bash(git push*)',
+  'Bash(git remote*)',
+  'Bash(rm -rf*)',
+  'ScheduleWakeup',
+  'CronCreate',
+  'CronDelete',
+];
 
 /** Where the rules a repo's workers run with come from: the repo's own, or the defaults plus those detected from its toolchain. */
 export type ToolRulesSource = 'own' | 'detected';
