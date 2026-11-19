@@ -8,7 +8,7 @@ import { isMergeLocked, isSyncLocked } from '#application/work/checkout-locks.ts
 import { type LiveView, type SyncView, liveView, syncView } from '#domain/runs/index.ts';
 import { type Run, type RunSummary, runSummary } from '#domain/runs/index.ts';
 import { type PrRetry, openPrUrl } from '#domain/landing/index.ts';
-import { prRetryFor, targetOf } from '#domain/work/index.ts';
+import { type PlanLanding, isLivePlanBranch, planLandingOf, prRetryFor, targetOf } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import type { StartWait, Waiting } from '#domain/work/index.ts';
 import { measureBranch } from '#application/work/files.ts';
@@ -37,6 +37,7 @@ export interface TaskView {
   sync: SyncView | null;
   checks: ChecksSummary | null;
   pr_retry: PrRetry | null;
+  plan_landing: PlanLanding | null;
 }
 
 type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'auto_merge' | 'source' | 'pr' | 'target'>;
@@ -69,8 +70,14 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
       run_model: runModels.get(t.id) ?? null,
       wait: waitOf(t, dependency),
       pr_retry: prRetryView(app, t, repo, now),
+      plan_landing: planLandingView(app, t),
     };
   });
+}
+
+function planLandingView(app: App, t: Viewed): PlanLanding | null {
+  if (t.target === null || t.pr?.state !== 'merged') return null;
+  return planLandingOf(t, app.planBranchNamed(t.repo_id, t.target));
 }
 
 function prRetryView(app: App, t: Viewed, repo: Repo | undefined, now: number): PrRetry | null {
@@ -100,8 +107,15 @@ export async function taskDetail(app: App, id: TaskId) {
     runs: app.runsForTask(id).map((run) => ({ ...run, summary: summaryOf(app, run, task, repo) })),
     events: app.eventsForTask(id),
     plans: plansShown(app, task),
-    plan_branch: shownPlanBranch(app, task),
+    plan_branch: await planBranchView(app, task, repo),
   };
+}
+
+async function planBranchView(app: App, task: Task, repo: Repo | undefined) {
+  const branch = shownPlanBranch(app, task);
+  if (!branch) return null;
+  const counts = repo && isLivePlanBranch(branch) ? await app.workspace.aheadBehind(repo.path, branch.base, branch.name) : null;
+  return { ...branch, ahead: counts?.ahead ?? null, behind: counts?.behind ?? null };
 }
 
 export function taskViews(app: App, filter: { status?: TaskStatus; limit: number; before?: TaskId }) {

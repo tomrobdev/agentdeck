@@ -5,6 +5,7 @@ import type { AutoMergeFacts, MergeInput, PrCheck, PrDetails, PrPlace, ReviewFac
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn, refreshVerdict } from '#domain/landing/index.ts';
 import { carryFailures, checksSettled, countOfKept, nextChecks, withCheckList } from '#domain/landing/index.ts';
 import { readFailure } from '#application/landing/pull-request/check-failures.ts';
+import { refreshPlanBranchPrs } from '#application/landing/pull-request/plan-branch-pr.ts';
 import { checksFailedNotification, mergeFailedNotification } from '#domain/operations/index.ts';
 import { type Repo, pausedReason } from '#domain/repos/index.ts';
 import { type PrEvent, type Task, targetOf } from '#domain/work/index.ts';
@@ -135,6 +136,7 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
 export async function refreshPrStates(app: App, log: (msg: string) => void = () => {}): Promise<PrRefresh> {
   const found: PrRefresh = { conflicting: [], unknown: 0, mergeable: [], polling: 0 };
   const requested: PrRefresh['mergeable'] = [];
+  await refreshPlanBranchPrs(app, log);
   for (const task of app.openPrTasks()) {
     try {
       const one = await refreshOne(app, task, log);
