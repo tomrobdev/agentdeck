@@ -1,4 +1,3 @@
-// The plan review run: opening a plan PR starts one, it reads the plan branch's whole diff, leaves its verdict on the plan PR, and a blocking finding stops an auto plan PR merging.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';

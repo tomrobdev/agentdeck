@@ -1373,14 +1373,12 @@ A run (or planner run) with a recorded pid: where a claude process may still be.
 
 ### PlanReviewContext
 
-What a plan review reads: the plan's page, the tasks that landed on the plan branch, and the commits its diff spans.
-
-| Field   | Type                                        | Comment                                                             |
-| ------- | ------------------------------------------- | ------------------------------------------------------------------- |
-| `plan`  | `{ name: string; html: string; } \| null`   | The plan's name and page; null when the plan task has none.         |
-| `tasks` | `Pick<Task, "id" \| "title" \| "status">[]` | The tasks whose work is on the plan branch, with their status.      |
-| `from`  | `string`                                    | The commit the plan branch left its base at: the diff starts there. |
-| `head`  | `string`                                    | The plan branch's head commit the review reads.                     |
+| Field   | Type                                        | Comment |
+| ------- | ------------------------------------------- | ------- |
+| `plan`  | `{ name: string; html: string; } \| null`   |         |
+| `tasks` | `Pick<Task, "id" \| "title" \| "status">[]` |         |
+| `from`  | `string`                                    |         |
+| `head`  | `string`                                    |         |
 
 ### PromptPlan
 
@@ -2129,9 +2127,9 @@ Where a task's work lands, for a link across repos: every repo's base is one pla
 | `land_error`     | `string \| null`          | Why the daemon's last merge of the plan PR failed for good; null once it merged or a person retried.                       |
 | `landed_commit`  | `string \| null`          | The commit the plan PR's merge made on the base, once it landed; null before, or when GitHub didn't say.                   |
 | `landed_from`    | `string \| null`          | The base's commit just before the plan PR's merge, which a revert goes back to; null until it landed.                      |
-| `review`         | `PlanReviewState \| null` | Where the review run of its open plan PR stands; null before a plan PR opened, or for one opened before plan reviews.      |
-| `review_head`    | `string \| null`          | The plan branch's head commit the plan review read; null until one answered.                                               |
-| `review_summary` | `string \| null`          | The plan review's summary and findings, as it left them on the plan PR; null until one answered.                           |
+| `review`         | `PlanReviewState \| null` |                                                                                                                            |
+| `review_head`    | `string \| null`          |                                                                                                                            |
+| `review_summary` | `string \| null`          |                                                                                                                            |
 | `created_at`     | `string`                  |                                                                                                                            |
 | `updated_at`     | `string`                  |                                                                                                                            |
 

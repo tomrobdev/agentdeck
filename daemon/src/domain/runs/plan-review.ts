@@ -3,15 +3,10 @@ import { parsePlanWithText } from '#domain/work/index.ts';
 import type { PlanBranch, Task } from '#domain/work/index.ts';
 import { type ReviewAnswer, reviewDiffCommand, reviewVerdict } from '#domain/runs/review.ts';
 
-/** What a plan review reads: the plan's page, the tasks that landed on the plan branch, and the commits its diff spans. */
 export interface PlanReviewContext {
-  /** The plan's name and page; null when the plan task has none. */
   plan: { name: string; html: string } | null;
-  /** The tasks whose work is on the plan branch, with their status. */
   tasks: Pick<Task, 'id' | 'title' | 'status'>[];
-  /** The commit the plan branch left its base at: the diff starts there. */
   from: string;
-  /** The plan branch's head commit the review reads. */
   head: string;
 }
 

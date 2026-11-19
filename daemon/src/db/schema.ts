@@ -308,8 +308,7 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE plan_branches ADD COLUMN land_error TEXT;
    ALTER TABLE plan_branches ADD COLUMN landed_commit TEXT;
    ALTER TABLE plan_branches ADD COLUMN landed_from TEXT;`,
-  // 46: plan_branches' plan review (domain/work/plans/plan-review.ts): where the review run of its plan PR stands, the head it
-  // read, and the summary and findings it left on the plan PR.
+  // 46: plan_branches' plan review: its state, the head it read and the summary it left.
   `ALTER TABLE plan_branches ADD COLUMN review TEXT;
    ALTER TABLE plan_branches ADD COLUMN review_head TEXT;
    ALTER TABLE plan_branches ADD COLUMN review_summary TEXT;`,

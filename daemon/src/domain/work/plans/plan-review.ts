@@ -2,11 +2,6 @@
 import type { MergeReasons } from '#domain/landing/index.ts';
 import type { PlanBranch } from '#domain/work/plans/plan-branch.ts';
 
-/**
- * Where a plan PR's review run stands. `due`: the plan PR opened and no plan review has read it yet. `clean`: one did and no
- * finding blocks. `blocking`: one found something that must not land as it is. `failed`: the run gave no answer, so a
- * person reads the plan PR.
- */
 export type PlanReviewState = 'due' | 'clean' | 'blocking' | 'failed';
 
 export const PLAN_REVIEW_STATES: PlanReviewState[] = ['due', 'clean', 'blocking', 'failed'];

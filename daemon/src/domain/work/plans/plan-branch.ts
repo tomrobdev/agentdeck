@@ -52,11 +52,8 @@ export interface PlanBranch {
   landed_commit: string | null;
   /** The base's commit just before the plan PR's merge, which a revert goes back to; null until it landed. */
   landed_from: string | null;
-  /** Where the review run of its open plan PR stands; null before a plan PR opened, or for one opened before plan reviews. */
   review: PlanReviewState | null;
-  /** The plan branch's head commit the plan review read; null until one answered. */
   review_head: string | null;
-  /** The plan review's summary and findings, as it left them on the plan PR; null until one answered. */
   review_summary: string | null;
   created_at: string;
   updated_at: string;
