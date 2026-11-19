@@ -10,6 +10,7 @@ export interface CodeHost {
   ensureLabel(cwd: string, label: { name: string; description: string; color: string }): Promise<void>;
   setLabel(url: string, cwd: string, label: string, on: boolean): Promise<void>;
   closePr(url: string, cwd: string): Promise<void>;
+  commentOnPr(url: string, cwd: string, body: string): Promise<void>;
   prDetails(url: string, cwd: string, opts?: { withFiles?: boolean }): Promise<PrDetails>;
   failedLog(cwd: string, run: string, check?: string | null): Promise<string>;
   jobSteps(cwd: string, job: string): Promise<JobStep[]>;

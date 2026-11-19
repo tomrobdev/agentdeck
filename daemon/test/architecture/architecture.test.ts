@@ -789,6 +789,7 @@ const ALLOWED_MODULE_STATE: Record<string, string> = {
     'the sync lock: a task being synced in this process; the database is the state the processes share',
   'application/proposals/planner.ts:proposing': 'the propose lock: a repo being planned in this process',
   'application/runs/plan-branch-sync.ts:syncing': 'the plan branch sync lock: a plan branch being synced with its base in this process',
+  'application/runs/plan-review.ts:reviewing': 'the plan review lock: a plan PR being reviewed in this process',
   'application/work/checkout-locks.ts:merging': 'the merge lock: a task being merged in this process',
   'application/landing/settle.ts:following':
     'the follow-up lock: history rows whose follow-ups run in this process; the outbox in the database is what the processes share',

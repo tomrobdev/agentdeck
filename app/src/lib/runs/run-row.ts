@@ -11,6 +11,7 @@ export const RUN_KIND_ICONS: Record<RunKind, { icon: string; label: string }> = 
   review: { icon: '◎', label: 'Review run' },
   verify: { icon: '⌕', label: 'Verify run' },
   plan_resolve: { icon: '⇄', label: 'Plan branch resolve run' },
+  plan_review: { icon: '◎', label: 'Plan review run' },
 };
 
 const count = (n: number): string => n.toLocaleString('en-US');

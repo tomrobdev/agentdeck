@@ -405,5 +405,5 @@ test('a run row: its cost as the CLI says it, its tokens on hover, and an icon f
   assert.equal(runCost({ ...tokens, cost_usd: 0.004 }).text, '<$0.01 equiv');
   const none = { input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: 0 };
   assert.equal(runCost(none).title, 'No tokens recorded');
-  assert.deepEqual(Object.keys(RUN_KIND_ICONS).sort(), ['plan_resolve', 'resolve', 'review', 'unblock', 'verify', 'work']);
+  assert.deepEqual(Object.keys(RUN_KIND_ICONS).sort(), ['plan_resolve', 'plan_review', 'resolve', 'review', 'unblock', 'verify', 'work']);
 });

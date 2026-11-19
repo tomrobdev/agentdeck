@@ -19,6 +19,7 @@ import type {
   PlanBranch,
   PlanBranchSyncOutcome,
   PlanFollower,
+  PlanReviewMove,
   PlanSource,
   PrEvent,
   Task,
@@ -145,6 +146,11 @@ export interface PlanBranchRepository {
   ): PlanBranch | undefined;
   landingPlanBranches(): PlanBranch[];
   openPlanBranchPr(id: number, pr_url: string): PlanBranch | undefined;
+  recordPlanReview(
+    branch: Pick<PlanBranch, 'id' | 'pr_url'>,
+    to: PlanReviewMove,
+    read: { head: string | null; summary: string | null },
+  ): PlanBranch | undefined;
   planBranchesOfPlan(plan_task: TaskId): PlanBranch[];
   setLandingPolicy(plan_task: TaskId, policy: LandingPolicy, order: { id: number; land_order: number | null }[]): PlanBranch[];
   recordLanding(id: number, change: LandingChange, landed?: { commit: string | null; from: string | null } | null): PlanBranch | undefined;

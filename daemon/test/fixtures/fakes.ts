@@ -68,6 +68,7 @@ export interface FakeCodeHost extends CodeHost {
   pushed: { repoPath: string; branch: string }[];
   merged: { url: string; method: string; head: string }[];
   closed: string[];
+  commented: { url: string; body: string }[];
   deletedBranches: string[];
 }
 
@@ -79,6 +80,7 @@ export function fakeCodeHost(): FakeCodeHost {
     pushed: [],
     merged: [],
     closed: [],
+    commented: [],
     deletedBranches: [],
     auth: async () => ({ ok: true, output: 'Logged in' }),
     push: async (repoPath, branch) => void host.pushed.push({ repoPath, branch }),
@@ -90,6 +92,7 @@ export function fakeCodeHost(): FakeCodeHost {
     ensureLabel: async () => {},
     setLabel: async () => {},
     closePr: async (url) => void host.closed.push(url),
+    commentOnPr: async (url, _cwd, body) => void host.commented.push({ url, body }),
     prDetails: async (url) => host.details[url] ?? READY_PR,
     failedLog: async () => '',
     jobSteps: async () => [],

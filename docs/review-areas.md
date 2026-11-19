@@ -11,6 +11,9 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 - daemon/src/domain/work/plans/plan-branch.ts
 - daemon/src/domain/work/plans/plan-landing.ts
 - daemon/src/domain/work/plans/landing-saga.ts
+- daemon/src/domain/work/plans/plan-review.ts
+- daemon/src/domain/runs/plan-review.ts
+- daemon/src/application/runs/plan-review.ts
 - daemon/src/application/work/plans.ts
 - daemon/src/application/landing/pull-request/plan-branch-pr.ts
 - daemon/src/application/landing/pull-request/plan-landing.ts

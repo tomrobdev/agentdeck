@@ -94,6 +94,7 @@ export type {
   MergeFailure,
   MergeInput,
   MergeReason,
+  MergeReasons,
   MergeVerdictView,
   PrDetails,
 } from '#domain/landing/merge/merge.ts';

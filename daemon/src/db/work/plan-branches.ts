@@ -10,9 +10,13 @@ import {
   type PlanBranchStatus,
   type PlanBranchSyncOutcome,
   type PlanBranchTask,
+  type PlanReviewMove,
+  type PlanReviewState,
   RUNNING_STATUSES,
   abandonRunningError,
   nextPlanBranchStatus,
+  nextPlanReviewState,
+  planReviewStatesFor,
   planBranchStatusesFor,
   planBranchSyncMove,
   planBranchTargetChanges,
@@ -40,7 +44,12 @@ type MoveFields = Partial<{
   land_error: string | null;
   landed_commit: string | null;
   landed_from: string | null;
+  review: PlanReviewState | null;
+  review_head: string | null;
+  review_summary: string | null;
 }>;
+
+const NO_REVIEW = { review_head: null, review_summary: null };
 
 const SAGA_STATUSES: PlanBranchStatus[] = ['landing', 'partly_landed'];
 
@@ -149,7 +158,31 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
         .map(toPlanBranch);
     },
     openPlanBranchPr(id: number, pr_url: string): PlanBranch | undefined {
-      return move(id, 'open_pr', { pr_url });
+      return move(id, 'open_pr', { pr_url, review: 'due', ...NO_REVIEW });
+    },
+    recordPlanReview(
+      branch: Pick<PlanBranch, 'id' | 'pr_url'>,
+      to: PlanReviewMove,
+      read: { head: string | null; summary: string | null },
+    ): PlanBranch | undefined {
+      const review = nextPlanReviewState('due', to);
+      if (!review || branch.pr_url === null) return undefined;
+      return mapFound(
+        orm
+          .update(planBranches)
+          .set({ review, review_head: read.head, review_summary: read.summary, updated_at: NOW_SQL })
+          .where(
+            and(
+              eq(planBranches.id, branch.id),
+              eq(planBranches.status, 'landing'),
+              eq(planBranches.pr_url, branch.pr_url),
+              inArray(planBranches.review, planReviewStatesFor(to)),
+            ),
+          )
+          .returning()
+          .get(),
+        toPlanBranch,
+      );
     },
     planBranchesOfPlan(plan_task: TaskId): PlanBranch[] {
       return orm
@@ -180,7 +213,7 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
     ): PlanBranch | undefined {
       const fields: MoveFields = {
         land_error: change.land_error,
-        ...(change.move === 'close_pr' ? { pr_url: null } : {}),
+        ...(change.move === 'close_pr' ? { pr_url: null, review: null, ...NO_REVIEW } : {}),
         ...(landed ? { landed_commit: landed.commit, landed_from: landed.from } : {}),
       };
       if (change.move) return move(id, change.move, fields);
