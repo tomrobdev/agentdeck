@@ -14,6 +14,18 @@ erDiagram
     integer task_id "nullable"
     text created_at
   }
+  plan_branches {
+    integer id PK
+    integer plan_task FK
+    integer repo_id FK
+    text name
+    text base
+    text status
+    text head_commit "nullable"
+    text pr_url "nullable"
+    text created_at
+    text updated_at
+  }
   planner_runs {
     integer id PK
     integer repo_id FK
@@ -196,11 +208,13 @@ erDiagram
     text status "nullable"
     text observed_at
   }
+  repos ||--o{ plan_branches : "repo_id"
   repos ||--o{ planner_runs : "repo_id"
   repos ||--o{ tasks : "repo_id"
   reviews ||--o{ review_comments : "review_id"
   tasks |o..o{ notifications : "task_id"
   tasks |o..o{ tasks : "after_task"
+  tasks ||--o{ plan_branches : "plan_task"
   tasks ||--o{ reviews : "task_id"
   tasks ||--o{ runs : "task_id"
   tasks ||--o{ task_links : "on_task"

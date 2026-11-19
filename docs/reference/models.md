@@ -2040,6 +2040,30 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 | `text`    | `string`              |         |
 | `reason?` | `string \| undefined` |         |
 
+### PlanBranch
+
+| Field         | Type               | Comment |
+| ------------- | ------------------ | ------- |
+| `id`          | `number`           |         |
+| `plan_task`   | `TaskId`           |         |
+| `repo_id`     | `RepoId`           |         |
+| `name`        | `string`           |         |
+| `base`        | `string`           |         |
+| `status`      | `PlanBranchStatus` |         |
+| `head_commit` | `string \| null`   |         |
+| `pr_url`      | `string \| null`   |         |
+| `created_at`  | `string`           |         |
+| `updated_at`  | `string`           |         |
+
+### PlanBranchTask
+
+| Field     | Type             | Comment |
+| --------- | ---------------- | ------- |
+| `id`      | `TaskId`         |         |
+| `target`  | `string \| null` |         |
+| `started` | `boolean`        |         |
+| `running` | `boolean`        |         |
+
 ### PlanFollower
 
 A task as far as its plan goes.
@@ -2232,6 +2256,7 @@ The fields of a task a write sets, named as its columns are; the store stores th
 | `pr_checks_opened?`      | `CheckCounts \| null \| undefined`     |         |
 | `pr_checks_merged?`      | `CheckCounts \| null \| undefined`     |         |
 | `merge_method?`          | `MergeMethod \| undefined`             |         |
+| `target?`                | `string \| null \| undefined`          |         |
 
 ### TaskCore
 

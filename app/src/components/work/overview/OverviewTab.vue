@@ -80,7 +80,15 @@ const when = 'ml-auto text-sm text-muted';
 
     <DependenciesCard :task="task" />
 
-    <PlanCard v-for="p in task.plans ?? []" :key="p.id" :task-id="task.id" :plan="p" @open="(path) => emit('path', path, null)" />
+    <PlanCard
+      v-for="p in task.plans ?? []"
+      :key="p.id"
+      :task-id="task.id"
+      :plan="p"
+      :plan-branch="task.plan_branch?.plan_task === p.task_id ? task.plan_branch : null"
+      :followed="p.task_id === (task.plan_task ?? task.id)"
+      @open="(path) => emit('path', path, null)"
+    />
 
     <DocumentsCard
       :task-id="task.id"

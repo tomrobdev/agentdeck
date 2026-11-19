@@ -6,7 +6,7 @@ import { branchName } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import type { Task } from '#domain/work/index.ts';
 import { git } from '#adapters/git/exec.ts';
-import { branchExists, refExists, startPoint } from '#adapters/git/refs.ts';
+import { branchExists, hasOrigin, refExists, startPoint } from '#adapters/git/refs.ts';
 
 export async function ensureWorktree(repo: Repo, task: Task, target: string): Promise<{ branch: string; path: string }> {
   const branch = branchName(task);
@@ -21,6 +21,11 @@ export async function ensureWorktree(repo: Repo, task: Task, target: string): Pr
     await git(repo.path, 'worktree', 'add', '--no-track', '-b', branch, path, await startPoint(repo.path, target));
   }
   return { branch, path };
+}
+
+export async function cutBranch(repoPath: string, branch: string, from: string): Promise<{ sha: string; origin: boolean }> {
+  if (!(await branchExists(repoPath, branch))) await git(repoPath, 'branch', '--no-track', branch, await startPoint(repoPath, from));
+  return { sha: await git(repoPath, 'rev-parse', `refs/heads/${branch}`), origin: await hasOrigin(repoPath) };
 }
 
 export async function commitLeftovers(worktree: string, message: string): Promise<boolean> {

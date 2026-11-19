@@ -37,7 +37,7 @@ import type { Repo } from '#domain/repos/index.ts';
 import { syncBranch } from '#application/runs/sync.ts';
 import { pauseRepo } from '#application/repos/pause.ts';
 import { markSyncing } from '#application/work/checkout-locks.ts';
-import { followedSteps, planForRun, takePlanFile } from '#application/work/plans.ts';
+import { cutPlanBranch, followedSteps, planForRun, takePlanFile } from '#application/work/plans.ts';
 import { settle } from '#application/landing/settle.ts';
 import { recordAnswers, reviewForRun } from '#application/landing/review/address.ts';
 import { escalateAfter } from '#application/work/escalate.ts';
@@ -47,6 +47,11 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
   const repo = app.getRepo(task.repo_id);
   if (!repo) return finish(app, task, null, { outcome: 'failed', reason: `repo ${task.repo_id} not found` });
 
+  try {
+    await cutPlanBranch(app, repo, task);
+  } catch (err) {
+    return finish(app, task, null, { outcome: 'failed', reason: `plan branch ${task.target}: ${errorMessage(err)}` });
+  }
   let wt: Checkout;
   try {
     wt = await app.workspace.prepareCheckout(repo, task, targetOf(task, repo));

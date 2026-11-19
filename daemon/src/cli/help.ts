@@ -77,6 +77,11 @@ Tasks
   agentdeck log <id> [--attempt n] [--raw]
   agentdeck attach <id> <plan.html>   store or replace the task's own plan (docs/plan-format.md), named
                                   <id>-<slug>.html after the task and the plan's title
+  agentdeck plan-branch open <plan task>   open a plan branch, plan/<id>-<slug>: the plan's tasks in its repo that
+                                  haven't started, and tasks added later with --plan, target it; the daemon cuts it from
+                                  the base and pushes it when the first of them starts
+  agentdeck plan-branch abandon <plan task>   close it: its tasks that haven't started move back to the base;
+                                  refused while one runs
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
   agentdeck park <id>... [--reason "…"]   keep proposals for later: off Attention, not approvable, not counted as

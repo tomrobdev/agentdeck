@@ -9,7 +9,8 @@ import type { Run } from '#domain/runs/index.ts';
 import { type Needs, type UnblockQuestion, isNeeds } from '#domain/work/index.ts';
 import { type StateFields, type Task, type TaskState, type TaskSummary, stateFields } from '#domain/work/index.ts';
 import { parseTextList, stored } from '#domain/shared/index.ts';
-import { repos, runs, tasks } from '#db/tables.ts';
+import type { PlanBranch } from '#domain/work/index.ts';
+import { type planBranches, repos, runs, tasks } from '#db/tables.ts';
 
 export type LegacyTaskColumn = 'after_task' | 'plan_path';
 
@@ -206,6 +207,10 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
 const flag = (v: number | null): boolean | null => (v === null ? null : v === 1);
 
 export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: flag(row.tests_passed), last_test_failed: flag(row.last_test_failed) });
+
+export type PlanBranchRow = typeof planBranches.$inferSelect;
+
+export const toPlanBranch = (row: PlanBranchRow): PlanBranch => ({ ...row });
 
 export const mapFound = <Row, Model>(row: Row | undefined, toModel: (row: Row) => Model): Model | undefined =>
   row === undefined ? undefined : toModel(row);

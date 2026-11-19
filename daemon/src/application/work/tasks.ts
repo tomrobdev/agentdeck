@@ -9,11 +9,12 @@ import { EDITABLE_STATUSES, type Task, WORKTREE_REMOVABLE_STATUSES, defaultTitle
 import { refuseWhileSyncing } from '#application/work/checkout-locks.ts';
 import { newLinks, refuseCrossTargets, targetEnd } from '#application/work/links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, textOrNull, whole } from '#application/shared/input.ts';
-import { checkFollowers } from '#application/work/plans.ts';
+import { checkFollowers, isPlanBranchName, planBranchTargetFor } from '#application/work/plans.ts';
 import { checkPlanLink, planRequest, stepList } from '#application/work/plan-link.ts';
 
 async function checkedTarget(app: App, repo: Repo, asked: string | null): Promise<string | null> {
   if (!asked || asked === repo.base_branch) return null;
+  if (isPlanBranchName(app, repo, asked)) return asked;
   const facts = await app.workspace.inspectRepo(repo.path, asked);
   if (!facts?.base) throw new ActionError(missingTargetError(asked), undefined, 'not_found');
   return asked;
@@ -61,16 +62,17 @@ export async function addTask(
       repoName ? 'not_found' : 'invalid',
     );
   refuse(archivedRepoError(repo));
-  const target = await checkedTarget(app, repo, textOrNull(body, 'target') ?? null);
+  const steps = stepList(input.plan_steps);
+  const checked = checkPlanLink(app, () => repo, planAsked ?? { task: null }, steps);
+  const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
+  const owner = 'owner' in checked ? checked.owner : null;
+  const askedTarget = textOrNull(body, 'target');
+  const target = askedTarget === undefined ? planBranchTargetFor(app, repo, owner) : await checkedTarget(app, repo, askedTarget);
   refuseCrossTargets(
     app,
     { id: null, repo_id: repo.id, target, base_branch: repo.base_branch },
     links.filter((l) => l.kind === 'builds_on').map((l) => l.on),
   );
-  const steps = stepList(input.plan_steps);
-  const checked = checkPlanLink(app, () => repo, planAsked ?? { task: null }, steps);
-  const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
-  const owner = 'owner' in checked ? checked.owner : null;
   const linked = owner !== null || own_plan !== undefined;
   const chosen = newTaskModel(model, repo, app.modelSettings().default_model);
   const task = app.addTask({

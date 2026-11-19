@@ -29,8 +29,10 @@ import type {
   toRun,
   toTask,
   toTaskSummary,
+  toPlanBranch,
 } from '#db/mappers.ts';
-import type { plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, tasks } from '#db/tables.ts';
+import type { PlanBranchStatus } from '#domain/work/index.ts';
+import type { planBranches, plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, tasks } from '#db/tables.ts';
 
 type FoldedColumn = PrColumn | CheckoutColumn | PlanColumn | StateColumn;
 
@@ -60,6 +62,8 @@ check<Same<typeof plannerRuns.$inferSelect, PlannerRun>>();
 check<Same<Omit<typeof taskEvents.$inferSelect, 'follow_up_pending'>, TaskEventRow>>();
 check<Equals<(typeof taskEvents.$inferSelect)['follow_up_pending'], number>>();
 check<Same<typeof reviews.$inferSelect, Review>>();
+check<Maps<typeof planBranches.$inferSelect, typeof toPlanBranch>>();
+check<Equals<(typeof planBranches.$inferSelect)['status'], PlanBranchStatus>>();
 check<Same<typeof reviewComments.$inferSelect, ReviewComment>>();
 
 check<Equals<TaskRow['status'], TaskStatus>>();

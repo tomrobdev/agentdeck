@@ -6,7 +6,13 @@ import type { ChangeRepository, NotificationRepository, SettingsRepository } fro
 import type { PlannerRunRepository } from '#application/ports/repositories/proposals.ts';
 import type { RepoRepository } from '#application/ports/repositories/repos.ts';
 import type { RunRepository } from '#application/ports/repositories/runs.ts';
-import type { PlanRepository, TaskEventRepository, TaskLinkRepository, TaskRepository } from '#application/ports/repositories/work.ts';
+import type {
+  PlanBranchRepository,
+  PlanRepository,
+  TaskEventRepository,
+  TaskLinkRepository,
+  TaskRepository,
+} from '#application/ports/repositories/work.ts';
 
 export type { DrainRepository, UsageRepository } from '#application/ports/repositories/capacity.ts';
 export type { StatsRepository } from '#application/ports/repositories/insights.ts';
@@ -16,7 +22,9 @@ export type { PlannerRunRepository } from '#application/ports/repositories/propo
 export type { NewRepo, RepoRepository, RepoUpdate } from '#application/ports/repositories/repos.ts';
 export type { RunRepository } from '#application/ports/repositories/runs.ts';
 export type {
+  NewPlanBranch,
   NewTask,
+  PlanBranchRepository,
   PlanRepository,
   TaskEdit,
   TaskEventRepository,
@@ -28,6 +36,7 @@ export type Repositories = TaskRepository &
   TaskEventRepository &
   TaskLinkRepository &
   PlanRepository &
+  PlanBranchRepository &
   RepoRepository &
   RunRepository &
   PlannerRunRepository &

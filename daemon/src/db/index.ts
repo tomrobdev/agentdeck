@@ -13,6 +13,7 @@ import { plannerRunStore } from '#db/proposals/planner-runs.ts';
 import { repoStore } from '#db/repos/repos.ts';
 import { runStore } from '#db/runs/runs.ts';
 import { migrate } from '#db/schema.ts';
+import { planBranchStore } from '#db/work/plan-branches.ts';
 import { planStore } from '#db/work/plans.ts';
 import { taskEventStore } from '#db/work/task-events.ts';
 import { taskLinkStore } from '#db/work/task-links.ts';
@@ -42,6 +43,7 @@ export function openDb(path = DB_PATH) {
     ...runStore(orm),
     ...statsStore(orm),
     ...planStore(db, orm),
+    ...planBranchStore(db, orm),
     ...plannerRunStore(orm),
     ...notificationStore(orm),
     ...usageStore(orm),

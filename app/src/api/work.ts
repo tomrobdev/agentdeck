@@ -12,6 +12,7 @@ import type {
   MarkDoneRequest,
   NewLink,
   NewTask,
+  OpenedPlanBranch,
   ParkRequest,
   PlanHtml,
   ProposalCheck,
@@ -50,6 +51,7 @@ export const workApi = {
   unlinkTask: (id: number, on: number) => del<TaskDetail>(`/api/tasks/${id}/links/${on}`),
   proposalCheck: (id: number) => get<ProposalCheck>(`/api/tasks/${id}/proposal-check`),
   planHtml: (id: number, planId: number) => get<PlanHtml>(`/api/tasks/${id}/plans/${planId}`),
+  openPlanBranch: (id: number) => post<OpenedPlanBranch>(`/api/tasks/${id}/plan-branch`),
 
   changes: (id: number, since: string | null = null) => get<Changes>(`/api/tasks/${id}/changes${qs({ since })}`),
   diff: (id: number, path: string, since: string | null = null) => get<FilePatch>(`/api/tasks/${id}/diff${qs({ path, since })}`),
