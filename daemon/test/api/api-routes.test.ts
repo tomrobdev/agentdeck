@@ -188,6 +188,7 @@ const REPO = ['id', 'name', 'path', 'base_branch', 'pr_mode', 'merge_method', 'a
 const REVIEW = ['id', 'task_id', 'kind', 'body', 'submitted_at', 'comments'];
 const STATUS = ['daemon', 'paused', 'running', 'max_concurrent', 'counts', 'headline', 'governor'];
 const ERROR = ['error'];
+const PLAN_BRANCH = ['id', 'plan_task', 'repo_id', 'name', 'base', 'status', 'head_commit', 'pr_url'];
 
 const bad = (method: Method, path: string, body: unknown, params?: Row['params']): Row => ({
   method,
@@ -729,6 +730,35 @@ const ROWS: Row[] = [
     },
     shape: ['html'],
     check: (p) => assert.match(p.html, /A plan/),
+  },
+  {
+    method: 'POST',
+    path: '/api/tasks/:task/plan-branch',
+    params: task(() => {
+      const id = proposed();
+      actions.attachPlan(app, id, { html: PLAN });
+      return id;
+    }),
+    shape: [...PLAN_BRANCH, 'targeted'],
+    check: (b, { task: id }) => {
+      assert.equal(b.name, `plan/${id}-a-plan`);
+      assert.deepEqual(b.targeted, [id]);
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/tasks/:task/plan-branch/abandon',
+    params: task(() => {
+      const id = proposed();
+      actions.attachPlan(app, id, { html: PLAN });
+      actions.openPlanBranch(app, id);
+      return id;
+    }),
+    shape: [...PLAN_BRANCH, 'moved'],
+    check: (b, { task: id }) => {
+      assert.equal(b.status, 'abandoned');
+      assert.deepEqual(b.moved, [id]);
+    },
   },
 
   { method: 'GET', path: '/api/tasks/:task/reviews', params: () => ({ task: draft().task_id }), shape: { each: REVIEW } },
