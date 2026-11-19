@@ -335,7 +335,8 @@ test('add links a task to another task’s plan by number, and refuses what does
   await refuses({ plan_task: plain.id }, new RegExp(`#${plain.id} has no plan`));
   const elsewhereTask = db.addTask({ repo_id: otherRepo.id, title: 'other', prompt: 'p' });
   db.saveOwnPlan(elsewhereTask.id, PLAN, 'attached');
-  await refuses({ plan_task: elsewhereTask.id }, new RegExp(`#${elsewhereTask.id} is in other, not demo`));
+  const acrossRepos = await addTask(db, { repo: 'demo', prompt: 'follow it from demo', plan_task: elsewhereTask.id });
+  assert.deepEqual(link(acrossRepos), [elsewhereTask.id, null], 'a task in any repo can follow a plan');
   await refuses({ plan_steps: 's1' }, /--steps needs --plan/);
   await refuses({ plan_task: 'x' as never }, /plan_task must be a task number/);
   await refuses({ plan_task: owner.id, plan_html: PLAN }, /not both/);

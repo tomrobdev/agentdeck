@@ -42,9 +42,9 @@ export const planBranchStatusesFor = (move: PlanBranchMove): PlanBranchStatus[] 
 
 export const planBranchName = (planTask: TaskId, title: string): string => `plan/${planTask}-${planSlug(title)}`;
 
-const LIVE: PlanBranchStatus[] = ['open', 'active', 'conflict', 'landing'];
+export const LIVE_PLAN_BRANCH_STATUSES: PlanBranchStatus[] = ['open', 'active', 'conflict', 'landing'];
 
-export const isLivePlanBranch = (branch: Pick<PlanBranch, 'status'>): boolean => LIVE.includes(branch.status);
+export const isLivePlanBranch = (branch: Pick<PlanBranch, 'status'>): boolean => LIVE_PLAN_BRANCH_STATUSES.includes(branch.status);
 
 export function planBranchMoveError(branch: Pick<PlanBranch, 'name' | 'status'>, move: PlanBranchMove): string | null {
   if (nextPlanBranchStatus(branch.status, move)) return null;
@@ -54,6 +54,9 @@ export function planBranchMoveError(branch: Pick<PlanBranch, 'name' | 'status'>,
 export function planBranchOpenError(planTask: TaskId, existing: Pick<PlanBranch, 'name' | 'status'> | undefined): string | null {
   return existing ? `#${planTask}'s plan has a plan branch already: ${existing.name} (${existing.status})` : null;
 }
+
+export const reposToOpen = (ownerRepo: RepoId, taskRepos: RepoId[], opened: RepoId[]): RepoId[] =>
+  [...new Set([ownerRepo, ...taskRepos])].filter((r) => !opened.includes(r));
 
 export interface PlanBranchTask {
   id: TaskId;

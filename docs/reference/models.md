@@ -1780,6 +1780,7 @@ A task's checkout: its branch and worktree, and when a sync of the branch began.
 | `status`  | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
 | `pr`      | `Pick<PullRequest, "state"> \| null`                                                                                      |         |
 | `pr_mode` | `PrMode`                                                                                                                  |         |
+| `place?`  | `Place \| undefined`                                                                                                      |         |
 
 ### Dependent
 
@@ -1871,6 +1872,7 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 | `status`  | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
 | `pr`      | `Pick<PullRequest, "state"> \| null`                                                                                      |         |
 | `pr_mode` | `PrMode`                                                                                                                  |         |
+| `place?`  | `Place \| undefined`                                                                                                      |         |
 | `links`   | `Link[]`                                                                                                                  |         |
 
 ### LinkView
@@ -1892,6 +1894,7 @@ A task at the end of a link: what its link states are read from.
 | `status`  | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
 | `pr`      | `Pick<PullRequest, "state"> \| null`                                                                                      |         |
 | `pr_mode` | `PrMode`                                                                                                                  |         |
+| `place?`  | `Place \| undefined`                                                                                                      |         |
 | `id`      | `TaskId`                                                                                                                  |         |
 
 ### ListFilter
@@ -2052,6 +2055,15 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 | --------- | --------------------- | ------- |
 | `text`    | `string`              |         |
 | `reason?` | `string \| undefined` |         |
+
+### Place
+
+Where a task's work lands, for a link across repos: every repo's base is one place (a null target), any other branch its name.
+
+| Field         | Type                       | Comment |
+| ------------- | -------------------------- | ------- |
+| `target`      | `string \| null`           |         |
+| `plan_branch` | `PlanBranchStatus \| null` |         |
 
 ### PlanBranch
 
@@ -2258,12 +2270,13 @@ The fields a state carries, each null where its status has none: how the columns
 
 ### TargetEnd
 
-| Field         | Type             | Comment |
-| ------------- | ---------------- | ------- |
-| `id`          | `TaskId \| null` |         |
-| `repo_id`     | `RepoId`         |         |
-| `base_branch` | `string`         |         |
-| `target`      | `string \| null` |         |
+| Field         | Type                       | Comment |
+| ------------- | -------------------------- | ------- |
+| `id`          | `TaskId \| null`           |         |
+| `repo_id`     | `RepoId`                   |         |
+| `base_branch` | `string`                   |         |
+| `plan_branch` | `PlanBranchStatus \| null` |         |
+| `target`      | `string \| null`           |         |
 
 ### TargetOwner
 

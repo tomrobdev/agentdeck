@@ -209,10 +209,12 @@ export interface PlanBranch {
 
 export interface OpenedPlanBranch extends PlanBranch {
   targeted: TaskId[];
+  others: (PlanBranch & { targeted: TaskId[] })[];
 }
 
 export interface AbandonedPlanBranch extends PlanBranch {
   moved: TaskId[];
+  others: (PlanBranch & { moved: TaskId[] })[];
 }
 
 export interface TaskDetail extends Task {
@@ -248,7 +250,7 @@ export interface NewTask {
   builds_on?: TaskId[];
   /** Tasks this one lands after: it runs at once, only its merge waits. */
   after?: TaskId[];
-  /** The task whose plan this one follows: one in the same repo with a plan. */
+  /** The task whose plan this one follows: one with a plan, in any repo. */
   plan_task?: TaskId;
   plan_steps?: string[];
   /** File it as a proposal, waiting for approval, instead of queueing it. */

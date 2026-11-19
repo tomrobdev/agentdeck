@@ -5,6 +5,7 @@ import { linkState, targetOf } from '#domain/work/index.ts';
 import { matchPath, pathsNamedIn } from '#domain/work/index.ts';
 import type { Task } from '#domain/work/index.ts';
 import { linkTargetOf } from '#application/work/dependencies.ts';
+import { placeOf } from '#application/work/links.ts';
 import { requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
 export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
@@ -54,12 +55,14 @@ function unmergedBuiltOn(app: App, task: Task): Task[] {
   const found: Task[] = [];
   const queue = [task.id];
   for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
+    const at = next === task.id ? task : app.getTask(next);
+    const place = at && placeOf(app, at);
     for (const link of app.linksOf(next)) {
       if (link.kind !== 'builds_on' || seen.has(link.on)) continue;
       seen.add(link.on);
       const dep = app.getTask(link.on);
       if (!dep) continue;
-      if (linkState(link, linkTargetOf(app, link.on)).kind === 'met') continue;
+      if (linkState(link, linkTargetOf(app, link.on), place).kind === 'met') continue;
       found.push(dep);
       queue.push(dep.id);
     }
