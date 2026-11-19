@@ -84,6 +84,22 @@ export async function commitsAhead(worktree: string, base: string): Promise<numb
   return Number(await git(worktree, 'rev-list', '--count', 'HEAD', '--not', ...bases));
 }
 
+export async function aheadBehind(repoPath: string, base: string, branch: string): Promise<{ ahead: number; behind: number } | null> {
+  try {
+    const counts = await git(
+      repoPath,
+      'rev-list',
+      '--left-right',
+      '--count',
+      `${await localStartPoint(repoPath, base)}...refs/heads/${branch}`,
+    );
+    const [behind, ahead] = counts.split(/\s+/).map(Number);
+    return { ahead, behind };
+  } catch {
+    return null;
+  }
+}
+
 export async function aheadOfRemote(worktree: string, branch: string): Promise<number | null> {
   const remote = `refs/remotes/origin/${branch}`;
   if (!(await refExists(worktree, remote))) return null;

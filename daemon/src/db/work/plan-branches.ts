@@ -50,7 +50,11 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
       .map((t) => t.id);
   };
 
-  const move = (id: number, to: PlanBranchMove, fields: { head_commit?: string; pr_url?: string; synced_at?: typeof NOW_SQL } = {}) => {
+  const move = (
+    id: number,
+    to: PlanBranchMove,
+    fields: { head_commit?: string; pr_url?: string | null; synced_at?: typeof NOW_SQL } = {},
+  ) => {
     const row = orm.select({ status: planBranches.status }).from(planBranches).where(eq(planBranches.id, id)).get();
     const status = row && nextPlanBranchStatus(row.status, to);
     if (!status) return undefined;
@@ -121,6 +125,21 @@ export function planBranchStore(db: DatabaseSync, orm: Orm) {
           .get(),
         toPlanBranch,
       );
+    },
+    landingPlanBranches(): PlanBranch[] {
+      return orm
+        .select()
+        .from(planBranches)
+        .where(eq(planBranches.status, 'landing'))
+        .orderBy(asc(planBranches.id))
+        .all()
+        .map(toPlanBranch);
+    },
+    openPlanBranchPr(id: number, pr_url: string): PlanBranch | undefined {
+      return move(id, 'open_pr', { pr_url });
+    },
+    settlePlanBranchPr(id: number, to: 'land' | 'close_pr'): PlanBranch | undefined {
+      return move(id, to, to === 'close_pr' ? { pr_url: null } : {});
     },
     abandonPlanBranch(branch: Pick<PlanBranch, 'id' | 'repo_id' | 'name'>): AbandonOutcome | undefined {
       return atomically(db, () => {

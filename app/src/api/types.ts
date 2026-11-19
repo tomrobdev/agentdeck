@@ -28,6 +28,7 @@ export type {
   NewTask,
   OpenedPlanBranch,
   PlanBranch,
+  PlanBranchView,
   PlanHtml,
   PlanStep,
   QueueWait,

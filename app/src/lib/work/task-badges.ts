@@ -1,7 +1,7 @@
 // What every view of a task shows besides its title: the list row, the board card, the peek and the task page header.
 import type { TaskSummary } from '#daemon/api/contract/work.ts';
 import type { AutoMergeView } from '#daemon/api/contract/landing.ts';
-import { isReview } from '#daemon/domain/work/index.ts';
+import { isReview, isWaitingToLand, planLandingText } from '#daemon/domain/work/index.ts';
 import { plural } from '#daemon/domain/shared/index.ts';
 import { describeMergeRequest } from '#lib/landing/landing-wording.ts';
 import { describeLive, describeSync } from '#lib/runs/run-wording.ts';
@@ -51,6 +51,7 @@ type Viewed = Pick<
   | 'max_attempts'
   | 'source'
   | 'pr_state'
+  | 'plan_landing'
   | 'checks'
   | 'needs'
   | 'question'
@@ -137,7 +138,10 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
       });
     else facts.push({ label: '✓ checks', title: `All ${checks.total} checks passed` });
   }
-  if (opts.pr !== false && (t.pr_state === 'merged' || t.pr_state === 'closed'))
+  if (t.plan_landing) {
+    const text = planLandingText(t.plan_landing);
+    facts.push({ label: text, title: `The pull request merged into the plan branch ${t.plan_landing.name}: ${text}` });
+  } else if (opts.pr !== false && (t.pr_state === 'merged' || t.pr_state === 'closed'))
     facts.push({ label: `PR ${t.pr_state}`, title: `The pull request is ${t.pr_state}` });
   if (am?.source === 'task') {
     const on = am.state !== 'off';
@@ -153,8 +157,8 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   return { attention, up, down: t.unblocks, facts };
 }
 
-export const statusText = (t: Pick<TaskSummary, 'status' | 'pr_state'>): string =>
-  isReview(t) ? 'in review' : t.status === 'cancel_requested' ? 'stopping' : t.status;
+export const statusText = (t: Pick<TaskSummary, 'status' | 'pr_state'> & Partial<Pick<TaskSummary, 'plan_landing'>>): string =>
+  isReview(t) ? 'in review' : isWaitingToLand(t) ? 'waiting to land' : t.status === 'cancel_requested' ? 'stopping' : t.status;
 
 export function fixReason(t: Pick<TaskSummary, 'status' | 'pr_state' | 'stop_reason' | 'auto_merge_view'>): string {
   const am = isReview(t) ? t.auto_merge_view : null;

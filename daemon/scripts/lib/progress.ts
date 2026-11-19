@@ -154,7 +154,7 @@ export const PLAIN_TASK_WRITES: Record<string, string> = {
 };
 
 export const COVERAGE_FLOORS: Record<string, Floor> = {
-  adapters: { lines: 88, branches: 85 },
+  adapters: { lines: 88, branches: 87 },
   api: { lines: 98, branches: 93 },
   application: { lines: 100, branches: 100 },
   'application/capacity': { lines: 100, branches: 100 },

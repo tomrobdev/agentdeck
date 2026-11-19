@@ -109,6 +109,16 @@ export type {
   PlanBranchTask,
 } from '#domain/work/plans/plan-branch.ts';
 export {
+  isWaitingToLand,
+  planLandingOf,
+  planLandingText,
+  planPrBody,
+  planPrMove,
+  readyToLand,
+  reviewVerdictOf,
+} from '#domain/work/plans/plan-landing.ts';
+export type { PlanLanding, PunchLine } from '#domain/work/plans/plan-landing.ts';
+export {
   BASE_LOG_FORMAT,
   CHECKED_STATUSES,
   emptyProposalCheck,

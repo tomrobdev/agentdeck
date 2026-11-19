@@ -57,6 +57,7 @@ export interface Workspace {
   head(cwd: string): Promise<Head | null>;
   commitsAhead(cwd: string, base: string): Promise<number>;
   unpushedCommits(worktree: string, branch: string): Promise<number | null>;
+  aheadBehind(repoPath: string, base: string, branch: string): Promise<{ ahead: number; behind: number } | null>;
   reviewFacts(repoPath: string, base: string, since: number): Promise<ReviewFacts | null>;
 
   runCommand(command: string | string[], cwd: string, timeoutMs: number): Promise<CommandResult>;
