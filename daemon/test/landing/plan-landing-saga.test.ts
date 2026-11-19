@@ -53,6 +53,7 @@ async function landingPlan(title: string) {
     db.cutPlanBranch(b.id, 'abc123');
     const url = `https://example.test/plan/${++prs}`;
     db.openPlanBranchPr(b.id, url);
+    db.recordPlanReview({ id: b.id, pr_url: url }, 'clean', { head: 'abc123', summary: 'clean' });
     urls[b.repo_id === shop.id ? 'shop' : 'api'] = url;
   }
   return { owner, other, urls };

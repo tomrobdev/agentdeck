@@ -1023,12 +1023,12 @@ Problems found in the daemon log.
 
 A claude process group recorded on a run, found alive.
 
-| Field   | Type                                                                                      | Comment                         |
-| ------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
-| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock" \| "verify" \| "plan_resolve"` |                                 |
-| `run`   | `number`                                                                                  |                                 |
-| `pid`   | `number`                                                                                  |                                 |
-| `ended` | `boolean`                                                                                 | The run has a finished-at time. |
+| Field   | Type                                                                                                       | Comment                         |
+| ------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock" \| "verify" \| "plan_resolve" \| "plan_review"` |                                 |
+| `run`   | `number`                                                                                                   |                                 |
+| `pid`   | `number`                                                                                                   |                                 |
+| `ended` | `boolean`                                                                                                  | The run has a finished-at time. |
 
 ### ReloadDecision
 
@@ -1370,6 +1370,15 @@ A run (or planner run) with a recorded pid: where a claude process may still be.
 | `pid`      | `number`                |                                                                                    |
 | `pid_at`   | `string`                | When the pid was stored (the run's start for a row from before that was recorded). |
 | `ended_at` | `string \| null`        |                                                                                    |
+
+### PlanReviewContext
+
+| Field   | Type                                        | Comment |
+| ------- | ------------------------------------------- | ------- |
+| `plan`  | `{ name: string; html: string; } \| null`   |         |
+| `tasks` | `Pick<Task, "id" \| "title" \| "status">[]` |         |
+| `from`  | `string`                                    |         |
+| `head`  | `string`                                    |         |
 
 ### PromptPlan
 
@@ -1854,8 +1863,8 @@ One repo's plan branch as the landing saga reads it.
 | `verdict`    | `"merge" \| "wait" \| "never" \| null` | The plan PR's check, as the daemon read it this pass; null when there is no open plan PR or it was not read.             |
 | `reason?`    | `string \| null \| undefined`          | The check's first reason, when it waits or needs a person.                                                               |
 | `id`         | `number`                               |                                                                                                                          |
-| `name`       | `string`                               |                                                                                                                          |
 | `status`     | `PlanBranchStatus`                     |                                                                                                                          |
+| `name`       | `string`                               |                                                                                                                          |
 | `land_order` | `number \| null`                       | Where this repo lands in an `in_order` plan, lowest first; null lands after the numbered ones, oldest plan branch first. |
 | `land_error` | `string \| null`                       | Why the daemon's last merge of the plan PR failed for good; null once it merged or a person retried.                     |
 
@@ -1949,8 +1958,8 @@ A task at the end of a link: what its link states are read from.
 | `repo_id`     | `RepoId`                                                                                                                  |         |
 | `id`          | `TaskId`                                                                                                                  |         |
 | `waiting`     | `Waiting \| null`                                                                                                         |         |
-| `status`      | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
 | `title`       | `string`                                                                                                                  |         |
+| `status`      | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
 | `source`      | `TaskSource`                                                                                                              |         |
 | `updated_at`  | `string`                                                                                                                  |         |
 | `priority`    | `number`                                                                                                                  |         |
@@ -1975,10 +1984,10 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `id`           | `TaskId`                                                                                                                  |                                                                                                                     |
 | `max_turns`    | `number`                                                                                                                  |                                                                                                                     |
 | `pr`           | `PullRequest \| null`                                                                                                     | the task's pull request, as one value                                                                               |
+| `title`        | `string`                                                                                                                  |                                                                                                                     |
 | `attempts`     | `number`                                                                                                                  |                                                                                                                     |
 | `max_attempts` | `number`                                                                                                                  |                                                                                                                     |
 | `restarts`     | `number`                                                                                                                  | times a daemon restart requeued this task mid-run                                                                   |
-| `title`        | `string`                                                                                                                  |                                                                                                                     |
 | `source`       | `TaskSource`                                                                                                              |                                                                                                                     |
 | `updated_at`   | `string`                                                                                                                  |                                                                                                                     |
 | `priority`     | `number`                                                                                                                  |                                                                                                                     |
@@ -2101,25 +2110,28 @@ Where a task's work lands, for a link across repos: every repo's base is one pla
 
 ### PlanBranch
 
-| Field            | Type               | Comment                                                                                                                    |
-| ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `id`             | `number`           |                                                                                                                            |
-| `plan_task`      | `TaskId`           |                                                                                                                            |
-| `repo_id`        | `RepoId`           |                                                                                                                            |
-| `name`           | `string`           |                                                                                                                            |
-| `base`           | `string`           |                                                                                                                            |
-| `status`         | `PlanBranchStatus` |                                                                                                                            |
-| `head_commit`    | `string \| null`   |                                                                                                                            |
-| `pr_url`         | `string \| null`   |                                                                                                                            |
-| `synced_at`      | `string \| null`   |                                                                                                                            |
-| `ahead_lines`    | `number \| null`   | The lines (added and removed) the plan branch is ahead of its base by, as the last sync measured them; null until one did. |
-| `landing_policy` | `LandingPolicy`    | The plan's landing policy, the same on each of its plan branches.                                                          |
-| `land_order`     | `number \| null`   | Where this repo lands in an `in_order` plan, lowest first; null lands after the numbered ones, oldest plan branch first.   |
-| `land_error`     | `string \| null`   | Why the daemon's last merge of the plan PR failed for good; null once it merged or a person retried.                       |
-| `landed_commit`  | `string \| null`   | The commit the plan PR's merge made on the base, once it landed; null before, or when GitHub didn't say.                   |
-| `landed_from`    | `string \| null`   | The base's commit just before the plan PR's merge, which a revert goes back to; null until it landed.                      |
-| `created_at`     | `string`           |                                                                                                                            |
-| `updated_at`     | `string`           |                                                                                                                            |
+| Field            | Type                      | Comment                                                                                                                    |
+| ---------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | `number`                  |                                                                                                                            |
+| `plan_task`      | `TaskId`                  |                                                                                                                            |
+| `repo_id`        | `RepoId`                  |                                                                                                                            |
+| `name`           | `string`                  |                                                                                                                            |
+| `base`           | `string`                  |                                                                                                                            |
+| `status`         | `PlanBranchStatus`        |                                                                                                                            |
+| `head_commit`    | `string \| null`          |                                                                                                                            |
+| `pr_url`         | `string \| null`          |                                                                                                                            |
+| `synced_at`      | `string \| null`          |                                                                                                                            |
+| `ahead_lines`    | `number \| null`          | The lines (added and removed) the plan branch is ahead of its base by, as the last sync measured them; null until one did. |
+| `landing_policy` | `LandingPolicy`           | The plan's landing policy, the same on each of its plan branches.                                                          |
+| `land_order`     | `number \| null`          | Where this repo lands in an `in_order` plan, lowest first; null lands after the numbered ones, oldest plan branch first.   |
+| `land_error`     | `string \| null`          | Why the daemon's last merge of the plan PR failed for good; null once it merged or a person retried.                       |
+| `landed_commit`  | `string \| null`          | The commit the plan PR's merge made on the base, once it landed; null before, or when GitHub didn't say.                   |
+| `landed_from`    | `string \| null`          | The base's commit just before the plan PR's merge, which a revert goes back to; null until it landed.                      |
+| `review`         | `PlanReviewState \| null` |                                                                                                                            |
+| `review_head`    | `string \| null`          |                                                                                                                            |
+| `review_summary` | `string \| null`          |                                                                                                                            |
+| `created_at`     | `string`                  |                                                                                                                            |
+| `updated_at`     | `string`                  |                                                                                                                            |
 
 ### PlanBranchConflict
 
@@ -2452,10 +2464,10 @@ A stored plan as the API returns it: parsed, without its HTML.
 | `id`           | `TaskId`                                                                                                                  |                                                                                                                     |
 | `max_turns`    | `number`                                                                                                                  |                                                                                                                     |
 | `pr`           | `PullRequest \| null`                                                                                                     | the task's pull request, as one value                                                                               |
+| `title`        | `string`                                                                                                                  |                                                                                                                     |
 | `attempts`     | `number`                                                                                                                  |                                                                                                                     |
 | `max_attempts` | `number`                                                                                                                  |                                                                                                                     |
 | `restarts`     | `number`                                                                                                                  | times a daemon restart requeued this task mid-run                                                                   |
-| `title`        | `string`                                                                                                                  |                                                                                                                     |
 | `source`       | `TaskSource`                                                                                                              |                                                                                                                     |
 | `updated_at`   | `string`                                                                                                                  |                                                                                                                     |
 | `priority`     | `number`                                                                                                                  |                                                                                                                     |

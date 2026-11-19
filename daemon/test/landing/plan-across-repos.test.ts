@@ -16,10 +16,10 @@ const { cutPlanBranch } = await import('#application/work/plans.ts');
 const { startPlanBranchSync } = await import('#application/runs/plan-branch-sync.ts');
 const { LAND_RETRY_MINUTES } = await import('#application/landing/pull-request/plan-branch-pr.ts');
 const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
-const { READY_PR, fakeCodeHost } = await import('#test/fixtures/fakes.ts');
+const { READY_PR, fakeAgent, fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 const { advance, openPr, settlePr, testApp } = await import('#test/fixtures/fixtures.ts');
 const host = fakeCodeHost();
-const db = testApp(openDb(join(home, 'agentdeck.db')), { codeHost: host });
+const db = testApp(openDb(join(home, 'agentdeck.db')), { agent: fakeAgent(), codeHost: host });
 after(() => db.close());
 
 const sh = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();

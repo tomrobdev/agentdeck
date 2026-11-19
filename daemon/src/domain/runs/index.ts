@@ -58,8 +58,10 @@ export {
   reviewSchemaArgs,
   reviewSystemPrompt,
   reviewable,
+  reviewVerdict,
 } from '#domain/runs/review.ts';
 export type { ReviewOutcome } from '#domain/runs/review.ts';
+export { buildPlanReviewPrompt, planReviewComment, planReviewSystemPrompt } from '#domain/runs/plan-review.ts';
 export {
   VERIFY_DENIED_TOOLS,
   VERIFY_MAX_TURNS,

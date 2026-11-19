@@ -5,6 +5,7 @@ import { PR_FROM, PR_MOVES } from '#domain/landing/pull-request/pr-moves.ts';
 import { COMMENT_MOVES, COMMENT_STATES } from '#domain/landing/review/review.ts';
 import { FOLLOW_UPS } from '#domain/work/lifecycle/follow-ups.ts';
 import { PLAN_BRANCH_MOVES, PLAN_BRANCH_STATUSES } from '#domain/work/plans/plan-branch.ts';
+import { PLAN_REVIEW_MOVES, PLAN_REVIEW_STATES } from '#domain/work/plans/plan-review.ts';
 import {
   DOMAIN_EVENT_TYPES,
   RULES,
@@ -239,6 +240,14 @@ export const STATE_MACHINES: StateMachine[] = [
     moves: 'move',
     states: PLAN_BRANCH_STATUSES,
     rules: PLAN_BRANCH_MOVES,
+  },
+  {
+    name: 'Plan review',
+    source: { file: 'domain/work/plans/plan-review.ts', constant: 'PLAN_REVIEW_MOVES' },
+    stateType: 'PlanReviewState',
+    moves: 'move',
+    states: PLAN_REVIEW_STATES,
+    rules: PLAN_REVIEW_MOVES,
   },
 ];
 

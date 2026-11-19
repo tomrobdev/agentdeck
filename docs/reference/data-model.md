@@ -32,6 +32,9 @@ erDiagram
     text land_error "nullable"
     text landed_commit "nullable"
     text landed_from "nullable"
+    text review "nullable"
+    text review_head "nullable"
+    text review_summary "nullable"
   }
   planner_runs {
     integer id PK

@@ -99,6 +99,10 @@ export const github = {
     await gh(['pr', 'close', url], { cwd });
   },
 
+  async commentOnPr(url: string, cwd: string, body: string): Promise<void> {
+    await gh(['pr', 'comment', url, '--body', body], { cwd });
+  },
+
   async prDetails(url: string, cwd: string, opts: { withFiles?: boolean } = {}): Promise<PrDetails> {
     const fields = `state,headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,mergeCommit${opts.withFiles ? ',files,labels,body' : ''}`;
     return parsePrDetails(await gh(['pr', 'view', url, '--json', fields], { cwd, maxBuffer: 16 * 1024 * 1024 }));

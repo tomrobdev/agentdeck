@@ -157,6 +157,23 @@ stateDiagram-v2
 | `by_hand`   | partly_landed → landing                                                                                    |
 | `abandon`   | open → abandoned, active → abandoned, conflict → abandoned, landing → abandoned, partly_landed → abandoned |
 
+## Plan review
+
+The rule table is `PLAN_REVIEW_MOVES` in `domain/work/plans/plan-review.ts`. States: `due`, `clean`, `blocking`, `failed`.
+
+```mermaid
+stateDiagram-v2
+  due --> clean: clean
+  due --> blocking: block
+  due --> failed: fail
+```
+
+| Move    | Moves          |
+| ------- | -------------- |
+| `clean` | due → clean    |
+| `block` | due → blocking |
+| `fail`  | due → failed   |
+
 ## Follow-ups
 
 What the daemon does after a task's status changes: each domain event `transition` makes, the moves that make it (event, from which statuses) and its follow-ups. The table is `FOLLOW_UPS` in `domain/work/lifecycle/follow-ups.ts`, run by `application/landing/settle.ts`. `task_events` is the outbox: a change whose event has follow-ups writes its row pending in the same transaction, `settle` runs the daemon's at once and marks the row, and the daemon's tick runs whatever is still pending: a person's events (only the daemon follows up), crash recovery's, and any a crash cut off.
