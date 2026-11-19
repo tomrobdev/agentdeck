@@ -116,7 +116,6 @@ export type {
   PlanBranchStatus,
   PlanBranchSyncOutcome,
   PlanBranchTask,
-  PlanBranchWait,
 } from '#domain/work/plans/plan-branch.ts';
 export {
   DEFAULT_LANDING_POLICY,
@@ -124,7 +123,6 @@ export {
   LANDING_POLICIES,
   afterLandingMerge,
   afterPlanPrState,
-  daemonLands,
   isLandingAnswer,
   isLandingPolicy,
   landingAnswerMove,
@@ -132,15 +130,15 @@ export {
   landingOrderError,
   landingQuestion,
   nextLandingStep,
+  partlyLandedLine,
   revertFrom,
 } from '#domain/work/plans/landing-saga.ts';
-export type { LandingAnswer, LandingBranch, LandingChange, LandingQuestion, LandingStep } from '#domain/work/plans/landing-saga.ts';
+export type { LandingAnswer, LandingBranch, LandingChange, LandingQuestion } from '#domain/work/plans/landing-saga.ts';
 export {
   isWaitingToLand,
   planLandingOf,
   planLandingText,
   planPrBody,
-  planPrMove,
   readyToLand,
   reviewVerdictOf,
 } from '#domain/work/plans/plan-landing.ts';

@@ -52,10 +52,6 @@ export function planPrBody(branch: Pick<PlanBranch, 'name' | 'base' | 'plan_task
   ].join('\n');
 }
 
-export type PlanPrMove = 'land' | 'close_pr' | null;
-
-export const planPrMove = (state: PrState): PlanPrMove => (state === 'merged' ? 'land' : state === 'closed' ? 'close_pr' : null);
-
 /** Where a done task merged into a plan branch stands: waiting for the plan branch to land, landed with it, or left on an abandoned one. */
 export interface PlanLanding {
   name: string;

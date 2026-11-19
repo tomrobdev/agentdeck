@@ -31,7 +31,7 @@ test('a plan branch opens in the plan’s own repo and each repo its tasks are i
 });
 
 const STATUSES: PlanBranchStatus[] = ['open', 'active', 'conflict', 'landing', 'landed', 'abandoned', 'partly_landed'];
-const MOVES: PlanBranchMove[] = ['cut', 'conflict', 'resolve', 'open_pr', 'close_pr', 'land', 'abandon'];
+const MOVES: PlanBranchMove[] = ['cut', 'conflict', 'resolve', 'open_pr', 'close_pr', 'land', 'part_land', 'retry', 'by_hand', 'abandon'];
 
 const EXPECTED: Record<PlanBranchMove, Partial<Record<PlanBranchStatus, PlanBranchStatus>>> = {
   cut: { open: 'active' },
@@ -39,8 +39,11 @@ const EXPECTED: Record<PlanBranchMove, Partial<Record<PlanBranchStatus, PlanBran
   resolve: { conflict: 'active' },
   open_pr: { active: 'landing' },
   close_pr: { landing: 'active' },
-  land: { landing: 'landed' },
-  abandon: { open: 'abandoned', active: 'abandoned', conflict: 'abandoned', landing: 'abandoned' },
+  land: { landing: 'landed', partly_landed: 'landed' },
+  part_land: { landing: 'partly_landed' },
+  retry: { partly_landed: 'landing' },
+  by_hand: { partly_landed: 'landing' },
+  abandon: { open: 'abandoned', active: 'abandoned', conflict: 'abandoned', landing: 'abandoned', partly_landed: 'abandoned' },
 };
 
 test('every move from every status goes where the rule table says, and nowhere else', () => {
@@ -50,8 +53,8 @@ test('every move from every status goes where the rule table says, and nowhere e
   }
 });
 
-test('landed, abandoned and partly_landed are ends: no move leaves them', () => {
-  for (const from of ['landed', 'abandoned', 'partly_landed'] as const) {
+test('landed and abandoned are ends: no move leaves them', () => {
+  for (const from of ['landed', 'abandoned'] as const) {
     for (const move of MOVES) assert.equal(nextPlanBranchStatus(from, move), null);
   }
 });
@@ -72,12 +75,12 @@ test('random move sequences never reach landed without passing landing', () => {
     for (let i = 0; i < 40; i++) {
       const next = nextPlanBranchStatus(status, MOVES[Math.floor(random() * MOVES.length)]);
       if (next === null) continue;
-      if (next === 'landed') assert.equal(status, 'landing', `seed ${seed}: ${path.join(' → ')} → landed`);
+      if (next === 'landed') assert.ok(['landing', 'partly_landed'].includes(status), `seed ${seed}: ${path.join(' → ')} → landed`);
+      if (next === 'partly_landed') assert.equal(status, 'landing', `seed ${seed}: ${path.join(' → ')} → partly_landed`);
       status = next;
       path.push(status);
     }
     if (status === 'landed') assert.ok(path.includes('landing'));
-    assert.ok(!path.includes('partly_landed'), 'nothing reaches partly_landed in phase 1');
   }
 });
 
@@ -87,11 +90,11 @@ test('a plan branch is named plan/<plan task>-<slug of the plan title>', () => {
 });
 
 test('a live plan branch is a target; a landed or abandoned one is not', () => {
-  for (const status of ['open', 'active', 'conflict', 'landing'] as const) {
+  for (const status of ['open', 'active', 'conflict', 'landing', 'partly_landed'] as const) {
     assert.ok(isLivePlanBranch({ status }));
     assert.equal(planBranchTarget({ name: 'plan/1-x', status }), 'plan/1-x');
   }
-  for (const status of ['landed', 'abandoned', 'partly_landed'] as const) {
+  for (const status of ['landed', 'abandoned'] as const) {
     assert.ok(!isLivePlanBranch({ status }));
     assert.equal(planBranchTarget({ name: 'plan/1-x', status }), null);
   }

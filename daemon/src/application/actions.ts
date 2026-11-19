@@ -19,6 +19,13 @@ export { measureBranch, parseFileRef, taskChanges, taskDiff, taskFile, taskTree 
 export { type LiveContext, repoForPath } from '#application/operations/digest.ts';
 export { liveContext } from '#application/work/live-context.ts';
 export { abandonPlanBranch, attachPlan, openPlanBranch, planHtml } from '#application/work/plans.ts';
+export {
+  type LandingAnswered,
+  answerPlanLandingInput as answerPlanLanding,
+  landPlanBranches,
+  planLandingQuestion,
+  setPlanLandingPolicy,
+} from '#application/landing/pull-request/plan-landing.ts';
 export { proposeNow } from '#application/proposals/planner.ts';
 export { pilotStats } from '#application/insights/stats.ts';
 export { closeTaskPr, mergePreview, mergeTask } from '#application/landing/merge/merge.ts';

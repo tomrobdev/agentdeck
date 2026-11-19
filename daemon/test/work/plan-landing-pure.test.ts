@@ -7,7 +7,7 @@ import {
   planLandingOf,
   planLandingText,
   planPrBody,
-  planPrMove,
+  afterPlanPrState,
   readyToLand,
   reviewVerdictOf,
 } from '#domain/work/index.ts';
@@ -50,10 +50,12 @@ test("the plan PR's body is a punch list of the plan's tasks", () => {
 });
 
 test('a plan PR that merged lands the plan branch, and one closed unmerged sends it back to active', () => {
-  assert.equal(planPrMove('merged'), 'land');
-  assert.equal(planPrMove('closed'), 'close_pr');
-  assert.equal(planPrMove('open'), null);
-  assert.equal(planPrMove('failed'), null);
+  const move = (state: 'merged' | 'closed' | 'open' | 'failed') =>
+    afterPlanPrState('person', [{ id: 1, status: 'landing' }], 1, state)?.move ?? null;
+  assert.equal(move('merged'), 'land');
+  assert.equal(move('closed'), 'close_pr');
+  assert.equal(move('open'), null);
+  assert.equal(move('failed'), null);
 });
 
 test('a done task merged into a plan branch waits for it to land, then reads landed', () => {

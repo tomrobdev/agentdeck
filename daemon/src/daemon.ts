@@ -2,7 +2,7 @@
 import { startApi } from '#api/server.ts';
 import type { Server } from 'node:http';
 import { join } from 'node:path';
-import { type ComposedApp, isPaused, maxConcurrent, reloadOnChange } from '#application/actions.ts';
+import { type ComposedApp, isPaused, landPlanBranches, maxConcurrent, reloadOnChange } from '#application/actions.ts';
 import { ChangeWatcher } from '#application/operations/changes.ts';
 import { reloadBlock } from '#application/operations/reload-block.ts';
 import { Scheduler } from '#application/scheduler/scheduler.ts';
@@ -130,6 +130,7 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
     `agentdeck ${once ? 'run-once' : 'daemon'} ${info.commit ? info.commit.slice(0, 7) : 'no commit'} (pid ${info.pid}): ${isPaused(db) && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${maxConcurrent(db)} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
   );
   try {
+    if (once) await landPlanBranches(db, stamped, { ignorePause: true });
     await scheduler.run();
   } finally {
     changes?.stop();

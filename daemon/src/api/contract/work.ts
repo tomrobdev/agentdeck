@@ -3,6 +3,9 @@ import type { RepoId, TaskId } from '#domain/shared/index.ts';
 import type {
   LinkKind,
   NeedsKind,
+  LandingAnswer,
+  LandingPolicy,
+  LandingQuestion,
   PlanBranchStatus,
   PlanLanding,
   PlanSource,
@@ -204,8 +207,28 @@ export interface PlanBranch {
   status: PlanBranchStatus;
   head_commit: string | null;
   pr_url: string | null;
+  /** How the plan's plan branches land on their bases; the same on each. */
+  landing_policy: LandingPolicy;
+  /** This repo's place in an `in_order` plan, lowest first; null lands after the numbered ones. */
+  land_order: number | null;
+  /** Why the daemon's last merge of the plan PR failed for good; null otherwise. */
+  land_error: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** A plan that landed in only some repos: the question it asks a person, null once it is answered. */
+export interface PlanLandingQuestion {
+  question: LandingQuestion | null;
+}
+
+/** What a person's answer to a partly landed plan did: the plan branches it moved, and the revert PRs it opened. */
+export interface LandingAnswered {
+  answer: LandingAnswer;
+  branches: PlanBranch[];
+  reverts: { repo: string; url: string }[];
+  /** The repos a revert PR could not be opened in, which a person reverts by hand. */
+  unreverted: string[];
 }
 
 export interface OpenedPlanBranch extends PlanBranch {

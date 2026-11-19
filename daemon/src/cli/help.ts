@@ -84,6 +84,12 @@ Tasks
                                   and pushes it when the first of them starts
   agentdeck plan-branch abandon <plan task>   close them all: their tasks that haven't started move back to the base;
                                   refused while one runs
+  agentdeck plan-branch policy <plan task> person|auto|together|in_order [repo,repo,...]   how the plan PRs land:
+                                  a person merges each (person, the default), the daemon merges each once its check
+                                  passes (auto), none until all are ready (together), or one repo at a time in the order given
+  agentdeck plan-branch question <plan task>   what a plan that landed in only some repos asks
+  agentdeck plan-branch answer <plan task> retry|revert|by_hand   answer it: merge again, open revert PRs for the
+                                  landed repos and abandon the rest, or finish by hand
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
   agentdeck park <id>... [--reason "…"]   keep proposals for later: off Attention, not approvable, not counted as
@@ -127,7 +133,8 @@ Daemon
                                   area reviews due (a warning, never a failure); each failed check names the command that
                                   fixes it (exit 1 if any fails; works with the daemon down)
   agentdeck daemon              run the scheduler in the foreground
-  agentdeck run-once            work the queue until empty, then exit (ignores pause; refused while the daemon runs)
+  agentdeck run-once            land the plan PRs their landing policies allow, work the queue until empty, then exit
+                                  (ignores pause; refused while the daemon runs)
   agentdeck pause | resume
   agentdeck drain               start no new task, let the work in flight finish (retries, resolve, unblock and review
                                   runs), then pause and send a 'drained' notification; resume ends a drain

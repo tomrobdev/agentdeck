@@ -74,6 +74,12 @@ const ghJson = (...args) => JSON.parse(gh(...args));
 const REPO = process.env.AGENTDECK_GITHUB_E2E_REPO?.trim();
 if (!REPO) refuse('AGENTDECK_GITHUB_E2E_REPO is not set; set it to a throwaway repo, owner/name');
 if (!/^[\w.-]+\/[\w.-]+$/.test(REPO)) refuse(`AGENTDECK_GITHUB_E2E_REPO must be owner/name, got "${REPO}"`);
+const REPO2 = process.env.AGENTDECK_GITHUB_E2E_REPO_2?.trim();
+if (!REPO2) refuse('AGENTDECK_GITHUB_E2E_REPO_2 is not set; set it to a second throwaway repo, owner/name, for the plan across repos');
+if (!/^[\w.-]+\/[\w.-]+$/.test(REPO2)) refuse(`AGENTDECK_GITHUB_E2E_REPO_2 must be owner/name, got "${REPO2}"`);
+if (REPO2.toLowerCase() === REPO.toLowerCase()) refuse('AGENTDECK_GITHUB_E2E_REPO_2 must be another repo than AGENTDECK_GITHUB_E2E_REPO');
+const REPO2_NAME = 'e2e2';
+const REPO2_BASE = 'develop';
 const origin = (() => {
   try {
     return run('git', ['remote', 'get-url', 'origin']);
@@ -83,22 +89,27 @@ const origin = (() => {
 })();
 const originRepo = /github\.com[:/]([^/]+\/[^/]+?)(\.git)?$/.exec(origin)?.[1]?.toLowerCase();
 const isOrigin = (name) => !!originRepo && originRepo === name.toLowerCase();
-if (isOrigin(REPO)) refuse(`${REPO} is this checkout's origin; the reset would force-push its main`);
+for (const r of [REPO, REPO2]) if (isOrigin(r)) refuse(`${r} is this checkout's origin; the reset would force-push it`);
 try {
   execFileSync('gh', ['auth', 'status'], { stdio: 'ignore' });
 } catch {
   refuse('gh is not logged in (or not installed): run gh auth login');
 }
-let info;
-try {
-  info = ghJson('repo', 'view', REPO, '--json', 'nameWithOwner,isArchived,viewerPermission,url');
-} catch (err) {
-  refuse(`gh cannot read ${REPO}: ${err.message}`);
+function repoInfo(repo) {
+  let found;
+  try {
+    found = ghJson('repo', 'view', repo, '--json', 'nameWithOwner,isArchived,viewerPermission,url');
+  } catch (err) {
+    refuse(`gh cannot read ${repo}: ${err.message}`);
+  }
+  if (isOrigin(found.nameWithOwner)) refuse(`${found.nameWithOwner} is this checkout's origin; the reset would force-push it`);
+  if (found.isArchived) refuse(`${repo} is archived`);
+  if (!['ADMIN', 'MAINTAIN', 'WRITE'].includes(found.viewerPermission))
+    refuse(`gh's account can't push to ${repo} (permission ${found.viewerPermission})`);
+  return found;
 }
-if (isOrigin(info.nameWithOwner)) refuse(`${info.nameWithOwner} is this checkout's origin; the reset would force-push its main`);
-if (info.isArchived) refuse(`${REPO} is archived`);
-if (!['ADMIN', 'MAINTAIN', 'WRITE'].includes(info.viewerPermission))
-  refuse(`gh's account can't push to ${REPO} (permission ${info.viewerPermission})`);
+const info = repoInfo(REPO);
+repoInfo(REPO2);
 
 const HOME = mkdtempSync(join(tmpdir(), 'agentdeck-github-e2e-'));
 const DB_PATH = join(HOME, 'agentdeck.db');
@@ -192,11 +203,11 @@ const remoteBranches = () =>
     .filter(Boolean)
     .map((l) => l.split('\t')[1].replace('refs/heads/', ''));
 
-function clearBranches(cwd) {
-  const open = ghJson('pr', 'list', '-R', REPO, '--state', 'open', '--limit', '100', '--json', 'number,headRefName').filter((p) =>
+function clearBranches(cwd, repo = REPO) {
+  const open = ghJson('pr', 'list', '-R', repo, '--state', 'open', '--limit', '100', '--json', 'number,headRefName').filter((p) =>
     isOurs(p.headRefName),
   );
-  for (const p of open) gh('pr', 'close', String(p.number), '-R', REPO);
+  for (const p of open) gh('pr', 'close', String(p.number), '-R', repo);
   const branches = run('git', ['ls-remote', '--heads', 'origin'], { cwd })
     .split('\n')
     .filter(Boolean)
@@ -245,43 +256,49 @@ async function merged(id, url, note) {
 
 const mainOutput = () => Buffer.from(ghJson('api', `repos/${REPO}/contents/fake-output.txt?ref=main`).content, 'base64').toString('utf8');
 
-console.log(`test:github on ${info.url}, scratch home ${HOME}`);
+console.log(`test:github on ${info.url} and ${REPO2}, scratch home ${HOME}`);
 let failed = false;
-let owned = false;
+const owned = new Set();
+
+function resetRepo(repo, base, scratch, note) {
+  gh('repo', 'clone', repo, scratch, '--', '-q');
+  const git = (...args) => run('git', args, { cwd: scratch });
+  if (git('ls-remote', '--heads', 'origin', base) !== '') {
+    const commits = Number(git('rev-list', '--count', `origin/${base}`));
+    const roots = git('rev-list', '--max-parents=0', `origin/${base}`).split('\n');
+    const rootSubject = git('log', '-1', '--format=%s', roots[0]);
+    if (commits > 1 && !(roots.length === 1 && rootSubject === RESET_SUBJECT))
+      throw Object.assign(
+        new Error(
+          `${repo}'s ${base} has ${commits} commits and was not made by this script (its first commit is "${rootSubject}"): use a new, empty repo`,
+        ),
+        { refusal: true },
+      );
+  }
+  owned.add(repo);
+  const cleared = clearBranches(scratch, repo);
+  note(`${repo}: closed ${cleared.prs} open PR(s), deleted ${cleared.branches.length} ${BRANCH_PREFIX} branch(es)`);
+  git('checkout', '-q', '--orphan', 'e2e-reset');
+  git('rm', '-rqf', '--ignore-unmatch', '.');
+  writeFileSync(join(scratch, 'README.md'), README);
+  mkdirSync(join(scratch, '.github/workflows'), { recursive: true });
+  writeFileSync(join(scratch, '.github/workflows/agentdeck-e2e.yml'), WORKFLOW);
+  git('add', 'README.md', '.github');
+  git('-c', 'user.name=AgentDeck e2e', '-c', 'user.email=e2e@agentdeck.invalid', 'commit', '-qm', RESET_SUBJECT);
+  try {
+    git('push', '-q', '--force', 'origin', `HEAD:${base}`);
+  } catch (err) {
+    throw new Error(`${err.message}. A push that adds a workflow needs gh's workflow scope: gh auth refresh -s workflow`);
+  }
+  note(
+    `${repo}: ${base} is ${git('rev-parse', '--short', 'HEAD')} "${RESET_SUBJECT}": README.md and a workflow with one check, ${CHECK_NAME}`,
+  );
+}
+
 try {
-  await step(`reset ${REPO}`, async (note) => {
-    const scratch = join(HOME, 'reset');
-    gh('repo', 'clone', REPO, scratch, '--', '-q');
-    const git = (...args) => run('git', args, { cwd: scratch });
-    const hasMain = git('ls-remote', '--heads', 'origin', 'main') !== '';
-    if (hasMain) {
-      const commits = Number(git('rev-list', '--count', 'origin/main'));
-      const roots = git('rev-list', '--max-parents=0', 'origin/main').split('\n');
-      const rootSubject = git('log', '-1', '--format=%s', roots[0]);
-      if (commits > 1 && !(roots.length === 1 && rootSubject === RESET_SUBJECT))
-        throw Object.assign(
-          new Error(
-            `${REPO}'s main has ${commits} commits and was not made by this script (its first commit is "${rootSubject}"): use a new, empty repo`,
-          ),
-          { refusal: true },
-        );
-    }
-    owned = true;
-    const cleared = clearBranches(scratch);
-    note(`closed ${cleared.prs} open PR(s), deleted ${cleared.branches.length} ${BRANCH_PREFIX} branch(es)`);
-    git('checkout', '-q', '--orphan', 'e2e-reset');
-    git('rm', '-rqf', '--ignore-unmatch', '.');
-    writeFileSync(join(scratch, 'README.md'), README);
-    mkdirSync(join(scratch, '.github/workflows'), { recursive: true });
-    writeFileSync(join(scratch, '.github/workflows/agentdeck-e2e.yml'), WORKFLOW);
-    git('add', 'README.md', '.github');
-    git('-c', 'user.name=AgentDeck e2e', '-c', 'user.email=e2e@agentdeck.invalid', 'commit', '-qm', RESET_SUBJECT);
-    try {
-      git('push', '-q', '--force', 'origin', 'HEAD:main');
-    } catch (err) {
-      throw new Error(`${err.message}. A push that adds a workflow needs gh's workflow scope: gh auth refresh -s workflow`);
-    }
-    note(`main is ${git('rev-parse', '--short', 'HEAD')} "${RESET_SUBJECT}": README.md and a workflow with one check, ${CHECK_NAME}`);
+  await step(`reset ${REPO} and ${REPO2}`, async (note) => {
+    resetRepo(REPO, 'main', join(HOME, 'reset'), note);
+    resetRepo(REPO2, REPO2_BASE, join(HOME, 'reset2'), note);
   });
 
   await step('register the repo on a scratch home and start the daemon', async (note) => {
@@ -551,6 +568,85 @@ try {
     note(`gh: ${planName} deleted`);
     expect(mainOutput().includes('done by fake claude'), "main's fake-output.txt lacks the plan's work");
   });
+
+  const clone2 = join(HOME, REPO2_NAME);
+  await step(`register ${REPO2} with base ${REPO2_BASE} and squash merges; ${REPO_NAME} merges with merge commits`, async (note) => {
+    gh('repo', 'clone', REPO2, clone2, '--', '-q');
+    run('git', ['config', 'user.name', 'AgentDeck e2e'], { cwd: clone2 });
+    run('git', ['config', 'user.email', 'e2e@agentdeck.invalid'], { cwd: clone2 });
+    cli('repo', 'add', clone2, '--name', REPO2_NAME, '--base', REPO2_BASE);
+    for (const [key, value] of [
+      ['pr_mode', 'ready'],
+      ['auto_merge', 'on'],
+      ['merge_method', 'squash'],
+    ])
+      cli('repo', 'set', REPO2_NAME, key, value);
+    cli('repo', 'resume', REPO2_NAME);
+    cli('repo', 'set', REPO_NAME, 'merge_method', 'merge');
+    const methods = database().prepare('SELECT name, base_branch, merge_method FROM repos ORDER BY id').all();
+    note(`db: ${methods.map((r) => `${r.name} base ${r.base_branch}, ${r.merge_method}`).join('; ')}`);
+  });
+
+  const acrossFile = join(HOME, 'e2e-across.html');
+  writeFileSync(acrossFile, PLAN_HTML.replace('E2E plan branch', 'E2E plan across repos'));
+  const acrossOwner = addTask('e2e: across, the e2e part', 'FAKE_DONE FAKE_TWO_WAY write across.txt', '--plan', acrossFile, '--propose');
+  const acrossOut = cli(
+    'add',
+    '--repo',
+    REPO2_NAME,
+    '--title',
+    'e2e: across, the e2e2 part',
+    '--plan',
+    String(acrossOwner),
+    '--propose',
+    'FAKE_DONE FAKE_TWO_WAY write across.txt',
+  );
+  const acrossOther = Number(/#(\d+)/.exec(acrossOut)?.[1]);
+  cli('plan-branch', 'open', String(acrossOwner));
+  cli('plan-branch', 'policy', String(acrossOwner), 'in_order', `${REPO2_NAME},${REPO_NAME}`);
+  const acrossRows = () =>
+    database()
+      .prepare(
+        'SELECT plan_branches.*, repos.name AS repo FROM plan_branches JOIN repos ON repos.id = plan_branches.repo_id WHERE plan_task = ? ORDER BY land_order',
+      )
+      .all(acrossOwner);
+  cli('approve', String(acrossOwner), String(acrossOther));
+
+  await step(
+    `an in_order plan across ${REPO_NAME} and ${REPO2_NAME} lands ${REPO2_NAME} first, then ${REPO_NAME}, each by its own method`,
+    async (note) => {
+      const rows = acrossRows();
+      expect(
+        rows.map((r) => `${r.repo}:${r.landing_policy}:${r.land_order}`).join(' ') === `${REPO2_NAME}:in_order:0 ${REPO_NAME}:in_order:1`,
+        `the plan branches are ${JSON.stringify(rows)}`,
+      );
+      note(`db: ${rows.map((r) => `${r.name} in ${r.repo} on ${r.base}, in_order #${r.land_order + 1}`).join('; ')}`);
+      for (const id of [acrossOwner, acrossOther]) {
+        const task = await waitFor(`#${id} done with its PR`, () => {
+          const t = taskRow(id);
+          if (['blocked', 'failed', 'cancelled'].includes(t.status)) throw fatal(`#${id} is ${t.status}: ${t.stop_reason}`);
+          return t.status === 'done' && t.pr_url && t;
+        });
+        await waitFor(`#${id}'s PR merged into its plan branch`, () => taskRow(id).pr_state === 'merged');
+        note(`db: #${id} merged into ${task.target}`);
+      }
+      const landed = await waitFor('both plan branches landed', () => {
+        const now = acrossRows();
+        const stuck = now.find((r) => r.status === 'partly_landed' || r.land_error);
+        if (stuck) throw fatal(`${stuck.name} in ${stuck.repo} is ${stuck.status}: ${stuck.land_error}`);
+        return now.every((r) => r.status === 'landed') && now;
+      });
+      const prs = landed.map((r) => ({ ...r, pr: prView(r.pr_url, 'state,mergedAt,mergeCommit,baseRefName') }));
+      const [first, second] = prs;
+      expect(first.pr.baseRefName === REPO2_BASE && second.pr.baseRefName === 'main', 'the plan PRs are not into develop and main');
+      expect(Date.parse(first.pr.mergedAt) <= Date.parse(second.pr.mergedAt), `${REPO_NAME} merged before ${REPO2_NAME}`);
+      note(`gh: ${REPO2_NAME}'s plan PR merged at ${first.pr.mergedAt}, ${REPO_NAME}'s at ${second.pr.mergedAt}`);
+      const parents = (repo, sha) => ghJson('api', `repos/${repo}/commits/${sha}`).parents.length;
+      expect(parents(REPO2, first.pr.mergeCommit.oid) === 1, `${REPO2_NAME}'s plan PR did not squash`);
+      expect(parents(REPO, second.pr.mergeCommit.oid) === 2, `${REPO_NAME}'s plan PR did not merge with a merge commit`);
+      note(`gh: ${REPO2_NAME} squashed, ${REPO_NAME} merged with a merge commit`);
+    },
+  );
 } catch (err) {
   if (err.refusal) {
     rmSync(HOME, { recursive: true, force: true });
@@ -565,13 +661,17 @@ try {
     if (daemon.exitCode === null) daemon.kill('SIGKILL');
   }
   db?.close();
-  if (owned) {
+  for (const [repo, dir] of [
+    [REPO, 'reset'],
+    [REPO2, 'reset2'],
+  ]) {
+    if (!owned.has(repo)) continue;
     try {
-      const cleared = clearBranches(join(HOME, 'reset'));
-      console.log(`\ncleanup: closed ${cleared.prs} open PR(s), deleted ${cleared.branches.length} branch(es) on GitHub`);
+      const cleared = clearBranches(join(HOME, dir), repo);
+      console.log(`\ncleanup: ${repo}: closed ${cleared.prs} open PR(s), deleted ${cleared.branches.length} branch(es) on GitHub`);
     } catch (err) {
       failed = true;
-      console.log(`\ncleanup failed: ${err.message}`);
+      console.log(`\ncleanup of ${repo} failed: ${err.message}`);
     }
   }
 }

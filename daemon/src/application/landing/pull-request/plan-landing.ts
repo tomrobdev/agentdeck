@@ -4,6 +4,9 @@ import { type PrDetails, mergeFailure, planPrCheck } from '#domain/landing/index
 import { type Repo, pausedReason } from '#domain/repos/index.ts';
 import { type TaskId, errorMessage } from '#domain/shared/index.ts';
 import {
+  DEFAULT_LANDING_POLICY,
+  LANDING_ANSWERS,
+  LANDING_POLICIES,
   type LandingAnswer,
   type LandingBranch,
   type LandingChange,
@@ -11,15 +14,19 @@ import {
   type PlanBranch,
   afterLandingMerge,
   afterPlanPrState,
+  isLandingAnswer,
+  isLandingPolicy,
   isLivePlanBranch,
   landingAnswerMove,
+  landingOrder,
+  landingOrderError,
   landingQuestion,
   nextLandingStep,
   partlyLandedLine,
   revertFrom,
 } from '#domain/work/index.ts';
 import { notifyLater } from '#application/operations/notifications.ts';
-import { ActionError } from '#application/shared/input.ts';
+import { ActionError, object } from '#application/shared/input.ts';
 import { planBranchesFor } from '#application/work/plans.ts';
 
 const MAX_STEPS = 10;
@@ -50,9 +57,9 @@ async function readPlan(app: App, branches: PlanBranch[], log: Log): Promise<Rea
   return reads;
 }
 
-function sagaView(app: App, reads: Read[]): LandingBranch[] {
+function sagaView(reads: Read[], paused: (repo: Repo) => string | null): LandingBranch[] {
   return reads.map(({ branch, repo, pr }) => {
-    const check = pr?.state === 'open' ? planPrCheck(pr, pausedReason(app.isPaused(), repo)) : null;
+    const check = pr?.state === 'open' ? planPrCheck(pr, paused(repo)) : null;
     return {
       id: branch.id,
       name: branch.name,
@@ -111,22 +118,23 @@ async function mergeNext(app: App, read: Read): Promise<{ change: LandingChange;
   return { change: afterLandingMerge(policy, branches, branch.id, { merged: true }), pr: after };
 }
 
-async function landPlan(app: App, plan: TaskId, log: Log): Promise<number> {
+async function landPlan(app: App, plan: TaskId, log: Log, ignorePause: boolean): Promise<number> {
   let landed = 0;
   for (let step = 0; step < MAX_STEPS; step++) {
     const branches = app.planBranchesOfPlan(plan);
-    const policy = branches[0]?.landing_policy ?? 'person';
+    const policy = branches[0]?.landing_policy ?? DEFAULT_LANDING_POLICY;
     const reads = await readPlan(app, branches, log);
     let moved = false;
     for (const read of reads) {
-      const change = read.pr && afterPlanPrState(policy, branches, read.branch.id, read.pr.state);
+      const change = read.pr && afterPlanPrState(policy, app.planBranchesOfPlan(plan), read.branch.id, read.pr.state);
       if (change && (await settled(app, read, change, read.pr, log))) {
         moved = true;
         if (change.move === 'land') landed++;
       }
     }
     if (moved) continue;
-    const next = nextLandingStep(policy, sagaView(app, reads));
+    const paused = (repo: Repo) => (ignorePause ? null : pausedReason(app.isPaused(), repo));
+    const next = nextLandingStep(policy, sagaView(reads, paused));
     if (next.kind === 'fail') {
       const read = reads.find((r) => r.branch.id === next.branch);
       if (read) await settled(app, read, { move: 'part_land', land_error: next.error }, null, log);
@@ -145,11 +153,11 @@ async function landPlan(app: App, plan: TaskId, log: Log): Promise<number> {
   return landed;
 }
 
-export async function landPlanBranches(app: App, log: Log = () => {}): Promise<number> {
+export async function landPlanBranches(app: App, log: Log = () => {}, opts: { ignorePause?: boolean } = {}): Promise<number> {
   const plans = [...new Set(app.landingPlanBranches().map((b) => b.plan_task))];
   let landed = 0;
   for (const plan of plans) {
-    landed += await landPlan(app, plan, log).catch((err) => {
+    landed += await landPlan(app, plan, log, opts.ignorePause ?? false).catch((err) => {
       log(`plan #${plan}: landing crashed: ${errorMessage(err)}`);
       return 0;
     });
@@ -157,10 +165,36 @@ export async function landPlanBranches(app: App, log: Log = () => {}): Promise<n
   return landed;
 }
 
-export function planLandingQuestion(app: App, id: TaskId): LandingQuestion | null {
+export function planLandingQuestion(app: App, id: TaskId): { question: LandingQuestion | null } {
   const { branches } = planBranchesFor(app, id);
   const names = new Map(app.listRepos().map((r) => [r.id, r.name]));
-  return landingQuestion(branches.map((b) => ({ ...b, repo: names.get(b.repo_id) ?? `repo ${b.repo_id}` })));
+  return { question: landingQuestion(branches.map((b) => ({ ...b, repo: names.get(b.repo_id) ?? `repo ${b.repo_id}` }))) };
+}
+
+export function setPlanLandingPolicy(app: App, id: TaskId, input: unknown): PlanBranch[] {
+  const { owner, branches } = planBranchesFor(app, id);
+  const { policy, order = [] } = object(input);
+  if (!isLandingPolicy(policy)) throw new ActionError(`a landing policy is one of: ${LANDING_POLICIES.join(', ')}`);
+  if (!Array.isArray(order) || !order.every((r) => typeof r === 'string')) throw new ActionError('the order is a list of repo names');
+  if (order.length && policy !== 'in_order') throw new ActionError('only an in_order plan takes an order');
+  const names = new Map(app.listRepos().map((r) => [r.id, r.name]));
+  const repoOf = (b: PlanBranch) => names.get(b.repo_id) ?? `repo ${b.repo_id}`;
+  const error = landingOrderError(order, branches.map(repoOf));
+  if (error) throw new ActionError(error);
+  const rank = (b: PlanBranch) => (order.includes(repoOf(b)) ? order.indexOf(repoOf(b)) : null);
+  return landingOrder(
+    app.setLandingPolicy(
+      owner.id,
+      policy,
+      branches.map((b) => ({ id: b.id, land_order: rank(b) })),
+    ),
+  );
+}
+
+export async function answerPlanLandingInput(app: App, id: TaskId, input: unknown): Promise<LandingAnswered> {
+  const { answer } = object(input);
+  if (!isLandingAnswer(answer)) throw new ActionError(`an answer is one of: ${LANDING_ANSWERS.join(', ')}`);
+  return answerPlanLanding(app, id, answer);
 }
 
 export interface LandingAnswered {
