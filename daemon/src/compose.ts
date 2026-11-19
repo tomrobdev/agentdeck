@@ -34,6 +34,7 @@ export const realCodeHost = (): CodeHost => ({
   ensureLabel: (cwd, label) => github.ensureLabel(cwd, label),
   setLabel: (url, cwd, label, on) => github.setLabel(url, cwd, label, on),
   closePr: (url, cwd) => github.closePr(url, cwd),
+  commentOnPr: (url, cwd, body) => github.commentOnPr(url, cwd, body),
   prDetails: (url, cwd, opts) => github.prDetails(url, cwd, opts),
   failedLog: (cwd, run, check) => github.failedLog(cwd, run, check),
   jobSteps: (cwd, job) => github.jobSteps(cwd, job),

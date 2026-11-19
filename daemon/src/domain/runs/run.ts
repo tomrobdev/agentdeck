@@ -7,9 +7,10 @@ import type { RunEnd, RunSummary } from '#domain/runs/translate/summary.ts';
  * `unblock` reads why a blocked task stopped and retries it with a note or asks a question (domain/runs/unblock.ts), and
  * never uses an attempt either; `review` reads a done task's changes against its Current problem, Expected outcome and plan steps,
  * and answers with findings (domain/runs/review.ts); `verify` checks a proposed or queued task's prompt against the base,
- * claim by claim (domain/runs/verify.ts). Neither uses an attempt, nor does `plan_resolve`, a resolve run on a plan branch.
+ * claim by claim (domain/runs/verify.ts). Neither uses an attempt, nor does `plan_resolve`, a resolve run on a plan branch,
+ * nor `plan_review`, which reads a plan branch's whole diff against its plan once its plan PR opens (domain/runs/plan-review.ts).
  */
-export type RunKind = 'work' | 'resolve' | 'unblock' | 'review' | 'verify' | 'plan_resolve';
+export type RunKind = 'work' | 'resolve' | 'unblock' | 'review' | 'verify' | 'plan_resolve' | 'plan_review';
 
 /** A run (or planner run) with a recorded pid: where a claude process may still be. */
 export interface PidRun {
@@ -36,9 +37,11 @@ export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
       ? 'Resolve plan branch conflicts'
       : run.kind === 'review'
         ? 'Review'
-        : run.kind === 'verify'
-          ? 'Verify'
-          : `Run ${run.attempt}`;
+        : run.kind === 'plan_review'
+          ? 'Plan review'
+          : run.kind === 'verify'
+            ? 'Verify'
+            : `Run ${run.attempt}`;
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
 
@@ -105,7 +108,7 @@ export interface RunModels {
 
 export function runModel(kind: RunKind, task: { model: string }, models: RunModels): string {
   if (kind === 'work') return task.model;
-  return kind === 'review' || kind === 'verify' ? models.review_model : models.support_model;
+  return kind === 'review' || kind === 'verify' || kind === 'plan_review' ? models.review_model : models.support_model;
 }
 
 export const INTERRUPTED = 'interrupted';

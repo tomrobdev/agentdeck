@@ -23,6 +23,7 @@ import {
   landingQuestion,
   nextLandingStep,
   partlyLandedLine,
+  planReviewReasons,
   revertFrom,
 } from '#domain/work/index.ts';
 import { notifyLater } from '#application/operations/notifications.ts';
@@ -59,7 +60,7 @@ async function readPlan(app: App, branches: PlanBranch[], log: Log): Promise<Rea
 
 function sagaView(reads: Read[], paused: (repo: Repo) => string | null): LandingBranch[] {
   return reads.map(({ branch, repo, pr }) => {
-    const check = pr?.state === 'open' ? planPrCheck(pr, paused(repo)) : null;
+    const check = pr?.state === 'open' ? planPrCheck(pr, paused(repo), planReviewReasons(branch)) : null;
     return {
       id: branch.id,
       name: branch.name,

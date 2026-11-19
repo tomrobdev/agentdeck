@@ -135,6 +135,14 @@ export {
 } from '#domain/work/plans/landing-saga.ts';
 export type { LandingAnswer, LandingBranch, LandingChange, LandingQuestion } from '#domain/work/plans/landing-saga.ts';
 export {
+  nextPlanReviewState,
+  planReviewDue,
+  planReviewMoveOf,
+  planReviewReasons,
+  planReviewStatesFor,
+} from '#domain/work/plans/plan-review.ts';
+export type { PlanReviewMove, PlanReviewState } from '#domain/work/plans/plan-review.ts';
+export {
   isWaitingToLand,
   planLandingOf,
   planLandingText,

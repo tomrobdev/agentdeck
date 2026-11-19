@@ -38,7 +38,7 @@ export interface ServiceFacts {
 
 /** A claude process group recorded on a run, found alive. */
 export interface ProcessFact {
-  kind: 'work' | 'resolve' | 'unblock' | 'review' | 'verify' | 'plan_resolve' | 'planner';
+  kind: 'work' | 'resolve' | 'unblock' | 'review' | 'verify' | 'plan_resolve' | 'plan_review' | 'planner';
   run: number;
   pid: number;
   /** The run has a finished-at time. */
@@ -177,6 +177,7 @@ const KIND_NAME = {
   review: 'review run',
   verify: 'verify run',
   plan_resolve: 'plan branch resolve run',
+  plan_review: 'plan review run',
   planner: 'planner run',
 } as const;
 

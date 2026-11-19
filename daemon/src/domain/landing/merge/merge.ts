@@ -323,8 +323,11 @@ export function unattendedVerdict(input: MergeInput, extra: Partial<MergeReasons
   return verdictOf(reasons, found);
 }
 
-export const planPrCheck = (pr: PrDetails, paused: string | null): AutoMergeCheck =>
-  unattendedVerdict({ pr_state: pr.state, pr, tests_passed: null }, { wait: paused ? [{ kind: 'paused', text: paused }] : [] });
+export const planPrCheck = (pr: PrDetails, paused: string | null, review: MergeReasons = { never: [], wait: [] }): AutoMergeCheck =>
+  unattendedVerdict(
+    { pr_state: pr.state, pr, tests_passed: null },
+    { never: review.never, wait: [...review.wait, ...(paused ? [{ kind: 'paused' as const, text: paused }] : [])] },
+  );
 
 /** What a check says to a person: its verdict and reasons as text, as the API and the CLI show them. */
 export interface MergeVerdictView {

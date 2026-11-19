@@ -15,6 +15,7 @@ import {
 import { endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 import { resolutionProblem } from '#application/runs/sync.ts';
 import { nextPlanBranchToLand, openPlanBranchPr } from '#application/landing/pull-request/plan-branch-pr.ts';
+import { nextPlanReview, runPlanReview } from '#application/runs/plan-review.ts';
 
 export interface PlanBranchSyncReport {
   outcome: PlanBranchSyncOutcome | 'deferred' | 'error';
@@ -156,6 +157,11 @@ export async function landPlanBranch(app: App, branch: PlanBranch): Promise<stri
 export function startPlanBranchSync(app: App, log: (msg: string) => void, now: number = Date.now()): Promise<void> | null {
   const ready = nextPlanBranchToLand(app, now, isPlanBranchSyncing);
   if (ready) return landPlanBranch(app, ready).then((line) => log(`plan branch ${ready.name}: ${line}`));
+  const review = nextPlanReview(app);
+  if (review)
+    return runPlanReview(app, review).then((r) =>
+      log(`plan branch ${review.name}: plan review run: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}`),
+    );
   const branch = nextPlanBranchSync(app, now);
   if (!branch) return null;
   return syncPlanBranch(app, branch, { allowResolve: true }).then((r) =>

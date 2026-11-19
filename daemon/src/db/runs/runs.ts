@@ -8,7 +8,7 @@ import type { Orm } from '#db/orm.ts';
 import { NOW_SQL } from '#db/sql.ts';
 import { plannerRuns, runs, tasks } from '#db/tables.ts';
 
-const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify', 'plan_resolve'];
+const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify', 'plan_resolve', 'plan_review'];
 
 export function runStore(orm: Orm) {
   const runningOf = (...kinds: RunKind[]) =>
@@ -87,7 +87,7 @@ export function runStore(orm: Orm) {
       return runningOf('unblock');
     },
     countRunningReviews(): number {
-      return runningOf('review');
+      return runningOf('review', 'plan_review');
     },
     countRunningVerifies(): number {
       return runningOf('verify');

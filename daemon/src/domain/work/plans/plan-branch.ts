@@ -1,6 +1,7 @@
 // A plan branch: a branch a plan owns in a repo, which the plan's tasks target and which lands on the base as one pull request.
 import { type RepoId, type TaskId, sqliteMs } from '#domain/shared/index.ts';
 import { planSlug } from '#domain/work/plans/plan.ts';
+import type { PlanReviewState } from '#domain/work/plans/plan-review.ts';
 
 export type PlanBranchStatus = 'open' | 'active' | 'conflict' | 'landing' | 'landed' | 'abandoned' | 'partly_landed';
 
@@ -51,6 +52,12 @@ export interface PlanBranch {
   landed_commit: string | null;
   /** The base's commit just before the plan PR's merge, which a revert goes back to; null until it landed. */
   landed_from: string | null;
+  /** Where the review run of its open plan PR stands; null before a plan PR opened, or for one opened before plan reviews. */
+  review: PlanReviewState | null;
+  /** The plan branch's head commit the plan review read; null until one answered. */
+  review_head: string | null;
+  /** The plan review's summary and findings, as it left them on the plan PR; null until one answered. */
+  review_summary: string | null;
   created_at: string;
   updated_at: string;
 }
