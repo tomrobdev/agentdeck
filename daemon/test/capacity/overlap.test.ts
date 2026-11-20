@@ -1,4 +1,3 @@
-// Queued tasks whose footprint overlaps a running task in their repo wait for it, and the claim moves on to the next.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';

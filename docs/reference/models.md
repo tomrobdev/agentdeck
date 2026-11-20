@@ -1918,8 +1918,6 @@ A task that ran out of attempts.
 
 ### FootprintSource
 
-What a task's footprint is read from: its prompt, its plan's HTML with the linked step ids (null for every unfinished step), and the files its branch changed.
-
 | Field     | Type                                                          | Comment |
 | --------- | ------------------------------------------------------------- | ------- |
 | `prompt`  | `string`                                                      |         |
@@ -1927,8 +1925,6 @@ What a task's footprint is read from: its prompt, its plan's HTML with the linke
 | `changed` | `readonly string[]`                                           |         |
 
 ### Footprinted
-
-A running task and its footprint.
 
 | Field   | Type                | Comment |
 | ------- | ------------------- | ------- |

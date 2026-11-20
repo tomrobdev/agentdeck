@@ -1,4 +1,3 @@
-// A task's footprint and when two overlap: the files its prompt and linked plan steps name, and those its branch changed.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { asTaskId } from '#domain/shared/index.ts';

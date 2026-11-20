@@ -4,14 +4,12 @@ import { parsePlanWithText } from '#domain/work/plans/plan.ts';
 import { pathsNamedIn } from '#domain/work/plans/prompt-paths.ts';
 import { meetAt } from '#domain/work/task/proposal-check.ts';
 
-/** What a task's footprint is read from: its prompt, its plan's HTML with the linked step ids (null for every unfinished step), and the files its branch changed. */
 export interface FootprintSource {
   prompt: string;
   plan: { html: string; steps: readonly string[] | null } | null;
   changed: readonly string[];
 }
 
-/** A running task and its footprint. */
 export interface Footprinted {
   id: TaskId;
   paths: readonly string[];

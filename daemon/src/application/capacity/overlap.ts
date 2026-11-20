@@ -1,4 +1,3 @@
-// Which queued tasks wait because their footprint overlaps a running task's in their repo, and the claim that skips them.
 import type { App } from '#application/ports/app.ts';
 import type { Draining } from '#domain/capacity/index.ts';
 import type { TaskId } from '#domain/shared/index.ts';
