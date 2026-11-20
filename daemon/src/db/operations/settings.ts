@@ -13,7 +13,7 @@ import {
   DEFAULT_PLAN_BRANCH_SYNC_MINUTES,
 } from '#domain/work/index.ts';
 import type { Settings } from '#domain/operations/index.ts';
-import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET, type Draining } from '#domain/capacity/index.ts';
+import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET, DEFAULT_SUPPORT_SLOTS, type Draining } from '#domain/capacity/index.ts';
 import type { Orm } from '#db/orm.ts';
 import { atomically } from '#db/sql.ts';
 import { settings } from '#db/tables.ts';
@@ -28,6 +28,7 @@ export const SETTING_DEFAULTS = {
   restart_pause_at: '0',
   reload_on_change: '0',
   max_concurrent: String(DEFAULTS.maxConcurrent),
+  support_slots: String(DEFAULT_SUPPORT_SLOTS),
   notify_desktop: '1',
   notify_events: NOTIFY_KINDS.join(','),
   ntfy_topic: '',
@@ -88,6 +89,7 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     setSetting: set,
     readSettings: (): Settings => ({
       max_concurrent: Number(get('max_concurrent')),
+      support_slots: Number(get('support_slots')),
       budget: budget(),
       notify: notifySettings(),
       planner: plannerSettings(),
@@ -101,6 +103,7 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     writeSettings: (s: Settings): void =>
       atomically(db, () => {
         set('max_concurrent', String(s.max_concurrent));
+        set('support_slots', String(s.support_slots));
         for (const k of BUDGET_KEYS) set(k, String(s.budget[k]));
         set('notify_desktop', s.notify.desktop ? '1' : '0');
         set('notify_events', s.notify.events.join(','));
@@ -144,6 +147,7 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     setAppSeenAt: (at: number): void => set('app_seen_at', String(at)),
     budget,
     maxConcurrent: (): number => Number(get('max_concurrent')),
+    supportSlots: (): number => Number(get('support_slots')),
     planBranchSyncMinutes: (): number => Number(get('plan_branch_sync_minutes')),
     notifySettings,
     plannerSettings,

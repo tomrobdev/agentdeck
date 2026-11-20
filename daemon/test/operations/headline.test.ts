@@ -19,9 +19,22 @@ test('idle, or working with a task running', () => {
   assert.equal(headline(facts({ running: 1 }), NOW).state, 'working');
 });
 
+test('the slots line counts the work slots and the support runs apart', () => {
+  const support = { review: 1, unblock: 0, verify: 0 };
+  assert.equal(headline(facts({ running: 1, slots: { max: 1, support } }), NOW).slots, '1/1 slots · 1 review');
+});
+
 test('precedence: paused, then rate limited, then hold, then working', () => {
   const all = facts({ paused: true, rate_limited_until: NOW + 60, governor: { allow: false, until: NOW + 120 }, running: 1 });
-  assert.deepEqual(headline(all, NOW), { state: 'paused', until: null, need_you: 0, attention: [], review_due: [], plan_branches: [] });
+  assert.deepEqual(headline(all, NOW), {
+    state: 'paused',
+    until: null,
+    slots: null,
+    need_you: 0,
+    attention: [],
+    review_due: [],
+    plan_branches: [],
+  });
   assert.deepEqual(headline({ ...all, paused: false }, NOW).state, 'rate_limited');
   assert.equal(headline({ ...all, paused: false }, NOW).until, NOW + 60);
   const hold = headline({ ...all, paused: false, rate_limited_until: null }, NOW);

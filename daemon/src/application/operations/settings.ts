@@ -2,7 +2,7 @@
 import type { App } from '#application/ports/app.ts';
 import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '#domain/operations/index.ts';
 import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '#domain/proposals/index.ts';
-import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '#domain/capacity/index.ts';
+import { BUDGET_KEYS, type Budget, validateBudget, validateSlots, validateSupportSlots } from '#domain/capacity/index.ts';
 import { ATTENTION_LIMIT, headline } from '#domain/operations/index.ts';
 import type { DaemonState } from '#domain/operations/index.ts';
 import { type ReloadInput, reloadState, restartWait } from '#domain/operations/index.ts';
@@ -76,6 +76,7 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
     rate_limited_until: gate.rate_limited_until,
     running: app.countRunning(),
     max_concurrent: app.maxConcurrent(),
+    support_slots: app.supportSlots(),
     counts,
     review,
     headline: headline(
@@ -84,6 +85,10 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
         rate_limited_until: gate.rate_limited_until,
         governor: gate.governor,
         running: app.countRunning(),
+        slots: {
+          max: gate.governor.max_concurrent,
+          support: { review: app.countRunningReviews(), unblock: app.countRunningUnblocks(), verify: app.countRunningVerifies() },
+        },
         need_you: { proposed: counts.proposed ?? 0, blocked: counts.blocked ?? 0, review },
         attention: app.attentionTasks(ATTENTION_LIMIT),
         review_due: app.reviewsDue(),
@@ -124,6 +129,7 @@ export function getSettings(app: App): Settings {
 
 export interface SettingsPatch {
   max_concurrent?: number;
+  support_slots?: number;
   budget?: Partial<Budget>;
   notify?: Partial<NotifySettings>;
   planner?: Partial<PlannerSettings>;
@@ -144,6 +150,7 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
 
   next.reload_on_change = flag(body, 'reload_on_change') ?? next.reload_on_change;
   next.max_concurrent = whole(body, 'max_concurrent', validateSlots) ?? next.max_concurrent;
+  next.support_slots = whole(body, 'support_slots', validateSupportSlots) ?? next.support_slots;
   next.plan_branch_sync_minutes =
     whole(body, 'plan_branch_sync_minutes', (v) => planBranchSyncMinutesError(v as number)) ?? next.plan_branch_sync_minutes;
   next.plan_branch_max_days = whole(body, 'plan_branch_max_days', (v) => planBranchMaxDaysError(v as number)) ?? next.plan_branch_max_days;

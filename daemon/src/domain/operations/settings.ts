@@ -6,6 +6,7 @@ import type { ReviewDueSettings } from '#domain/operations/review-due.ts';
 
 export interface Settings {
   max_concurrent: number;
+  support_slots: number;
   budget: Budget;
   notify: NotifySettings;
   planner: PlannerSettings;

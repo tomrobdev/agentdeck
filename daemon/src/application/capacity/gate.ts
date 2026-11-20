@@ -1,6 +1,6 @@
 // May new work start? The pause flag, the rate limit and the governor's decision, read once.
 import type { App } from '#application/ports/app.ts';
-import { decide } from '#domain/capacity/index.ts';
+import { decide, slotUse } from '#domain/capacity/index.ts';
 import { type QueueState, type QueueWait, startDecision } from '#domain/work/index.ts';
 
 export function startGate(app: App): QueueState {
@@ -11,8 +11,17 @@ export function startGate(app: App): QueueState {
   };
 }
 
-export function queueWait(app: App, ignorePause = false): { wait: QueueWait | null; free: number; used: number; max: number } {
+export interface QueueRoom {
+  wait: QueueWait | null;
+  free: number;
+  support_free: number;
+  used: number;
+  max: number;
+}
+
+export function queueWait(app: App, ignorePause = false): QueueRoom {
   const gate = startGate(app);
-  const used = app.slotsUsed();
-  return { ...startDecision(gate, { ignorePause, used, now: Date.now() / 1000 }), used, max: gate.governor.max_concurrent };
+  const { work, support_free } = slotUse({ used: app.slotsUsed(), support: app.supportRunsUsed(), support_slots: app.supportSlots() });
+  const { wait, free } = startDecision(gate, { ignorePause, used: work, now: Date.now() / 1000 });
+  return { wait, free, support_free: wait ? 0 : free + support_free, used: work, max: gate.governor.max_concurrent };
 }

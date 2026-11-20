@@ -311,7 +311,7 @@ export class Scheduler {
   }
 
   private maybeUnblock(): void {
-    for (let room = this.gate().free; room > 0; room--) {
+    for (let room = this.gate().support_free; room > 0; room--) {
       const task = nextUnblockable(this.app);
       if (!task) return;
       const p: Promise<unknown> = startUnblock(this.app, task, this.opts.log, () => {
@@ -326,15 +326,15 @@ export class Scheduler {
   }
 
   private maybeReview(): void {
-    if (this.findingReview || Date.now() < this.reviewIdleUntil || this.gate().free <= 0) return;
+    if (this.findingReview || Date.now() < this.reviewIdleUntil || this.gate().support_free <= 0) return;
     this.findingReview = true;
     nextReviewable(this.app)
       .then((target) => {
         this.findingReview = false;
         if (!target) this.reviewIdleUntil = Date.now() + REVIEW_LOOK_MS;
         if (!target || this.stopped) return;
-        const { reason, free } = this.gate();
-        if (reason || free <= 0) return;
+        const { reason, support_free } = this.gate();
+        if (reason || support_free <= 0) return;
         const p: Promise<unknown> = startReview(this.app, target, this.opts.log, () => {
           this.running.delete(p);
           this.reviews.delete(p);
@@ -380,8 +380,8 @@ export class Scheduler {
     );
   }
 
-  private gate(): { reason: string | null; free: number } {
-    const { wait, free } = queueWait(this.app, this.opts.once);
+  private gate(): { reason: string | null; free: number; support_free: number } {
+    const { wait, free, support_free } = queueWait(this.app, this.opts.once);
     const hold = wait?.kind === 'governor' ? wait : null;
     if (hold && !this.lastHold && this.app.hasQueued()) {
       const lifts = hold.until
@@ -394,6 +394,6 @@ export class Scheduler {
       this.opts.log('governor: hold lifted');
       this.lastHold = null;
     }
-    return { reason: wait ? describeWait(wait) : null, free };
+    return { reason: wait ? describeWait(wait) : null, free, support_free };
   }
 }

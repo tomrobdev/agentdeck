@@ -88,11 +88,8 @@ const toggleTitle = computed(() => {
     </Chip>
 
     <span v-if="status && !offline" class="text-muted" :title="status.governor.reason ?? ''">
-      {{ status.running }}/{{ status.governor.max_concurrent }} slots<template
-        v-if="status.governor.max_concurrent < status.max_concurrent"
-      >
-        (throttled)</template
-      >
+      {{ status.headline.slots ?? `${status.running}/${status.governor.max_concurrent} slots`
+      }}<template v-if="status.governor.max_concurrent < status.max_concurrent"> (throttled)</template>
     </span>
 
     <Popover v-if="!offline && activity.length" up>

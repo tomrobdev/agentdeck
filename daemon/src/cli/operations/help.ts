@@ -23,6 +23,7 @@ export const DAEMON_HELP = `  agentdeck install             run the daemon at lo
   agentdeck status
   agentdeck settings              show concurrency, usage budget and notification settings
   agentdeck set <key> <value>     max_concurrent, five_hour_max, five_hour_soft, weekly_max, pace_slack (0..1),
+                                  support_slots (0 to 4: room for review, unblock and verify runs beyond max_concurrent),
                                   notify_desktop (on|off), notify_events (${NOTIFY_KINDS.join(',')}), ntfy_topic, ntfy_server,
                                   planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model,
                                   default_model (a new task's model when neither it nor its repo names one),

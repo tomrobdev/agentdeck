@@ -53,6 +53,22 @@ A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1.
 | `resets_at`   | `number` |         |
 | `observed_at` | `string` |         |
 
+### SlotsTaken
+
+| Field           | Type     | Comment |
+| --------------- | -------- | ------- |
+| `used`          | `number` |         |
+| `support`       | `number` |         |
+| `support_slots` | `number` |         |
+
+### SupportRuns
+
+| Field     | Type     | Comment |
+| --------- | -------- | ------- |
+| `review`  | `number` |         |
+| `unblock` | `number` |         |
+| `verify`  | `number` |         |
+
 ### WindowObs
 
 | Field         | Type     | Comment |
@@ -981,6 +997,7 @@ An open task as the digest shows it.
 | --------------- | ---------------------- | --------------------------------------------------------------------------------------------------- |
 | `state`         | `HeadlineState`        |                                                                                                     |
 | `until`         | `number \| null`       | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
+| `slots`         | `string \| null`       |                                                                                                     |
 | `need_you`      | `number`               |                                                                                                     |
 | `attention`     | `AttentionTask[]`      |                                                                                                     |
 | `review_due`    | `RepoReviewDue[]`      |                                                                                                     |
@@ -994,6 +1011,7 @@ An open task as the digest shows it.
 | `rate_limited_until` | `number \| null`                                         | Unix seconds; may have passed already.                                               |
 | `governor`           | `{ allow: boolean; until: number \| null; }`             | The governor's decision: whether new work may start, and until when it waits if not. |
 | `running`            | `number`                                                 |                                                                                      |
+| `slots?`             | `{ max: number; support: SupportRuns; } \| undefined`    |                                                                                      |
 | `need_you`           | `{ proposed: number; blocked: number; review: number; }` | Proposed, blocked and in-review tasks.                                               |
 | `attention`          | `AttentionCandidate[]`                                   | Tasks that need a person; any number, in any order.                                  |
 | `review_due?`        | `RepoReviewDue[] \| undefined`                           | The repos due for an area review, as the daemon's last check found them.             |
@@ -1163,6 +1181,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | Field                      | Type                | Comment                                                                                                                     |
 | -------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `max_concurrent`           | `number`            |                                                                                                                             |
+| `support_slots`            | `number`            |                                                                                                                             |
 | `budget`                   | `Budget`            |                                                                                                                             |
 | `notify`                   | `NotifySettings`    |                                                                                                                             |
 | `planner`                  | `PlannerSettings`   |                                                                                                                             |

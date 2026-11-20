@@ -63,6 +63,7 @@ export interface Headline {
   state: HeadlineState;
   /** When a rate limit or a hold ends (unix seconds); null otherwise. */
   until: number | null;
+  slots?: string | null;
   /** Proposed tasks, blocked tasks and done tasks in review. */
   need_you: number;
   /** Up to five of those tasks: blocked first, then review, then proposed, each by priority. */
@@ -80,6 +81,7 @@ export interface Status {
   rate_limited_until: number | null;
   running: number;
   max_concurrent: number;
+  support_slots?: number;
   counts: Partial<Record<TaskStatus, number>>;
   /** Done tasks whose PR is open. */
   review: number;
@@ -98,6 +100,7 @@ export interface Status {
 
 export interface Settings {
   max_concurrent: number;
+  support_slots: number;
   budget: Budget;
   notify: { desktop: boolean; events: NotifyKind[]; ntfy_topic: string; ntfy_server: string };
   planner: { enabled: boolean; interval_hours: number; max_tasks: number; model: string };
@@ -118,6 +121,7 @@ export interface Settings {
 /** POST /api/settings */
 export interface SettingsPatch {
   max_concurrent?: number;
+  support_slots?: number;
   budget?: Partial<Budget>;
   notify?: Partial<Settings['notify']>;
   planner?: Partial<Settings['planner']>;

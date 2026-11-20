@@ -8,9 +8,17 @@ import type { Orm } from '#db/orm.ts';
 import { NOW_SQL } from '#db/sql.ts';
 import { plannerRuns, runs, tasks } from '#db/tables.ts';
 
-const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify', 'plan_resolve', 'plan_review'];
+const SUPPORT_KINDS: RunKind[] = ['unblock', 'review', 'verify', 'plan_review'];
+const SIDE_KINDS: RunKind[] = ['resolve', 'plan_resolve', ...SUPPORT_KINDS];
 
 export function runStore(orm: Orm) {
+  const besideTasks = (kinds: RunKind[]) =>
+    orm
+      .select({ n: countDistinct(runs.task_id) })
+      .from(runs)
+      .innerJoin(tasks, eq(tasks.id, runs.task_id))
+      .where(and(inArray(runs.kind, kinds), isNull(runs.ended_at), notInArray(tasks.status, RUNNING_STATUSES)))
+      .get()?.n ?? 0;
   const runningOf = (...kinds: RunKind[]) =>
     orm
       .select({ n: count() })
@@ -94,15 +102,11 @@ export function runStore(orm: Orm) {
     },
     slotsUsed(): number {
       const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING_STATUSES)).get()?.n ?? 0;
-      const beside =
-        orm
-          .select({ n: countDistinct(runs.task_id) })
-          .from(runs)
-          .innerJoin(tasks, eq(tasks.id, runs.task_id))
-          .where(and(inArray(runs.kind, SIDE_KINDS), isNull(runs.ended_at), notInArray(tasks.status, RUNNING_STATUSES)))
-          .get()?.n ?? 0;
       const planning = orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
-      return running + beside + planning;
+      return running + besideTasks(SIDE_KINDS) + planning;
+    },
+    supportRunsUsed(): number {
+      return besideTasks(SUPPORT_KINDS);
     },
     hasRunningResolve(task_id: TaskId): boolean {
       return (
