@@ -53,6 +53,26 @@ A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1.
 | `resets_at`   | `number` |         |
 | `observed_at` | `string` |         |
 
+### SlotsTaken
+
+What is running in the slots.
+
+| Field           | Type     | Comment                                                              |
+| --------------- | -------- | -------------------------------------------------------------------- |
+| `used`          | `number` | Every slot taken: tasks, resolve runs, the planner and support runs. |
+| `support`       | `number` | How many of those are review, unblock and verify runs.               |
+| `support_slots` | `number` |                                                                      |
+
+### SupportRuns
+
+The support runs under way, by kind.
+
+| Field     | Type     | Comment |
+| --------- | -------- | ------- |
+| `review`  | `number` |         |
+| `unblock` | `number` |         |
+| `verify`  | `number` |         |
+
 ### WindowObs
 
 | Field         | Type     | Comment |
@@ -977,14 +997,15 @@ An open task as the digest shows it.
 
 ### Headline
 
-| Field           | Type                   | Comment                                                                                             |
-| --------------- | ---------------------- | --------------------------------------------------------------------------------------------------- |
-| `state`         | `HeadlineState`        |                                                                                                     |
-| `until`         | `number \| null`       | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
-| `need_you`      | `number`               |                                                                                                     |
-| `attention`     | `AttentionTask[]`      |                                                                                                     |
-| `review_due`    | `RepoReviewDue[]`      |                                                                                                     |
-| `plan_branches` | `PlanBranchConflict[]` |                                                                                                     |
+| Field           | Type                   | Comment                                                                                              |
+| --------------- | ---------------------- | ---------------------------------------------------------------------------------------------------- |
+| `state`         | `HeadlineState`        |                                                                                                      |
+| `until`         | `number \| null`       | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known.  |
+| `slots`         | `string \| null`       | "1/1 slots · 1 review": the work slots in use, then the support runs under way; null when not known. |
+| `need_you`      | `number`               |                                                                                                      |
+| `attention`     | `AttentionTask[]`      |                                                                                                      |
+| `review_due`    | `RepoReviewDue[]`      |                                                                                                      |
+| `plan_branches` | `PlanBranchConflict[]` |                                                                                                      |
 
 ### HeadlineFacts
 
@@ -994,6 +1015,7 @@ An open task as the digest shows it.
 | `rate_limited_until` | `number \| null`                                         | Unix seconds; may have passed already.                                               |
 | `governor`           | `{ allow: boolean; until: number \| null; }`             | The governor's decision: whether new work may start, and until when it waits if not. |
 | `running`            | `number`                                                 |                                                                                      |
+| `slots?`             | `{ max: number; support: SupportRuns; } \| undefined`    | The work slots the governor allows, and the support runs under way beside them.      |
 | `need_you`           | `{ proposed: number; blocked: number; review: number; }` | Proposed, blocked and in-review tasks.                                               |
 | `attention`          | `AttentionCandidate[]`                                   | Tasks that need a person; any number, in any order.                                  |
 | `review_due?`        | `RepoReviewDue[] \| undefined`                           | The repos due for an area review, as the daemon's last check found them.             |
@@ -1163,6 +1185,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | Field                      | Type                | Comment                                                                                                                     |
 | -------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `max_concurrent`           | `number`            |                                                                                                                             |
+| `support_slots`            | `number`            | Room for review, unblock and verify runs beyond the work slots (0 to 4); they use it first, then a free work slot.          |
 | `budget`                   | `Budget`            |                                                                                                                             |
 | `notify`                   | `NotifySettings`    |                                                                                                                             |
 | `planner`                  | `PlannerSettings`   |                                                                                                                             |

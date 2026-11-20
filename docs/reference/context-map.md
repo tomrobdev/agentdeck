@@ -23,7 +23,7 @@ flowchart LR
   domain_insights --> domain_work
   domain_landing --> domain_repos
   domain_landing --> domain_shared
-  domain_operations -.-> domain_capacity
+  domain_operations --> domain_capacity
   domain_operations --> domain_landing
   domain_operations -.-> domain_proposals
   domain_operations --> domain_shared

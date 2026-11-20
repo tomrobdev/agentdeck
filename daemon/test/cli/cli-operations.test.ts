@@ -32,7 +32,7 @@ test('pause and resume stop and start the queue, and status says which', async (
   assert.equal((await run('resume')).out, 'resumed');
   const status = (await run('status')).out;
   assert.match(status, /^state {6}active/m);
-  assert.match(status, /^slots {6}0\/\d+ running/m);
+  assert.match(status, /^slots {6}0\/\d+ slots/m);
   assert.match(status, /^tasks {6}none/m);
   assert.match(status, /^db /m);
   queuedTask(db, repo);

@@ -95,6 +95,7 @@ export const daemonCommands: Record<string, Command> = {
     const st = actions.getSettings(db);
     const d = actions.status(db).governor;
     console.log(`max_concurrent  ${st.max_concurrent}`);
+    console.log(`support_slots   ${st.support_slots} (review, unblock and verify runs, beyond max_concurrent)`);
     for (const [k, v] of Object.entries(st.budget)) console.log(`${k.padEnd(15)} ${v}`);
     console.log(`reload_on_change ${st.reload_on_change ? 'on' : 'off'}`);
     console.log(`notify_desktop  ${st.notify.desktop ? 'on' : 'off'}`);
@@ -126,7 +127,7 @@ export const daemonCommands: Record<string, Command> = {
     const limited = until && until * 1000 > Date.now() ? ` (rate limited, resumes in ${relTime(until)})` : '';
     console.log(`state      ${st.paused ? 'PAUSED' : st.draining.daemon ? 'DRAINING' : 'active'}${limited}`);
     for (const r of st.draining.repos) console.log(`repo       ${r.name} DRAINING  → agentdeck repo resume ${r.name}`);
-    console.log(`slots      ${st.running}/${st.max_concurrent} running`);
+    console.log(`slots      ${st.headline.slots ?? `${st.running}/${st.max_concurrent} slots`}`);
     if (st.governor.reason)
       console.log(
         `governor   ${st.governor.allow ? '' : 'HOLD: '}${st.governor.reason}${st.governor.until ? ` (lifts in ${relTime(st.governor.until)})` : ''}`,

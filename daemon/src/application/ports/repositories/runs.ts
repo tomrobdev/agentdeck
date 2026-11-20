@@ -17,6 +17,7 @@ export interface RunRepository {
   countRunningReviews(): number;
   countRunningVerifies(): number;
   slotsUsed(): number;
+  supportRunsUsed(): number;
   pidRuns(days: number): PidRun[];
   runningTaskRuns(): RunningTaskRun[];
   unfinishedPids(): { pid: number; pid_at: string }[];

@@ -3,5 +3,7 @@ export { BUDGET_KEYS, DEFAULT_BUDGET, decide, validateBudget, validateSlots } fr
 export type { Budget, Decision } from '#domain/capacity/governor.ts';
 export { NOT_DRAINING, drainedMessage, inFlightLine, isDraining, mayStart } from '#domain/capacity/drain.ts';
 export type { Draining, InFlight } from '#domain/capacity/drain.ts';
+export { DEFAULT_SUPPORT_SLOTS, slotUse, slotsLine, validateSupportSlots } from '#domain/capacity/slots.ts';
+export type { SupportRuns } from '#domain/capacity/slots.ts';
 export { quotaSpends } from '#domain/capacity/quota.ts';
 export type { QuotaSample } from '#domain/capacity/quota.ts';

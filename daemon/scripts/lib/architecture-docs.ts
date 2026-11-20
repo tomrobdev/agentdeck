@@ -31,6 +31,7 @@ const SETTING_MEANINGS: Record<string, string> = {
     'When an `agentdeck restart` waiting for work to end last renewed its pause (ms since the epoch); 0 for none. One not renewed for 30 s was cut off, and the next daemon start lifts its pause',
   reload_on_change: 'Restart the daemon onto new code when daemon/src changes and nothing is running',
   max_concurrent: 'Slots: how many tasks may run at once',
+  support_slots: 'Room for review, unblock and verify runs beyond the slots (0 to 4); they use it first, then a free slot',
   notify_desktop: 'Show desktop notifications',
   notify_events: 'The notification kinds to send, comma-separated',
   ntfy_topic: 'The ntfy topic to push notifications to; empty for none',

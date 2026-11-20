@@ -40,9 +40,9 @@ export function startVerify(app: App, id: TaskId): VerifyStart {
   const task = requireTask(app, id);
   refuse(verifyRefusal(task, app.runsForTask(id)));
   const repo = requireTaskRepo(app, task);
-  const { wait, free } = queueWait(app);
+  const { wait, support_free } = queueWait(app);
   if (wait) refuse(`a verify run can't start now: ${describeWait(wait)}`);
-  if (free <= 0) refuse("a verify run can't start now: every slot is in use");
+  if (support_free <= 0) refuse("a verify run can't start now: every slot is in use");
   const opened = openTaskRun(app, task, 'verify');
   const done = runOpened(app, task, repo, opened).catch(async (err): Promise<VerifyReport> => {
     const reason = errorMessage(err);

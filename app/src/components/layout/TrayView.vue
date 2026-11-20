@@ -66,7 +66,7 @@ const openQueue = () => open('agentdeck://queue', { name: 'queue' });
       <header class="flex items-center gap-2 border-b border-border bg-panel px-3 py-2">
         <Chip :status="state.cls.slice(2)" variant="tint" dot :title="state.title">{{ state.label }}</Chip>
         <span v-if="status && !offline" class="text-muted text-xs tabular-nums" :title="status.governor.reason ?? ''">
-          {{ status.running }}/{{ status.governor.max_concurrent }} slots
+          {{ status.headline.slots ?? `${status.running}/${status.governor.max_concurrent} slots` }}
         </span>
         <div class="spacer" />
         <button v-if="offline" :disabled="busy || !isNative" @click="start">{{ busy ? 'Starting…' : 'Start daemon' }}</button>
