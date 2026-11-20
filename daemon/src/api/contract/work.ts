@@ -163,6 +163,7 @@ export interface TaskEventRow {
     | 'retry'
     | 'unblock_retry'
     | 'review_retry'
+    | 'turn_continue'
     | 'mark_done'
     | 'pr_merged'
     | 'recover';

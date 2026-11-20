@@ -29,6 +29,7 @@ export { advanceClock, heardLine, limitReached, limitReason, startClock } from '
 export type { RunLimits } from '#domain/runs/run-limit.ts';
 export type { Outcome, PidRun, Run, RunKind, RunOutcome, RunningTaskRun } from '#domain/runs/run.ts';
 export {
+  TURN_LIMIT,
   classifyRun,
   firstDenial,
   isEnvironmentBlock,
@@ -36,6 +37,7 @@ export {
   resultFields,
   resumeFailed,
   runOutcome,
+  turnContinue,
   withTurnUsage,
   setupFailedReason,
 } from '#domain/runs/run-result.ts';

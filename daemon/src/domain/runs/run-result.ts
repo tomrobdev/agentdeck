@@ -1,6 +1,6 @@
 // Reading a run's result: what claude left behind, how it classifies, and what the run came to.
 import { STATUS_WORD, lastLine, oneLine } from '#domain/shared/index.ts';
-import { type Needs, parseNeeds } from '#domain/work/index.ts';
+import { MOST_TURNS, type Needs, parseNeeds } from '#domain/work/index.ts';
 import type { Outcome, Run } from '#domain/runs/run.ts';
 import { type LimitStop, limitReason } from '#domain/runs/run-limit.ts';
 
@@ -137,6 +137,30 @@ const NO_RESULT = ['claude ended without a result', 'claude exited with code '];
 export const isNoResult = (reason: string | null | undefined): boolean => NO_RESULT.some((r) => (reason ?? '').startsWith(r));
 
 export const TURN_LIMIT = 'error_max_turns';
+
+/** A work run that ended on the turn limit, as far as `turnContinue` reads it. */
+export interface TurnLimitEnd {
+  reason: string | null;
+  commitsBefore: number;
+  commitsAfter: number;
+  testsBefore: boolean | null;
+  testsAfter: boolean | null;
+  continuedBefore: boolean;
+  maxTurns: number;
+}
+
+const madeProgress = (e: Pick<TurnLimitEnd, 'commitsBefore' | 'commitsAfter' | 'testsBefore' | 'testsAfter'>): boolean =>
+  e.commitsAfter > e.commitsBefore || (e.testsBefore === false && e.testsAfter === true);
+
+export function turnContinue(e: TurnLimitEnd): { maxTurns: number; note: string } | null {
+  if (e.reason !== TURN_LIMIT || e.continuedBefore || !madeProgress(e)) return null;
+  const maxTurns = Math.min(Math.ceil(e.maxTurns * 1.5), MOST_TURNS);
+  if (maxTurns <= e.maxTurns) return null;
+  return {
+    maxTurns,
+    note: `The last run ran out of its ${e.maxTurns} turns while making progress. Carry on from where its commits leave off; this run has ${maxTurns} turns.`,
+  };
+}
 
 export const TESTS_FAILED = 'tests failed';
 

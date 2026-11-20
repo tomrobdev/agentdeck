@@ -3,6 +3,7 @@ export { branchName } from '#domain/work/task/branch.ts';
 export { checkoutOf } from '#domain/work/task/checkout.ts';
 export type { Checkout } from '#domain/work/task/checkout.ts';
 export {
+  continuedSinceRetry,
   isAutoMergeReason,
   latestRetryAt,
   latestReviewNote,
@@ -194,6 +195,7 @@ export { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks, listable } f
 export {
   archivedRepoError,
   maxAttemptsError,
+  MOST_TURNS,
   maxTurnsError,
   modelError,
   priorityError,

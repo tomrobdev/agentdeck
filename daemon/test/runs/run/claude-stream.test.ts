@@ -70,6 +70,32 @@ test('the turn limit fails the run with error_max_turns', async () => {
   assert.equal(run.live_tool, 'Read README.md');
 });
 
+test('a run out of turns that committed continues once with half as many turns again and a note; a second turn limit fails', async () => {
+  const task = db.addTask({ repo_id: REPO, title: 'progress', prompt: 'FAKE_MAX_TURNS_COMMIT', max_attempts: 1, max_turns: 40 });
+  await drain();
+  await drain();
+  const after = db.getTask(task.id)!;
+  const runs = db.runsForTask(task.id);
+  assert.equal(runs.length, 2, 'one continued run, then it settles');
+  assert.equal(after.status, 'failed');
+  assert.equal(after.stop_reason, 'error_max_turns');
+  assert.equal(after.max_turns, 60);
+  assert.deepEqual([after.attempts, after.max_attempts], [2, 2], 'the continue used an attempt, as a retry does');
+  const continues = db.eventsForTask(task.id).filter((e) => e.type === 'turn_continue');
+  assert.equal(continues.length, 1);
+  assert.match(continues[0].reason ?? '', /ran out of its 40 turns/);
+  const entries = readFileSync(runs[1].log_path, 'utf8').split('\n').flatMap(parseLogLine);
+  const prompt = entries.find((e) => e.kind === 'prompt');
+  assert.ok(prompt?.kind === 'prompt');
+  assert.match(prompt.note ?? '', /this run has 60 turns/);
+  const args = readFileSync(join(home, 'fake-claude-args.log'), 'utf8')
+    .trim()
+    .split('\n')
+    .map((l) => JSON.parse(l) as string[]);
+  const last = args.at(-1) ?? [];
+  assert.equal(last[last.indexOf('--max-turns') + 1], '60');
+});
+
 test('a truncated last line fails the run as one that ended without a result', async () => {
   const { task, run, lines, entries } = await runOnce('FAKE_TRUNCATED');
   assert.equal(task.status, 'failed');

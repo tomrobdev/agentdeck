@@ -25,6 +25,11 @@ test('the person variant shows the reason beside the sentence, except where the 
   assert.deepEqual(person('pr'), { text: 'pull request changed' });
   const why = 'runs on opus, up from sonnet, after the turn limit';
   assert.deepEqual(person('escalate', 'queued', why), { text: 'moved the next attempt to a stronger model', reason: why });
+  assert.deepEqual(person('turn_continue', 'queued', 'out of turns'), {
+    text: 'ran out of turns while making progress; continued once with more turns',
+    reason: 'out of turns',
+  });
+  assert.equal(describeEvent({ type: 'turn_continue', to_status: 'queued', reason: null }), 'continued after running out of turns');
 });
 
 test('the person variant reads merge reasons', () => {
