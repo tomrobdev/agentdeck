@@ -5,11 +5,8 @@ export const DEFAULT_SUPPORT_SLOTS = 1;
 
 export const validateSupportSlots = (value: unknown): string | null => wholeNumberError('support_slots', value, 0, 4);
 
-/** What is running in the slots. */
 export interface SlotsTaken {
-  /** Every slot taken: tasks, resolve runs, the planner and support runs. */
   used: number;
-  /** How many of those are review, unblock and verify runs. */
   support: number;
   support_slots: number;
 }
@@ -19,7 +16,6 @@ export function slotUse(s: SlotsTaken): { work: number; support_free: number } {
   return { work: s.used - Math.min(support, s.support_slots), support_free: Math.max(0, s.support_slots - support) };
 }
 
-/** The support runs under way, by kind. */
 export interface SupportRuns {
   review: number;
   unblock: number;

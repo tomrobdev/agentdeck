@@ -28,7 +28,6 @@ export interface HeadlineFacts {
   /** The governor's decision: whether new work may start, and until when it waits if not. */
   governor: { allow: boolean; until: number | null };
   running: number;
-  /** The work slots the governor allows, and the support runs under way beside them. */
   slots?: { max: number; support: SupportRuns };
   /** Proposed, blocked and in-review tasks. */
   need_you: { proposed: number; blocked: number; review: number };
@@ -50,7 +49,6 @@ export interface Headline {
   state: HeadlineState;
   /** When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. */
   until: number | null;
-  /** "1/1 slots · 1 review": the work slots in use, then the support runs under way; null when not known. */
   slots: string | null;
   need_you: number;
   attention: AttentionTask[];

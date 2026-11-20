@@ -63,7 +63,6 @@ export interface Headline {
   state: HeadlineState;
   /** When a rate limit or a hold ends (unix seconds); null otherwise. */
   until: number | null;
-  /** "1/1 slots · 1 review": the work slots in use, then the review, unblock and verify runs under way. Missing from a daemon that predates it. */
   slots?: string | null;
   /** Proposed tasks, blocked tasks and done tasks in review. */
   need_you: number;
@@ -82,7 +81,6 @@ export interface Status {
   rate_limited_until: number | null;
   running: number;
   max_concurrent: number;
-  /** Room for review, unblock and verify runs beyond the work slots. Missing from a daemon that predates it. */
   support_slots?: number;
   counts: Partial<Record<TaskStatus, number>>;
   /** Done tasks whose PR is open. */
@@ -102,7 +100,6 @@ export interface Status {
 
 export interface Settings {
   max_concurrent: number;
-  /** Room for review, unblock and verify runs beyond the work slots (0 to 4); they use it first, then a free work slot. */
   support_slots: number;
   budget: Budget;
   notify: { desktop: boolean; events: NotifyKind[]; ntfy_topic: string; ntfy_server: string };

@@ -6,7 +6,6 @@ import type { ReviewDueSettings } from '#domain/operations/review-due.ts';
 
 export interface Settings {
   max_concurrent: number;
-  /** Room for review, unblock and verify runs beyond the work slots (0 to 4); they use it first, then a free work slot. */
   support_slots: number;
   budget: Budget;
   notify: NotifySettings;
