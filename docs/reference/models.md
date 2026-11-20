@@ -1395,14 +1395,14 @@ The plan a run follows: its name (`112-plans-in-agentdeck.html`) and its HTML as
 
 ### ResolveContext
 
-| Field         | Type                                                 | Comment                                                                                      |
-| ------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `base`        | `string`                                             | The base branch being merged into the task's branch, as the person knows it ("main").        |
-| `files`       | `string[]`                                           | Files with conflict markers.                                                                 |
-| `ours`        | `string[]`                                           | Subjects of the commits on the task's branch that the base does not have.                    |
-| `theirs`      | `string[]`                                           | Subjects of the commits on the base that the task's branch does not have.                    |
-| `testCmd`     | `string \| null`                                     |                                                                                              |
-| `regenerate?` | `{ command: string; files: string[]; } \| undefined` | Conflicting files the repo's command rebuilds, to be regenerated rather than merged by hand. |
+| Field         | Type                                                 | Comment                                                                               |
+| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `base`        | `string`                                             | The base branch being merged into the task's branch, as the person knows it ("main"). |
+| `files`       | `string[]`                                           | Files with conflict markers.                                                          |
+| `ours`        | `string[]`                                           | Subjects of the commits on the task's branch that the base does not have.             |
+| `theirs`      | `string[]`                                           | Subjects of the commits on the base that the task's branch does not have.             |
+| `testCmd`     | `string \| null`                                     |                                                                                       |
+| `regenerate?` | `{ command: string; files: string[]; } \| undefined` |                                                                                       |
 
 ### ResultLike
 

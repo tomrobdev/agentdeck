@@ -169,7 +169,6 @@ export interface ResolveContext {
   /** Subjects of the commits on the base that the task's branch does not have. */
   theirs: string[];
   testCmd: string | null;
-  /** Conflicting files the repo's command rebuilds, to be regenerated rather than merged by hand. */
   regenerate?: { command: string; files: string[] };
 }
 
