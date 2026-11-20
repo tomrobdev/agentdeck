@@ -83,7 +83,14 @@ beforeEach(() => {
   pushes = [];
   pushError = null;
   details = {};
-  updateRepo(db, 'demo', { pr_mode: 'ready', auto_resolve: true, test_cmd: TEST_CMD, union_paths: '' });
+  updateRepo(db, 'demo', {
+    pr_mode: 'ready',
+    auto_resolve: true,
+    test_cmd: TEST_CMD,
+    union_paths: '',
+    generated_paths: '',
+    generated_cmd: null,
+  });
 });
 
 let n = 0;
@@ -290,6 +297,62 @@ test('union_paths: the same conflict in an unlisted file still needs a resolve r
   assert.equal(r.outcome, 'resolved');
   assert.equal(resolveCalls(), before + 1);
   assert.ok(kinds(t.id).includes('resolve'));
+});
+
+async function generatedConflict(withSource: boolean) {
+  mkdirSync(join(dir, 'gen'), { recursive: true });
+  advanceMain('gen/out.txt', 'built 0\n', 'Add gen/out.txt');
+  const t = await doneTask();
+  writeFileSync(join(t.wt, 'gen', 'out.txt'), 'built by task\n');
+  sh(t.wt, 'commit', '-q', '-am', 'Task rebuilds gen/out.txt');
+  advanceMain('gen/out.txt', 'built by main\n', 'Main rebuilds gen/out.txt');
+  if (withSource) conflictOnMain();
+  return t;
+}
+
+test('generated: a conflict only in a generated path reruns its command and settles with no resolve run', async () => {
+  updateRepo(db, 'demo', { generated_paths: 'gen/**', generated_cmd: 'echo regenerated > gen/out.txt' });
+  const t = await generatedConflict(false);
+  const before = resolveCalls();
+
+  const r = await syncNow(db, t.id);
+  assert.equal(r.outcome, 'clean');
+  assert.equal(resolveCalls(), before);
+  assert.deepEqual(kinds(t.id), ['work']);
+  assert.equal(readFileSync(join(t.wt, 'gen', 'out.txt'), 'utf8'), 'regenerated\n');
+  assert.equal(parents(t.wt), 2, 'the regenerated file is committed with the merge');
+  assert.deepEqual(pushes, [t.branch]);
+  clean(t.wt);
+});
+
+test('generated: a generated conflict beside a source conflict starts a resolve run told to rerun the command', async () => {
+  updateRepo(db, 'demo', { generated_paths: 'gen/**', generated_cmd: 'echo regenerated > gen/out.txt' });
+  const t = await generatedConflict(true);
+  const before = resolveCalls();
+
+  await syncNow(db, t.id);
+  assert.equal(resolveCalls(), before + 1);
+  assert.ok(kinds(t.id).includes('resolve'));
+  const prompt = claudeLog().split('AgentDeck conflict resolution').at(-1)!;
+  assert.match(prompt, /These files are generated, so do not merge them by hand: gen\/out\.txt/);
+  assert.ok(prompt.includes('`echo regenerated > gen/out.txt`'), prompt);
+});
+
+test('generated: a command that fails undoes the sync and blocks the task with its last line', async () => {
+  updateRepo(db, 'demo', { generated_paths: 'gen/**', generated_cmd: 'echo starting; echo docs:gen broke; false' });
+  const t = await generatedConflict(false);
+  const head = sh(t.wt, 'rev-parse', 'HEAD');
+  const before = resolveCalls();
+
+  const r = await syncNow(db, t.id);
+  assert.equal(r.outcome, 'blocked');
+  assert.match(r.reason!, /^conflicts with main in 1 file: gen\/out\.txt \(.*failed: docs:gen broke\)$/);
+  assert.equal(resolveCalls(), before);
+  assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head);
+  assert.equal(readFileSync(join(t.wt, 'gen', 'out.txt'), 'utf8'), 'built by task\n');
+  clean(t.wt);
+  assert.equal(db.getTask(t.id)!.status, 'blocked');
+  assert.deepEqual(pushes, []);
 });
 
 test('a resolve run that stages but does not commit still concludes the merge', async () => {

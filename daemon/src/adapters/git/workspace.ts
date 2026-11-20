@@ -23,6 +23,7 @@ import {
   removeTempDir,
   removeWorktree,
   revertChange,
+  takeTheirs,
 } from '#adapters/git/worktrees.ts';
 import {
   aheadBehind,
@@ -165,6 +166,8 @@ export const workspace = {
     if ((await headCommit(worktree)) === before) return { kind: 'not_committed' as const };
     return { kind: 'done' as const };
   },
+
+  takeBaseSide: (worktree: string, files: string[]) => takeTheirs(worktree, files),
 
   undoSync: (worktree: string, before: string) => abortMerge(worktree, before),
 

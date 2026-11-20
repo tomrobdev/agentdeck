@@ -1,7 +1,7 @@
 // Keeps plan branches current: merges each one's base into it in a scratch checkout, with a resolve run on its plan's task for conflicts.
 import type { App } from '#application/ports/app.ts';
 import type { SyncStart } from '#application/ports/workspace.ts';
-import type { Repo } from '#domain/repos/index.ts';
+import { type Repo, splitGenerated } from '#domain/repos/index.ts';
 import { type Outcome, type Run, buildPlanResolvePrompt, resolveOutcome } from '#domain/runs/index.ts';
 import { errorMessage } from '#domain/shared/index.ts';
 import {
@@ -13,7 +13,7 @@ import {
   planBranchSyncDue,
 } from '#domain/work/index.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
-import { resolutionProblem } from '#application/runs/sync.ts';
+import { regenerateConflicts, regenerateHint, resolutionProblem } from '#application/runs/sync.ts';
 import { nextPlanBranchToLand, openPlanBranchPr } from '#application/landing/pull-request/plan-branch-pr.ts';
 import { nextPlanReview, runPlanReview } from '#application/runs/plan-review.ts';
 
@@ -63,6 +63,11 @@ async function syncIn(app: App, at: SyncPlace, allowResolve: boolean): Promise<P
   if (merge.kind === 'no_base') return { outcome: 'error', files: [], reason: `there is no ${merge.ref} to sync with`, pushed: false };
   if (merge.kind === 'up_to_date') return settled(app, at, 'up_to_date', before, []);
   if (merge.kind === 'merged') return land(app, at, 'clean', []);
+  const { command, other } = splitGenerated(repo, merge.files);
+  if (command && !other.length) {
+    const why = await regenerateConflicts(app, worktree, { ...merge, command }, leftoversMessage(owner));
+    return why ? { ...(await settled(app, at, 'conflict', null, merge.files)), reason: why } : land(app, at, 'clean', []);
+  }
   if (!allowResolve) return settled(app, at, 'conflict', null, merge.files);
   const resolved = await resolve(app, at, merge);
   if (resolved.outcome === 'done') return land(app, at, 'resolved', merge.files);
@@ -78,7 +83,14 @@ async function resolve(
 ): Promise<{ outcome: Outcome; reason: string }> {
   const { branch, repo, owner, worktree } = at;
   const { files, ours, theirs, before } = conflict;
-  const prompt = buildPlanResolvePrompt(owner, branch.name, { base: branch.base, files, ours, theirs, testCmd: repo.test_cmd });
+  const prompt = buildPlanResolvePrompt(owner, branch.name, {
+    base: branch.base,
+    files,
+    ours,
+    theirs,
+    testCmd: repo.test_cmd,
+    ...regenerateHint(repo, files),
+  });
   const opened = openTaskRun(app, owner, 'plan_resolve');
   let fields: Partial<Run> = {};
   let outcome: Outcome;

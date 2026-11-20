@@ -9,6 +9,7 @@ export {
   protectedEditTarget,
   protectedEditsMessage,
 } from '#domain/repos/protected-edits.ts';
+export { splitGenerated } from '#domain/repos/generated.ts';
 export { AGENTDECK_FOLDER, DEFAULT_MERGE_METHOD, MERGE_METHODS, PR_MODES, isMergeMethod, pausedReason } from '#domain/repos/repo.ts';
 export type { MergeMethod, PrMode, Repo } from '#domain/repos/repo.ts';
 export { goalsError, networkError, repoNameError, toolRulesError } from '#domain/repos/rules.ts';

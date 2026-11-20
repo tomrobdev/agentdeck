@@ -77,6 +77,8 @@ erDiagram
     integer code_comment_max_percent
     integer ci_not_run_ok
     text union_paths
+    text generated_paths
+    text generated_cmd "nullable"
   }
   review_comments {
     integer id PK

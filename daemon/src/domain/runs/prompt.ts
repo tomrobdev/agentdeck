@@ -169,6 +169,8 @@ export interface ResolveContext {
   /** Subjects of the commits on the base that the task's branch does not have. */
   theirs: string[];
   testCmd: string | null;
+  /** Conflicting files the repo's command rebuilds, to be regenerated rather than merged by hand. */
+  regenerate?: { command: string; files: string[] };
 }
 
 const bullets = (subjects: string[]) =>
@@ -216,6 +218,11 @@ function resolvePrompt(heading: string, words: { branch: string; goal: string; s
     bullets(ctx.theirs),
     '',
     "Resolve every conflict so that the result keeps the intent of both sides: do not drop either side's change just to make the markers go away, and do not add unrelated changes.",
+    ...(ctx.regenerate?.files.length
+      ? [
+          `These files are generated, so do not merge them by hand: ${ctx.regenerate.files.join(', ')}. Once the other conflicts are resolved, take ${ctx.base}'s side of each (\`git checkout --theirs -- <file>\`) and run \`${ctx.regenerate.command}\` to rebuild them.`,
+        ]
+      : []),
     ctx.testCmd
       ? `When no markers are left, run \`${ctx.testCmd}\` and fix what fails.`
       : 'When no markers are left, run the tests if the project has any.',

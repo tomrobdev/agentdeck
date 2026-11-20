@@ -45,6 +45,9 @@ Repos
                                                   is over the limit (0 to 100, 0 turns it off; default ${DEFAULT_CODE_COMMENT_MAX_PERCENT})
   agentdeck repo set <repo> union_paths "<globs>"  files whose conflicts in a sync keep both sides' lines, e.g. "docs/review-areas.md"
                                                   ("" for none)
+  agentdeck repo set <repo> generated_paths "<globs>"  files generated_cmd rebuilds: a sync conflicting only in them reruns
+                                                  the command instead of a resolve run, e.g. "docs/reference/**" ("" for none)
+  agentdeck repo set <repo> generated_cmd "<cmd>"  the command that rebuilds generated_paths, e.g. "pnpm docs:gen" ("" for none)
   agentdeck repo set <repo> sandbox on|off     run the agent's shell commands in Claude Code's sandbox (default on)
   agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
   agentdeck repo set <repo> model ${MODELS.join('|')}|""  the model a new task of the repo takes when it names none

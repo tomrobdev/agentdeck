@@ -80,6 +80,8 @@ export interface RepoPatch {
   model?: string | null;
   allowed_tools?: string | string[] | null;
   union_paths?: string | string[];
+  generated_paths?: string | string[];
+  generated_cmd?: string | null;
 }
 
 export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
@@ -106,6 +108,9 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const ci_not_run_ok = flag(body, 'ci_not_run_ok');
   const unions = list(body, 'union_paths', { split: true });
   const union_paths = unions && textList(unions);
+  const generatedGlobs = list(body, 'generated_paths', { split: true });
+  const generated_paths = generatedGlobs && textList(generatedGlobs);
+  const generated_cmd = textOrNull(body, 'generated_cmd');
   const code_comment_max_lines = whole(body, 'code_comment_max_lines', codeCommentMaxLinesError);
   const code_comment_max_percent = whole(body, 'code_comment_max_percent', codeCommentMaxPercentError);
   const model = textOrNull(body, 'model');
@@ -158,6 +163,8 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
     ...(ci_not_run_ok !== undefined ? { ci_not_run_ok } : {}),
     ...(union_paths !== undefined ? { union_paths } : {}),
+    ...(generated_paths !== undefined ? { generated_paths } : {}),
+    ...(generated_cmd !== undefined ? { generated_cmd: generated_cmd?.trim() || null } : {}),
     ...(code_comment_max_lines !== undefined ? { code_comment_max_lines } : {}),
     ...(code_comment_max_percent !== undefined ? { code_comment_max_percent } : {}),
     ...(model !== undefined ? { model: model || null } : {}),
