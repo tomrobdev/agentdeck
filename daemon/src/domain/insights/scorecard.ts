@@ -6,6 +6,7 @@ import { isAutoMergeReason } from '#domain/work/index.ts';
 import { median, minutesBetween, sqliteMs, weekOf } from '#domain/shared/index.ts';
 import { type InterventionCount, INTERVENTION_KINDS, countInterventions } from '#domain/insights/interventions.ts';
 import { num, pct, table } from '#domain/insights/report-text.ts';
+import { type MergeWaitMeasures, measureMergeWait, mergeWaitText } from '#domain/insights/merge-wait.ts';
 import {
   type ReviewRunMeasures,
   type ScorecardReviewRun,
@@ -105,6 +106,8 @@ export interface ScorecardMeasures {
   queued_minutes: number | null;
   running_minutes: number | null;
   review_minutes: number | null;
+  /** The done-to-merged time of the tasks, and the slowest few with what each waited on. */
+  merge_wait: MergeWaitMeasures;
   pr_checks: ChecksSummary;
   /** The review runs of the group, by when they started. */
   review_runs: ReviewRunMeasures;
@@ -117,7 +120,7 @@ function scorecardMeasures(
   interventionEvents: ScorecardEvent[],
   review_runs: ReviewRunMeasures,
 ): ScorecardMeasures {
-  const eventsOf = new Map<number, ScorecardEvent[]>();
+  const eventsOf = new Map<TaskId, ScorecardEvent[]>();
   for (const e of events) eventsOf.set(e.task_id, [...(eventsOf.get(e.task_id) ?? []), e]);
   const cycles = tasks.map((t) => cycleOf(eventsOf.get(t.id) ?? []));
   const med = (pick: (c: CycleMinutes) => number | null) => median(cycles.flatMap((c) => pick(c) ?? []));
@@ -127,6 +130,10 @@ function scorecardMeasures(
     queued_minutes: med((c) => c.queued),
     running_minutes: med((c) => c.running),
     review_minutes: med((c) => c.review),
+    merge_wait: measureMergeWait(
+      eventsOf,
+      tasks.map((t) => t.id),
+    ),
     pr_checks: summarizeChecks(tasks),
     review_runs,
   };
@@ -279,6 +286,7 @@ export function scorecardText(card: Scorecard): string {
   const kinds = INTERVENTION_KINDS.map((k) => `${k} ${card.total.interventions.by_kind[k]}`).join(', ');
   parts.push(
     `interventions: ${card.total.interventions.total} on ${card.total.interventions.tasks} task${card.total.interventions.tasks === 1 ? '' : 's'} (${kinds})`,
+    mergeWaitText(card.total.merge_wait),
     reviewRunsText(card.total.review_runs),
     `times are medians in minutes; quota spent: ${num(card.quota_points)} points of the 7-day window${card.since ? ` since ${card.since}` : ''}`,
   );

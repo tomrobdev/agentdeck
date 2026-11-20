@@ -169,6 +169,21 @@ An intervention is something a person did that changed how a task turned out, wh
 | `cost_per_done_task`    | `number \| null`   | Cost of every work run of the done tasks, over their number; null with no done task.        |
 | `minutes_per_done_task` | `number \| null`   | Minutes of finished work runs of the done tasks, over their number; null with no done task. |
 
+### MergeWait
+
+| Field     | Type                                                                      | Comment                                                            |
+| --------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `minutes` | `number`                                                                  | Minutes from the first done to the merge.                          |
+| `waits`   | `Record<"person" \| "checks" \| "conflict" \| "sync" \| "other", number>` | Minutes by what the task waited on; the kinds add up to `minutes`. |
+
+### MergeWaitMeasures
+
+| Field            | Type             | Comment |
+| ---------------- | ---------------- | ------- |
+| `tasks`          | `number`         |         |
+| `median_minutes` | `number \| null` |         |
+| `slowest`        | `SlowTask[]`     |         |
+
 ### ModelMeasures
 
 The first-run measures of the work runs of one model, and the interventions on the tasks while they ran on it.
@@ -229,15 +244,16 @@ One row of a task's history (`task_events`), with the task's repo.
 
 ### ScorecardMeasures
 
-| Field             | Type                | Comment                                             |
-| ----------------- | ------------------- | --------------------------------------------------- |
-| `interventions`   | `InterventionCount` |                                                     |
-| `tasks`           | `number`            | Tasks the three medians below are over.             |
-| `queued_minutes`  | `number \| null`    |                                                     |
-| `running_minutes` | `number \| null`    |                                                     |
-| `review_minutes`  | `number \| null`    |                                                     |
-| `pr_checks`       | `ChecksSummary`     |                                                     |
-| `review_runs`     | `ReviewRunMeasures` | The review runs of the group, by when they started. |
+| Field             | Type                | Comment                                                                             |
+| ----------------- | ------------------- | ----------------------------------------------------------------------------------- |
+| `interventions`   | `InterventionCount` |                                                                                     |
+| `tasks`           | `number`            | Tasks the three medians below are over.                                             |
+| `queued_minutes`  | `number \| null`    |                                                                                     |
+| `running_minutes` | `number \| null`    |                                                                                     |
+| `review_minutes`  | `number \| null`    |                                                                                     |
+| `merge_wait`      | `MergeWaitMeasures` | The done-to-merged time of the tasks, and the slowest few with what each waited on. |
+| `pr_checks`       | `ChecksSummary`     |                                                                                     |
+| `review_runs`     | `ReviewRunMeasures` | The review runs of the group, by when they started.                                 |
 
 ### ScorecardReviewRun
 
@@ -287,6 +303,14 @@ The fields of a task the scorecard reads, as the database has them.
 | `repo_auto_merge`   | `boolean`                          |                                                                                                      |
 | `pr_checks_opened`  | `CheckCounts \| null`              | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable). |
 | `pr_checks_merged?` | `CheckCounts \| null \| undefined` | The PR's checks when it merged; null if it has not merged or they were not recorded.                 |
+
+### SlowTask
+
+| Field     | Type                                                                      | Comment |
+| --------- | ------------------------------------------------------------------------- | ------- |
+| `task_id` | `TaskId`                                                                  |         |
+| `minutes` | `number`                                                                  |         |
+| `waits`   | `Record<"person" \| "checks" \| "conflict" \| "sync" \| "other", number>` |         |
 
 ### StatRun
 
@@ -514,7 +538,7 @@ One fact about a PR that bears on merging it. A problem stops any merge; anythin
 
 | Field     | Type                                                                                                                                                      | Comment |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `kind`    | `"not_open" \| "lands_after" \| "conflict" \| "draft" \| "behind" \| "blocked" \| "tests_failed" \| "checks_failing" \| "checks_pending" \| "ci_not_run"` |         |
+| `kind`    | `"conflict" \| "not_open" \| "lands_after" \| "draft" \| "behind" \| "blocked" \| "tests_failed" \| "checks_failing" \| "checks_pending" \| "ci_not_run"` |         |
 | `problem` | `boolean`                                                                                                                                                 |         |
 | `text`    | `string`                                                                                                                                                  |         |
 
@@ -706,7 +730,7 @@ Where opening a failed PR again stands. `due`: the PR refresh opens it now. `wai
 
 | Field      | Type                          | Comment                                                                           |
 | ---------- | ----------------------------- | --------------------------------------------------------------------------------- |
-| `state`    | `"wait" \| "due" \| "person"` |                                                                                   |
+| `state`    | `"person" \| "wait" \| "due"` |                                                                                   |
 | `failures` | `number`                      | How many times it failed to open, the first open when the task finished included. |
 | `error`    | `string`                      | The last failure's error.                                                         |
 | `next_at`  | `string \| null`              | When the next retry is due (SQLite UTC); null when a person must open it.         |
