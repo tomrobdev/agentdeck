@@ -133,5 +133,12 @@ export function latestRetryAt(events: Pick<TaskEventRow, 'type' | 'at'>[]): stri
 }
 
 export function latestReviewNote(events: Pick<TaskEventRow, 'type' | 'reason'>[]): string | null {
-  return events.findLast((e) => RETRY_TYPES.includes(e.type))?.reason ?? null;
+  const at = events.findLastIndex((e) => e.type === 'turn_continue' || RETRY_TYPES.includes(e.type));
+  if (at < 0) return null;
+  const { type, reason } = events[at];
+  if (type !== 'turn_continue') return reason;
+  return [reason, latestReviewNote(events.slice(0, at))].filter(Boolean).join('\n\n') || null;
 }
+
+export const continuedSinceRetry = (events: Pick<TaskEventRow, 'type'>[]): boolean =>
+  events.findLast((e) => e.type === 'turn_continue' || RETRY_TYPES.includes(e.type))?.type === 'turn_continue';

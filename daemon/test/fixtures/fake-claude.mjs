@@ -210,6 +210,11 @@ if (given.startsWith('AgentDeck counted the code comments')) {
   await new Promise(() => setInterval(() => assistant([{ type: 'text', text: 'still going' }]), 100));
 } else if (prompt.includes('FAKE_MAX_TURNS')) {
   readme();
+  if (prompt.includes('FAKE_MAX_TURNS_COMMIT')) {
+    writeFileSync('fake-progress.txt', `run ${process.pid}\n`);
+    execFileSync('git', ['add', '-A']);
+    execFileSync('git', ['commit', '-q', '-m', 'fake: progress']);
+  }
   const { result: _text, api_error_status: _status, ...end } = ending('');
   out({ ...end, subtype: 'error_max_turns', is_error: true, num_turns: 2, errors: ['Reached maximum number of turns (1)'] });
   process.exitCode = 1;

@@ -25,8 +25,41 @@ import {
   parseUnblock,
   unblockSystemPrompt,
   withTurnUsage,
+  TURN_LIMIT,
+  turnContinue,
 } from '#domain/runs/index.ts';
 import { asTaskId } from '#domain/shared/index.ts';
+
+const turnEnd = (fields: Partial<Parameters<typeof turnContinue>[0]> = {}) => ({
+  reason: TURN_LIMIT,
+  commitsBefore: 1,
+  commitsAfter: 3,
+  testsBefore: null,
+  testsAfter: null,
+  continuedBefore: false,
+  maxTurns: 40,
+  ...fields,
+});
+
+test('turnContinue: a run out of turns that made new commits continues once with half as many turns again, and a note', () => {
+  const more = turnContinue(turnEnd());
+  assert.equal(more?.maxTurns, 60);
+  assert.match(more?.note ?? '', /ran out of its 40 turns while making progress.*60 turns/);
+  assert.equal(turnContinue(turnEnd({ maxTurns: 7 }))?.maxTurns, 11, 'rounded up');
+  assert.equal(turnContinue(turnEnd({ maxTurns: 400 }))?.maxTurns, 500, 'no higher than a task may ask');
+  assert.equal(turnContinue(turnEnd({ maxTurns: 500 })), null, 'already at the most');
+});
+
+test('turnContinue: a test that failed before and passes now is progress without a commit', () => {
+  assert.equal(turnContinue(turnEnd({ commitsAfter: 1, testsBefore: false, testsAfter: true }))?.maxTurns, 60);
+});
+
+test('turnContinue: no new commits and the same failing test, a second turn limit, or another failure settle as today', () => {
+  assert.equal(turnContinue(turnEnd({ commitsAfter: 1, testsBefore: false, testsAfter: false })), null);
+  assert.equal(turnContinue(turnEnd({ commitsAfter: 1 })), null);
+  assert.equal(turnContinue(turnEnd({ continuedBefore: true })), null);
+  assert.equal(turnContinue(turnEnd({ reason: 'tests failed' })), null);
+});
 
 const run = (over: Record<string, unknown>) =>
   ({ kind: 'work', attempt: 1, outcome: null, live_turns: 0, num_turns: null, ...over }) as unknown as Run;

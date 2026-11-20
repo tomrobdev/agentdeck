@@ -3,7 +3,8 @@ import { wholeNumberError } from '#domain/shared/index.ts';
 import { MODELS, isModel } from '#domain/work/task/task.ts';
 
 export const priorityError = (value: unknown): string | null => wholeNumberError('priority', value, -1000, 1000);
-export const maxTurnsError = (value: unknown): string | null => wholeNumberError('max_turns', value, 1, 500);
+export const MOST_TURNS = 500;
+export const maxTurnsError = (value: unknown): string | null => wholeNumberError('max_turns', value, 1, MOST_TURNS);
 export const maxAttemptsError = (value: unknown): string | null => wholeNumberError('max_attempts', value, 1, 20);
 
 export function modelError(model: string | undefined): string | null {

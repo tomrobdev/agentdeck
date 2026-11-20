@@ -53,6 +53,8 @@ function agentText(e: EventFields): string {
       return 'unblock run: retried with a note';
     case 'review_retry':
       return 'review run: requested changes';
+    case 'turn_continue':
+      return withReason('continued after running out of turns', e.reason);
     case 'unblock_ask':
       return 'unblock run: asked a question';
     case 'mark_done':
@@ -130,6 +132,8 @@ function personText(e: EventFields): PersonEventText | null {
       return say('blocked by the environment; attempt given back');
     case 'escalate':
       return say('moved the next attempt to a stronger model');
+    case 'turn_continue':
+      return say('ran out of turns while making progress; continued once with more turns');
     case 'conflict':
       return say("the sync hit conflicts it couldn't settle; blocked");
     case 'rate_limited':

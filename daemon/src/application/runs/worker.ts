@@ -17,7 +17,9 @@ import {
 import { codeCommentFields, measureCodeComments } from '#application/runs/code-comments.ts';
 import { latestReviewNote } from '#domain/work/index.ts';
 import {
+  INTERRUPTED,
   type Run,
+  TURN_LIMIT,
   type WorkerResult,
   editsSinceCutOff,
   escalationSince,
@@ -28,8 +30,9 @@ import {
   resumeMaxTurns,
   runOutcome,
   setupFailedReason,
+  turnContinue,
 } from '#domain/runs/index.ts';
-import { hasPlanLink, otherPlanOwner } from '#domain/work/index.ts';
+import { continuedSinceRetry, hasPlanLink, otherPlanOwner } from '#domain/work/index.ts';
 import { type Task, attemptsLeft, leftoversMessage, targetOf } from '#domain/work/index.ts';
 import { errorMessage } from '#domain/shared/index.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
@@ -144,6 +147,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   }
 
   const systemPrompt = workerSystemPrompt(repo.test_cmd, repo);
+  const commitsBefore = await ws.commitsAhead(wt.path, target);
   let ran: TaskRunEnd;
   try {
     ran = await startTaskRun(app, task, { kind: 'work', repo, worktree: wt.path, prompt, note, opened, resume, systemPrompt });
@@ -188,6 +192,27 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
     if (!status.blocked && testsPassed !== false) ahead = await ws.commitsAhead(wt.path, target);
   }
   let { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
+
+  if (outcome.outcome === 'failed' && outcome.reason === TURN_LIMIT && !pause) {
+    const commitsAfter = await ws.commitsAhead(wt.path, target);
+    const last = previousRuns.findLast((r) => r.kind === 'work' && r.outcome !== INTERRUPTED && r.outcome !== 'rate_limited');
+    const testsBefore = last && (last.tests_passed === false || last.last_test_failed === true) ? false : null;
+    const testsAfter = commitsAfter <= commitsBefore && testsBefore === false ? await runTests() : null;
+    const more = turnContinue({
+      reason: outcome.reason,
+      commitsBefore,
+      commitsAfter,
+      testsBefore,
+      testsAfter,
+      continuedBefore: continuedSinceRetry(events),
+      maxTurns: task.max_turns,
+    });
+    if (more) {
+      await endTaskRun(app, opened, outcome.outcome, outcome.reason, runFields, summaryContext(app, task));
+      await settle(app, task.id, { type: 'turn_continue', max_turns: more.maxTurns }, { reason: more.note });
+      return outcome;
+    }
+  }
 
   const measured = outcome.outcome === 'done' ? await measureCodeComments(app, repo, { worktree: wt.path, target }, log) : null;
   if (measured) Object.assign(runFields, codeCommentFields(measured.count));

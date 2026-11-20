@@ -1589,6 +1589,20 @@ A sync of a done task under way, as the queue shows it.
 | `max_turns` | `number`         |                                                                                                        |
 | `tool`      | `string \| null` | The resolve run's last tool call in a few words; null before the first one or without a run.           |
 
+### TurnLimitEnd
+
+A work run that ended on the turn limit, as far as `turnContinue` reads it.
+
+| Field             | Type              | Comment |
+| ----------------- | ----------------- | ------- |
+| `reason`          | `string \| null`  |         |
+| `commitsBefore`   | `number`          |         |
+| `commitsAfter`    | `number`          |         |
+| `testsBefore`     | `boolean \| null` |         |
+| `testsAfter`      | `boolean \| null` |         |
+| `continuedBefore` | `boolean`         |         |
+| `maxTurns`        | `number`          |         |
+
 ### UnblockContext
 
 | Field         | Type                 | Comment                                                   |

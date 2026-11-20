@@ -13,7 +13,7 @@ stateDiagram-v2
   parked --> cancelled: reject
   queued --> running: claim
   queued --> cancelled: cancel
-  running --> queued: finish/failed/retry, rate_limited, recover
+  running --> queued: finish/failed/retry, rate_limited, turn_continue, recover
   running --> done: finish/done
   running --> blocked: finish/blocked
   running --> failed: finish/failed, recover/exhausted

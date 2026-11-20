@@ -7,6 +7,7 @@ import {
   autoMergeCheckChanges,
   autoMergeSettingChanges,
   emptyProposalCheck,
+  continuedSinceRetry,
   isAutoMergeReason,
   latestRetryAt,
   latestReviewNote,
@@ -92,6 +93,18 @@ test('the latest retry is the last retry, unblock retry or review retry event, w
   assert.equal(latestRetryAt([{ type: 'unblock_retry', at: '9' }]), '9');
   assert.equal(latestRetryAt([]), null);
   assert.equal(latestReviewNote([{ type: 'edit', reason: 'x' }]), null);
+});
+
+test('a turn continue adds its note to the retry note before it, and counts as continued until the next retry', () => {
+  const events = [
+    { type: 'retry' as const, reason: 'use the cache' },
+    { type: 'turn_continue' as const, reason: 'out of turns' },
+  ];
+  assert.equal(latestReviewNote(events), 'out of turns\n\nuse the cache');
+  assert.equal(latestReviewNote([{ type: 'turn_continue', reason: 'out of turns' }]), 'out of turns');
+  assert.equal(continuedSinceRetry(events), true);
+  assert.equal(continuedSinceRetry([...events, { type: 'retry' }]), false);
+  assert.equal(continuedSinceRetry([{ type: 'claim' }]), false);
 });
 
 test('the writes of a model, a question and the merge settings change only their own fields, and clear what they make stale', () => {

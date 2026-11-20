@@ -35,6 +35,7 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   retry: { type: 'retry' },
   unblock_retry: { type: 'unblock_retry' },
   review_retry: { type: 'review_retry' },
+  turn_continue: { type: 'turn_continue', max_turns: 60 },
   mark_done: { type: 'mark_done' },
   pr_merged: { type: 'pr_merged' },
   recover: { type: 'recover' },
