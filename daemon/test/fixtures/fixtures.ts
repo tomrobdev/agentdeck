@@ -54,6 +54,13 @@ const testPorts = (): Ports => ({
 });
 
 export const testApp = (db: Db, ports: Partial<Ports> = {}): Db & App => Object.assign(db, { ...testPorts(), ...ports });
+
+export const brokenApp = (thrown: unknown): App =>
+  new Proxy({} as App, {
+    get: () => {
+      throw thrown;
+    },
+  });
 type Task = NonNullable<ReturnType<Db['getTask']>>;
 type TaskStatus = Task['status'];
 type NewTask = Partial<Omit<Parameters<Db['addTask']>[0], 'repo_id' | 'status'>>;
