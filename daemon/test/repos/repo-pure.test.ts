@@ -31,6 +31,11 @@ test('a generated path glob: ** spans folders, * stays in one, and a folder cove
   assert.equal(matchesGlob('pnpm-lock.yaml', '**/pnpm-lock.yaml'), true);
   assert.equal(matchesGlob('docs/reference/x.md', 'docs/reference'), true);
   assert.equal(matchesGlob('docs/x.md', ' '), false);
+  assert.equal(matchesGlob('docs/a1.md', 'docs/a?.md'), true);
+  assert.equal(matchesGlob('docs/a/.md', 'docs/a?.md'), false);
+  assert.equal(matchesGlob('docs/x.md', '/docs/x.md'), true);
+  assert.equal(matchesGlob('src/a(1).ts', 'src/a(1).ts'), true);
+  assert.deepEqual(splitGenerated({ generated_paths: ['**'], generated_cmd: null }, ['a']), { command: null, generated: [], other: ['a'] });
 });
 
 test('a sync regenerates only when the repo has a command; the rest of the conflicts are merged', () => {

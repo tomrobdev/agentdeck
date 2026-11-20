@@ -76,6 +76,12 @@ test('a repo goes into the form and back into a patch with every setting it show
   });
 });
 
+test('a repo with no generated command shows an empty field, and a blank one saves as none', () => {
+  const form = toRepoForm({ ...repo, generated_cmd: undefined });
+  assert.equal(form.generatedCmd, '');
+  assert.equal(toRepoPatch({ ...form, generatedCmd: '  ' }).generated_cmd, null);
+});
+
 test('a setup command keeps its lines for the shell, and the base branch is trimmed', () => {
   const form = { ...toRepoForm(repo), setupCmd: 'npm ci &&\nnpm run build', baseBranch: ' main ' };
   const patch = toRepoPatch(form);
