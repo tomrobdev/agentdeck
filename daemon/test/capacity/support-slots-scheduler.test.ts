@@ -16,7 +16,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('#db/index.ts');
 const { Scheduler } = await import('#application/scheduler/scheduler.ts');
-const { status, updateRepo, updateSettings } = await import('#application/actions.ts');
+const { cancelTask, status, updateRepo, updateSettings } = await import('#application/actions.ts');
 const { testApp, waitFor } = await import('#test/fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
@@ -48,6 +48,8 @@ async function busyWorkSlotAndReviewDue(supportSlots: number) {
   await waitFor(() => db.getTask(busy.id)?.status === 'running', { what: 'the busy task to take the work slot' });
   const reviews = () => db.runsForTask(done.id).filter((r) => r.kind === 'review');
   const stop = async () => {
+    cancelTask(db, busy.id);
+    await waitFor(() => db.getTask(busy.id)?.status === 'cancelled', { timeoutMs: 10_000, what: 'the busy task to stop' });
     scheduler.stop();
     await running;
     await waitFor(() => reviews().every((r) => r.ended_at), { timeoutMs: 10_000, what: 'the review run to end' });
