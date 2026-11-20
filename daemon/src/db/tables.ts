@@ -141,6 +141,7 @@ export const runs = sqliteTable(
     base_commit: text(),
     code_comment_lines: integer(),
     code_comment_percent: real(),
+    changed_paths: text(),
   },
   (table) => [index('runs_task').on(table.task_id, table.id)],
 );

@@ -93,6 +93,8 @@ export interface Run {
   code_comment_lines: number | null;
   /** Those lines as a share of the lines the branch adds, from 0 to 100; null when `code_comment_lines` is. */
   code_comment_percent: number | null;
+  /** The files a work run's branch had changed against its target when it ended; null for other kinds and when git couldn't say. */
+  changed_paths: string[] | null;
 }
 
 export const DEFAULT_SUPPORT_MODEL = 'sonnet';

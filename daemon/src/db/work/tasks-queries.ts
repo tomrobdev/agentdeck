@@ -29,6 +29,15 @@ export function taskQueries(orm: Orm) {
     listTasks(): Task[] {
       return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all().map(toTask);
     },
+    tasksWithStatus(statuses: readonly TaskStatus[]): Task[] {
+      return orm
+        .select(TASK_COLUMNS)
+        .from(tasks)
+        .where(inArray(tasks.status, [...statuses]))
+        .orderBy(asc(tasks.id))
+        .all()
+        .map(toTask);
+    },
     tasksForRepo(repo_id: RepoId, limit = 40): Task[] {
       return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all().map(toTask);
     },

@@ -214,6 +214,8 @@ export {
   statusGroup,
 } from '#domain/work/task/stage.ts';
 export type { StatusGroup } from '#domain/work/task/stage.ts';
+export { footprint, overlapWith } from '#domain/work/task/footprint.ts';
+export type { Footprinted } from '#domain/work/task/footprint.ts';
 export { describeWait, startDecision, startWait, waitingFor } from '#domain/work/task/start.ts';
 export type { QueueState, QueueWait, StartWait, Waiting } from '#domain/work/task/start.ts';
 export {

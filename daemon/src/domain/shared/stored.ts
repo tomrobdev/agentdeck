@@ -9,9 +9,18 @@ const JSON_FIELDS = [
   'pr_checks',
   'pr_checks_opened',
   'pr_checks_merged',
+  'changed_paths',
 ];
 type JsonField =
-  'needs' | 'question' | 'plan_steps' | 'auto_merge_check' | 'merge_request_check' | 'pr_checks' | 'pr_checks_opened' | 'pr_checks_merged';
+  | 'needs'
+  | 'question'
+  | 'plan_steps'
+  | 'auto_merge_check'
+  | 'merge_request_check'
+  | 'pr_checks'
+  | 'pr_checks_opened'
+  | 'pr_checks_merged'
+  | 'changed_paths';
 
 /** A task or run value as its column stores it: the type of `T` with its parsed fields turned back. */
 type Stored<T> = {

@@ -212,7 +212,12 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
 }
 const flag = (v: number | null): boolean | null => (v === null ? null : v === 1);
 
-export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: flag(row.tests_passed), last_test_failed: flag(row.last_test_failed) });
+export const toRun = (row: RunRow): Run => ({
+  ...row,
+  tests_passed: flag(row.tests_passed),
+  last_test_failed: flag(row.last_test_failed),
+  changed_paths: row.changed_paths === null ? null : parseTextList(row.changed_paths),
+});
 
 export type PlanBranchRow = typeof planBranches.$inferSelect;
 

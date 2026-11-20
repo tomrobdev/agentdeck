@@ -1543,6 +1543,7 @@ A review run's review, as it is stored: its kind, its note and its line comments
 | `last_test_failed`     | `boolean \| null`    | Whether the last test run of that run failed; null with no test run, and for a run with no `run_end`.                                                                                                                                          |
 | `code_comment_lines`   | `number \| null`     | The code comment lines a work run's branch adds, as last measured before it ended; null when its repo has no limit on, or it was not measured.                                                                                                 |
 | `code_comment_percent` | `number \| null`     | Those lines as a share of the lines the branch adds, from 0 to 100; null when `code_comment_lines` is.                                                                                                                                         |
+| `changed_paths`        | `string[] \| null`   | The files a work run's branch had changed against its target when it ended; null for other kinds and when git couldn't say.                                                                                                                    |
 
 ### RunCameTo
 
@@ -1914,6 +1915,21 @@ A task that ran out of attempts.
 | `path`      | `string`  |         |
 | `patch`     | `string`  |         |
 | `truncated` | `boolean` |         |
+
+### FootprintSource
+
+| Field     | Type                                                          | Comment |
+| --------- | ------------------------------------------------------------- | ------- |
+| `prompt`  | `string`                                                      |         |
+| `plan`    | `{ html: string; steps: readonly string[] \| null; } \| null` |         |
+| `changed` | `readonly string[]`                                           |         |
+
+### Footprinted
+
+| Field   | Type                | Comment |
+| ------- | ------------------- | ------- |
+| `id`    | `TaskId`            |         |
+| `paths` | `readonly string[]` |         |
 
 ### LandingBranch
 

@@ -45,6 +45,7 @@ import { cutPlanBranch, followedSteps, planForRun, takePlanFile } from '#applica
 import { settle } from '#application/landing/settle.ts';
 import { recordAnswers, reviewForRun } from '#application/landing/review/address.ts';
 import { escalateAfter } from '#application/work/escalate.ts';
+import { branchPaths } from '#application/work/files.ts';
 
 export async function runTask(app: App, task: Task): Promise<WorkerResult> {
   ensureDirs();
@@ -208,7 +209,14 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
       maxTurns: task.max_turns,
     });
     if (more) {
-      await endTaskRun(app, opened, outcome.outcome, outcome.reason, runFields, summaryContext(app, task));
+      await endTaskRun(
+        app,
+        opened,
+        outcome.outcome,
+        outcome.reason,
+        await withChangedPaths(app, task, runFields),
+        summaryContext(app, task),
+      );
       await settle(app, task.id, { type: 'turn_continue', max_turns: more.maxTurns }, { reason: more.note });
       return outcome;
     }
@@ -258,6 +266,11 @@ async function giveBackPlan(app: App, task: Task, worktree: string, log: OpenedR
   }
 }
 
+async function withChangedPaths(app: App, task: Task, runFields: Partial<Run>): Promise<Partial<Run>> {
+  const current = app.getTask(task.id);
+  return { ...runFields, changed_paths: current ? await branchPaths(app, current) : null };
+}
+
 function summaryContext(app: App, task: Task): SummaryContext {
   return { testCmd: app.getRepo(task.repo_id)?.test_cmd ?? null, maxTurns: task.max_turns };
 }
@@ -269,7 +282,8 @@ async function finish(
   res: WorkerResult,
   runFields: Partial<Run> = {},
 ): Promise<WorkerResult> {
-  if (opened) await endTaskRun(app, opened, res.outcome, res.reason, runFields, summaryContext(app, task));
+  if (opened)
+    await endTaskRun(app, opened, res.outcome, res.reason, await withChangedPaths(app, task, runFields), summaryContext(app, task));
   const reason = { reason: res.reason ?? null };
   switch (res.outcome) {
     case 'done':

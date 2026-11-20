@@ -62,6 +62,7 @@ export interface TaskRepository {
     opts?: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] },
   ) => { task: Task; event: DomainEvent; pending: number[] } | undefined;
   listTasks(): Task[];
+  tasksWithStatus(statuses: readonly TaskStatus[]): Task[];
   tasksForRepo(repo_id: RepoId, limit?: number): Task[];
   tasksOnTarget(repo_id: RepoId, target: string): Task[];
   countOpen(repo_id: RepoId): number;
@@ -79,7 +80,7 @@ export interface TaskRepository {
   listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: TaskId }): TaskSummary[];
   openPrTasks(): Task[];
   failedPrTasks(): Task[];
-  claimNextTask(draining?: Draining): Task | undefined;
+  claimNextTask(draining?: Draining, overlapping?: ReadonlySet<TaskId>): Task | undefined;
   editTask(id: TaskId, fields: TaskEdit, opts?: { ownPlan?: string }): Task | undefined;
   attachOwnPlan(id: TaskId, html: string): TaskPlan | undefined;
   setCheckout(id: TaskId, fields: { branch?: string | null; worktree?: string | null }): void;

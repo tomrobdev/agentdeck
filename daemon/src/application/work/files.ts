@@ -105,6 +105,22 @@ export async function taskChanges(app: App, id: TaskId, rawSince?: string | null
   return { ...changes, since, base_may_show, files, commits };
 }
 
+const pathsOf = (files: ChangedFile[]): string[] => files.flatMap((f) => (f.old_path ? [f.path, f.old_path] : [f.path]));
+
+export async function branchPaths(app: App, task: Task): Promise<string[] | null> {
+  const repo = app.getRepo(task.repo_id);
+  const branch = task.checkout?.branch;
+  if (!repo || !branch) return null;
+  try {
+    const head = await app.workspace.branchHead(repo.path, branch);
+    if (!head) return null;
+    const base = await baseOf(app, repo, targetOf(task, repo), head);
+    return pathsOf(await changedFilesCached(app, repo.path, base.sha, head));
+  } catch {
+    return null;
+  }
+}
+
 export async function measureBranch(
   app: App,
   repo: Repo,
@@ -123,7 +139,7 @@ export async function measureBranch(
     ]);
     return {
       lines: files.reduce((sum, f) => sum + f.additions + f.deletions, 0),
-      paths: files.flatMap((f) => (f.old_path ? [f.path, f.old_path] : [f.path])),
+      paths: pathsOf(files),
       code_comments: added ? countCodeComments(added) : null,
     };
   } catch {

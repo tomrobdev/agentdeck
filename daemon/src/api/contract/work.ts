@@ -39,6 +39,8 @@ export type StartWait =
   | { kind: 'plan-branch'; name: string; base: string; status: 'conflict' | 'partly_landed' }
   /** An unblock run for the task is still going: a person retried it meanwhile, and it starts once that run stops. */
   | { kind: 'unblocking' }
+  /** `with`: the running task in its repo whose footprint, the files it names or changed, overlaps this task's. */
+  | { kind: 'overlap'; with: TaskId }
   /** `repo`: the repo whose own slots are all in use, or null when the daemon's are. */
   | { kind: 'slots'; running: number; max: number; repo: string | null };
 

@@ -7,6 +7,7 @@ import type { StartState } from '#domain/work/index.ts';
 import { type QueueWait, type StartWait, planBranchWait, startWait } from '#domain/work/index.ts';
 import type { Task } from '#domain/work/index.ts';
 import { queueWait } from '#application/capacity/gate.ts';
+import { overlapWaits } from '#application/capacity/overlap.ts';
 
 export interface PausedRepo {
   id: RepoId;
@@ -40,6 +41,7 @@ export function startWaits(
   const runningIn = app.countRunningByRepo();
   const repoSlots = (repo: Repo | undefined) => repo && { name: repo.name, running: runningIn.get(repo.id) ?? 0, max: repo.max_concurrent };
   const unblocks = app.liveRuns('unblock');
+  const overlaps = overlapWaits(app);
   const draining = app.draining();
   const ran = draining.daemon || draining.repos.length ? app.queuedThatRan() : new Set<TaskId>();
   const drainOf = (task: Pick<Task, 'id' | 'repo_id'>) =>
@@ -52,6 +54,7 @@ export function startWaits(
       dependency,
       planBranch: planBranchOf(task),
       unblocking: unblocks.has(task.id),
+      overlap: overlaps.get(task.id) ?? null,
       running: used,
       max,
       repo: repoSlots(repos.get(task.repo_id)),
