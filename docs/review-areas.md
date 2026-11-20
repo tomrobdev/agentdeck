@@ -280,6 +280,18 @@ The App object, the ports and repositories, the composition root and the entry p
 - daemon/src/config.ts
 - daemon/src/cli/format.ts
 - daemon/src/cli/help.ts
+- daemon/src/cli/capacity/settings.ts
+- daemon/src/cli/insights/help.ts
+- daemon/src/cli/landing/help.ts
+- daemon/src/cli/landing/settings.ts
+- daemon/src/cli/operations/help.ts
+- daemon/src/cli/operations/settings.ts
+- daemon/src/cli/proposals/settings.ts
+- daemon/src/cli/repos/help.ts
+- daemon/src/cli/repos/settings.ts
+- daemon/src/cli/runs/settings.ts
+- daemon/src/cli/work/help.ts
+- daemon/src/cli/work/settings.ts
 
 ## data
 
