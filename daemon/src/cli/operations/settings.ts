@@ -1,4 +1,3 @@
-// The parsing of the daemon and notification settings.
 import { type SettingsPatch, onOff } from '#application/actions.ts';
 import type { NotifyKind } from '#domain/operations/index.ts';
 

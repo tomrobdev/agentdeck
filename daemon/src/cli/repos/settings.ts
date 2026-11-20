@@ -1,4 +1,3 @@
-// The parsing of the repo's own settings: approval, branch, commands and pull request mode.
 import { type RepoPatch, onOff } from '#application/actions.ts';
 import type { MergeMethod, PrMode } from '#domain/repos/index.ts';
 

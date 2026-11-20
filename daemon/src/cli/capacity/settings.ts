@@ -1,4 +1,3 @@
-// The parsing of the capacity settings: slots and the usage budget.
 import { type SettingsPatch } from '#application/actions.ts';
 import { BUDGET_KEYS } from '#domain/capacity/index.ts';
 

@@ -1,4 +1,3 @@
-// The parsing of the landing settings: auto-merge, code comment limits, area review dues and the sync's union and generated paths.
 import { type RepoPatch, type SettingsPatch, onOff } from '#application/actions.ts';
 
 export const LANDING_SETTINGS: Record<string, (value: string, key: string) => SettingsPatch> = {

@@ -1,4 +1,3 @@
-// The parsing of the plan branch settings.
 import { type SettingsPatch } from '#application/actions.ts';
 
 export const WORK_SETTINGS: Record<string, (value: string, key: string) => SettingsPatch> = {

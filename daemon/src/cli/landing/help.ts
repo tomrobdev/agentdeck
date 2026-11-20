@@ -1,4 +1,3 @@
-// The help lines of the commands that land a task: checks, pull requests, merging, sync and verify.
 import { PR_OPEN_RETRIES } from '#domain/landing/index.ts';
 
 export const LANDING_HELP = `  agentdeck fix-checks <id>    retry a done task whose PR checks fail, with each failing check and its log tail in the note

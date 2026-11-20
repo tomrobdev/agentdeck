@@ -1,4 +1,3 @@
-// The help lines of the task and plan branch commands.
 import { MODELS } from '#domain/work/index.ts';
 
 export const WORK_HELP = `  agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model ${MODELS.join('|')}] [--max-turns n] [--attempts n]

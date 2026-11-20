@@ -1,4 +1,3 @@
-// The parsing of the planner settings.
 import { type SettingsPatch, onOff } from '#application/actions.ts';
 
 export const PROPOSALS_SETTINGS: Record<string, (value: string, key: string) => SettingsPatch> = {

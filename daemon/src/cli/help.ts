@@ -1,4 +1,3 @@
-// The help text, assembled from each context's help lines in order.
 import { INSIGHTS_HELP } from '#cli/insights/help.ts';
 import { LANDING_HELP } from '#cli/landing/help.ts';
 import { CONTEXT_HELP, DAEMON_HELP, NOTIFY_HELP } from '#cli/operations/help.ts';

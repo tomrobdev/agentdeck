@@ -1,4 +1,3 @@
-// The help lines of the daemon, settings, context and notification commands.
 import { NOTIFY_KINDS } from '#domain/operations/index.ts';
 
 export const CONTEXT_HELP = `  agentdeck clean <id>          remove the task's worktree (its branch is kept)

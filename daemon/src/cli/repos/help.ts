@@ -1,4 +1,3 @@
-// The help lines of the repo commands and the repo settings.
 import {
   DEFAULT_AUTO_MERGE_MAX_LINES,
   DEFAULT_AUTO_MERGE_SKIP,

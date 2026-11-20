@@ -1,4 +1,3 @@
-// The parsing of the settings of how runs start: the models, resolve, unblock, review, escalation, sandbox, network and tools.
 import { type RepoPatch, type SettingsPatch, onOff } from '#application/actions.ts';
 
 export const RUNS_SETTINGS: Record<string, (value: string, key: string) => SettingsPatch> = {

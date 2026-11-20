@@ -1,4 +1,3 @@
-// The help lines of the stats command.
 export const INSIGHTS_HELP = `  agentdeck stats [--repo r] [--since <date>] [--by week|model] [--failures] [--json]  the pilot scorecard measures per repo: tasks done on
                                   the first run (with a Wilson 95% interval), permission denials per run, cost and minutes per
                                   done task, then interventions, median minutes queued, running and in review, PRs green on CI
