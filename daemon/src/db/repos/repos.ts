@@ -185,6 +185,8 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           | 'model'
           | 'allowed_tools'
           | 'union_paths'
+          | 'generated_paths'
+          | 'generated_cmd'
         >
       >,
     ): void {

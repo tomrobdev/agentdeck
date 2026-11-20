@@ -4,7 +4,7 @@ import type { App } from '#application/ports/app.ts';
 import type { SyncFinish } from '#application/ports/workspace.ts';
 import type { TaskId } from '#domain/shared/index.ts';
 import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '#domain/runs/index.ts';
-import type { Repo } from '#domain/repos/index.ts';
+import { type Repo, splitGenerated } from '#domain/repos/index.ts';
 import { buildResolvePrompt } from '#domain/runs/index.ts';
 import { resolveOutcome } from '#domain/runs/index.ts';
 import type { Outcome, Run } from '#domain/runs/index.ts';
@@ -35,22 +35,27 @@ export async function syncBranch(app: App, task: Task, repo: Repo, worktree: str
     }
     if (merge.kind === 'up_to_date') return merge;
     before = merge.before;
-    if (merge.kind === 'merged') {
-      if (opts.runTests && repo.test_cmd) {
-        const tests = await ws.runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
-        if (!tests.passed) {
-          await ws.undoSync(worktree, before);
-          return { kind: 'failed', files: [], reason: `tests failed after merging ${targetOf(task, repo)}: ${lastLine(tests.output)}` };
-        }
+    if (merge.kind === 'conflicts') {
+      const { command, other } = splitGenerated(repo, merge.files);
+      if (command && !other.length) {
+        const why = await regenerateConflicts(app, worktree, { before, files: merge.files, command }, leftoversMessage(task));
+        if (why) return { kind: 'failed', files: merge.files, reason: why };
+      } else if (!opts.allowResolve) {
+        await ws.undoSync(worktree, before);
+        return { kind: 'needs_resolution', files: merge.files };
+      } else {
+        const { files, ours, theirs } = merge;
+        return await resolveConflicts(app, task, repo, worktree, before, { files, ours, theirs }, opts.runTests);
       }
-      return { kind: 'clean' };
     }
-    if (!opts.allowResolve) {
-      await ws.undoSync(worktree, before);
-      return { kind: 'needs_resolution', files: merge.files };
+    if (opts.runTests && repo.test_cmd) {
+      const tests = await ws.runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
+      if (!tests.passed) {
+        await ws.undoSync(worktree, before);
+        return { kind: 'failed', files: [], reason: `tests failed after merging ${targetOf(task, repo)}: ${lastLine(tests.output)}` };
+      }
     }
-    const { files, ours, theirs } = merge;
-    return await resolveConflicts(app, task, repo, worktree, before, { files, ours, theirs }, opts.runTests);
+    return { kind: 'clean' };
   } catch (err) {
     if (before) await ws.undoSync(worktree, before).catch(() => {});
     return { kind: 'error', reason: errorMessage(err) };
@@ -67,7 +72,12 @@ async function resolveConflicts(
   runTests: boolean,
 ): Promise<SyncResult> {
   const { files } = conflict;
-  const prompt = buildResolvePrompt(task, { base: targetOf(task, repo), ...conflict, testCmd: repo.test_cmd });
+  const prompt = buildResolvePrompt(task, {
+    base: targetOf(task, repo),
+    ...conflict,
+    testCmd: repo.test_cmd,
+    ...regenerateHint(repo, files),
+  });
   const opened = openTaskRun(app, task, 'resolve');
   const { log } = opened;
   let fields: Partial<Run> = {};
@@ -100,6 +110,28 @@ async function resolveConflicts(
   await endTaskRun(app, opened, outcome, reason, fields);
 
   return syncResultOf(outcome, files, reason);
+}
+
+export function regenerateHint(repo: Repo, files: string[]): { regenerate?: { command: string; files: string[] } } {
+  const { command, generated } = splitGenerated(repo, files);
+  return command && generated.length ? { regenerate: { command, files: generated } } : {};
+}
+
+export async function regenerateConflicts(
+  app: App,
+  worktree: string,
+  conflict: { before: string; files: string[]; command: string },
+  leftovers: string,
+): Promise<string> {
+  const ws = app.workspace;
+  const { before, files, command } = conflict;
+  await ws.takeBaseSide(worktree, files);
+  const ran = await ws.runCommand(command, worktree, TEST_TIMEOUT_MS);
+  const why = ran.passed
+    ? resolutionProblem(await ws.finishSync(worktree, files, before, leftovers))
+    : `\`${command}\` failed: ${lastLine(ran.output)}`;
+  if (why) await ws.undoSync(worktree, before);
+  return why;
 }
 
 export function resolutionProblem(finish: SyncFinish): string {

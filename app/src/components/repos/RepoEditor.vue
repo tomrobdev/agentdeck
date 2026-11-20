@@ -172,6 +172,26 @@ async function drain() {
           >
             <input v-model="form.unionPaths" class="font-mono" placeholder="docs/review-areas.md, *.lock" data-testid="repo-union-paths" />
           </FieldRow>
+          <FieldRow
+            label="Generated files"
+            hint="Path globs, comma-separated, of files the command below rebuilds. A sync that conflicts only in these reruns the command instead of a resolve run."
+          >
+            <input
+              v-model="form.generatedPaths"
+              class="font-mono"
+              placeholder="docs/architecture.md, docs/reference/**"
+              data-testid="repo-generated-paths"
+            />
+          </FieldRow>
+          <FieldRow label="Regenerate with" hint="The command that rebuilds the generated files, run in the task's worktree.">
+            <input
+              v-model="form.generatedCmd"
+              class="font-mono"
+              spellcheck="false"
+              placeholder="pnpm docs:gen"
+              data-testid="repo-generated-cmd"
+            />
+          </FieldRow>
         </FieldSection>
 
         <FieldSection title="Code comments" hint="A branch over either limit is flagged. 0 turns a limit off.">

@@ -64,6 +64,10 @@ export interface Repo {
   escalate: boolean;
   /** Path globs whose conflicts in a sync's merge keep both sides' lines (git's merge=union); none = empty. */
   union_paths: string[];
+  /** Path globs of files generated_cmd rebuilds; a sync conflict in one takes the base's side and reruns the command. None = empty. */
+  generated_paths: string[];
+  /** The command that rebuilds generated_paths, run in the worktree; null when the repo has none. */
+  generated_cmd: string | null;
   created_at: string;
 }
 

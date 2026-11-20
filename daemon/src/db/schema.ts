@@ -314,6 +314,9 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE plan_branches ADD COLUMN review_summary TEXT;`,
   // 47: repos' union_paths, a JSON array of path globs whose conflicts a sync's merge settles by keeping both sides' lines.
   `ALTER TABLE repos ADD COLUMN union_paths TEXT NOT NULL DEFAULT '[]';`,
+  // 48: repos' generated files: generated_paths, a JSON array of path globs, and generated_cmd, the command that rebuilds them.
+  `ALTER TABLE repos ADD COLUMN generated_paths TEXT NOT NULL DEFAULT '[]';
+   ALTER TABLE repos ADD COLUMN generated_cmd TEXT;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

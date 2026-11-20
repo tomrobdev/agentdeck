@@ -37,6 +37,8 @@ export type RepoUpdate = Partial<
     | 'model'
     | 'allowed_tools'
     | 'union_paths'
+    | 'generated_paths'
+    | 'generated_cmd'
   >
 >;
 

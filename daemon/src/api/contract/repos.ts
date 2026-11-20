@@ -52,6 +52,8 @@ export interface Repo {
   model?: string | null;
   /** JSON array of path globs whose conflicts in a sync's merge keep both sides' lines. Missing from a daemon that predates it. */
   union_paths?: string;
+  generated_paths?: string;
+  generated_cmd?: string | null;
   created_at: string;
 }
 
@@ -103,6 +105,8 @@ export interface RepoPatch {
   /** The repo's own tool rules; null or [] goes back to the detected ones. */
   allowed_tools?: string[] | null;
   union_paths?: string[];
+  generated_paths?: string[];
+  generated_cmd?: string | null;
 }
 
 export interface DoctorCheck {

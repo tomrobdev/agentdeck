@@ -11,9 +11,51 @@ import {
   protectedEditTarget,
   protectedEditsMessage,
   repoNameError,
+  splitGenerated,
   toolRulesError,
   toolRulesSource,
 } from '#domain/repos/index.ts';
+import { buildResolvePrompt } from '#domain/runs/index.ts';
+import { asTaskId } from '#domain/shared/index.ts';
+
+test('a generated path glob: ** spans folders, * stays in one, and a folder covers what is under it', () => {
+  const matchesGlob = (path: string, glob: string) =>
+    splitGenerated({ generated_paths: [glob], generated_cmd: 'gen' }, [path]).generated.length === 1;
+  assert.equal(matchesGlob('docs/reference/models.md', 'docs/reference/**'), true);
+  assert.equal(matchesGlob('docs/reference/a/b.md', 'docs/reference/**'), true);
+  assert.equal(matchesGlob('docs/reference/b.md', 'docs/*.md'), false);
+  assert.equal(matchesGlob('docs/b.md', 'docs/*.md'), true);
+  assert.equal(matchesGlob('docs/architecture.md', 'docs/architecture.md'), true);
+  assert.equal(matchesGlob('docs/architectureXmd', 'docs/architecture.md'), false);
+  assert.equal(matchesGlob('a/pnpm-lock.yaml', '**/pnpm-lock.yaml'), true);
+  assert.equal(matchesGlob('pnpm-lock.yaml', '**/pnpm-lock.yaml'), true);
+  assert.equal(matchesGlob('docs/reference/x.md', 'docs/reference'), true);
+  assert.equal(matchesGlob('docs/x.md', ' '), false);
+  assert.equal(matchesGlob('docs/a1.md', 'docs/a?.md'), true);
+  assert.equal(matchesGlob('docs/a/.md', 'docs/a?.md'), false);
+  assert.equal(matchesGlob('docs/x.md', '/docs/x.md'), true);
+  assert.equal(matchesGlob('src/a(1).ts', 'src/a(1).ts'), true);
+  assert.deepEqual(splitGenerated({ generated_paths: ['**'], generated_cmd: null }, ['a']), { command: null, generated: [], other: ['a'] });
+});
+
+test('a sync regenerates only when the repo has a command; the rest of the conflicts are merged', () => {
+  const files = ['docs/architecture.md', 'src/a.ts', 'docs/reference/models.md'];
+  const repo = { generated_paths: ['docs/architecture.md', 'docs/reference/**'], generated_cmd: 'pnpm docs:gen' };
+  assert.deepEqual(splitGenerated(repo, files), {
+    command: 'pnpm docs:gen',
+    generated: ['docs/architecture.md', 'docs/reference/models.md'],
+    other: ['src/a.ts'],
+  });
+  assert.deepEqual(splitGenerated({ ...repo, generated_cmd: '  ' }, files), { command: null, generated: [], other: files });
+});
+
+test('a resolve prompt with generated files says to rerun their command, not merge them', () => {
+  const task = { id: asTaskId(3), title: 't', prompt: 'p' };
+  const ctx = { base: 'main', files: ['docs/a.md', 'src/a.ts'], ours: [], theirs: [], testCmd: null };
+  const told = buildResolvePrompt(task, { ...ctx, regenerate: { command: 'pnpm docs:gen', files: ['docs/a.md'] } });
+  assert.match(told, /These files are generated, so do not merge them by hand: docs\/a\.md\..*`pnpm docs:gen`/);
+  assert.doesNotMatch(buildResolvePrompt(task, ctx), /generated/);
+});
 
 test('a repo name may use letters, digits, dot, underscore and dash, and must not start with a dot or dash or be all digits', () => {
   assert.equal(repoNameError('my-repo_1.x'), null);

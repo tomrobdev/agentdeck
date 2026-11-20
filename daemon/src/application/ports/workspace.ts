@@ -67,6 +67,7 @@ export interface Workspace {
 
   startSync(repo: Repo, target: string, worktree: string, leftovers: string): Promise<SyncStart>;
   finishSync(worktree: string, files: string[], before: string, leftovers: string): Promise<SyncFinish>;
+  takeBaseSide(worktree: string, files: string[]): Promise<void>;
   undoSync(worktree: string, before: string): Promise<void>;
 
   writePlanFile(worktree: string, html: string | null): Promise<void>;

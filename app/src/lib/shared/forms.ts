@@ -22,6 +22,8 @@ export type RepoForm = {
   codeCommentMaxLines: number;
   codeCommentMaxPercent: number;
   unionPaths: string;
+  generatedPaths: string;
+  generatedCmd: string;
   sandbox: boolean;
   network: string;
   model: string;
@@ -50,6 +52,8 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     codeCommentMaxLines: d.code_comment_max_lines ?? DEFAULT_CODE_COMMENT_MAX_LINES,
     codeCommentMaxPercent: d.code_comment_max_percent ?? DEFAULT_CODE_COMMENT_MAX_PERCENT,
     unionPaths: parseTextList(d.union_paths).join(', '),
+    generatedPaths: parseTextList(d.generated_paths).join(', '),
+    generatedCmd: d.generated_cmd ?? '',
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),
     model: d.model ?? '',
@@ -76,6 +80,8 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     code_comment_max_lines: f.codeCommentMaxLines,
     code_comment_max_percent: f.codeCommentMaxPercent,
     union_paths: textList(f.unionPaths),
+    generated_paths: textList(f.generatedPaths),
+    generated_cmd: f.generatedCmd.trim() || null,
     sandbox: f.sandbox,
     network: textList(f.network),
     model: f.model || null,

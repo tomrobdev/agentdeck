@@ -91,6 +91,17 @@ export async function mergeRef(worktree: string, ref: string, unionPaths: string
   return (await headCommit(worktree)) === before ? { kind: 'up_to_date' } : { kind: 'merged' };
 }
 
+export async function takeTheirs(worktree: string, files: string[]): Promise<void> {
+  for (const file of files) {
+    try {
+      await git(worktree, 'checkout', '--theirs', '--', file);
+      await git(worktree, 'add', '--', file);
+    } catch {
+      await git(worktree, 'rm', '-q', '-f', '--ignore-unmatch', '--', file);
+    }
+  }
+}
+
 export async function abortMerge(worktree: string, head: string): Promise<void> {
   if (await mergeInProgress(worktree)) await git(worktree, 'merge', '--abort');
   if ((await headCommit(worktree)) !== head) await git(worktree, 'reset', '--hard', head);

@@ -1228,6 +1228,8 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `model`                    | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                                                         |
 | `escalate`                 | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default.                                                                                |
 | `union_paths`              | `string[]`         | Path globs whose conflicts in a sync's merge keep both sides' lines (git's merge=union); none = empty.                                                                                      |
+| `generated_paths`          | `string[]`         | Path globs of files generated_cmd rebuilds; a sync conflict in one takes the base's side and reruns the command. None = empty.                                                              |
+| `generated_cmd`            | `string \| null`   | The command that rebuilds generated_paths, run in the worktree; null when the repo has none.                                                                                                |
 | `created_at`               | `string`           |                                                                                                                                                                                             |
 
 ### ToolchainInfo
@@ -1393,13 +1395,14 @@ The plan a run follows: its name (`112-plans-in-agentdeck.html`) and its HTML as
 
 ### ResolveContext
 
-| Field     | Type             | Comment                                                                               |
-| --------- | ---------------- | ------------------------------------------------------------------------------------- |
-| `base`    | `string`         | The base branch being merged into the task's branch, as the person knows it ("main"). |
-| `files`   | `string[]`       | Files with conflict markers.                                                          |
-| `ours`    | `string[]`       | Subjects of the commits on the task's branch that the base does not have.             |
-| `theirs`  | `string[]`       | Subjects of the commits on the base that the task's branch does not have.             |
-| `testCmd` | `string \| null` |                                                                                       |
+| Field         | Type                                                 | Comment                                                                               |
+| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `base`        | `string`                                             | The base branch being merged into the task's branch, as the person knows it ("main"). |
+| `files`       | `string[]`                                           | Files with conflict markers.                                                          |
+| `ours`        | `string[]`                                           | Subjects of the commits on the task's branch that the base does not have.             |
+| `theirs`      | `string[]`                                           | Subjects of the commits on the base that the task's branch does not have.             |
+| `testCmd`     | `string \| null`                                     |                                                                                       |
+| `regenerate?` | `{ command: string; files: string[]; } \| undefined` |                                                                                       |
 
 ### ResultLike
 

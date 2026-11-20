@@ -33,6 +33,8 @@ const repo: RepoDetail = {
   code_comment_max_lines: 5,
   code_comment_max_percent: 5,
   union_paths: JSON.stringify(['docs/review-areas.md']),
+  generated_paths: JSON.stringify(['docs/reference/**']),
+  generated_cmd: 'pnpm docs:gen',
   model: null,
   created_at: '2026-11-01T00:00:00Z',
   goals: 'Ship it',
@@ -65,11 +67,19 @@ test('a repo goes into the form and back into a patch with every setting it show
     code_comment_max_lines: 5,
     code_comment_max_percent: 5,
     union_paths: ['docs/review-areas.md'],
+    generated_paths: ['docs/reference/**'],
+    generated_cmd: 'pnpm docs:gen',
     sandbox: true,
     network: ['github.com'],
     model: null,
     allowed_tools: ['Read', 'Bash(make *)'],
   });
+});
+
+test('a repo with no generated command shows an empty field, and a blank one saves as none', () => {
+  const form = toRepoForm({ ...repo, generated_cmd: undefined });
+  assert.equal(form.generatedCmd, '');
+  assert.equal(toRepoPatch({ ...form, generatedCmd: '  ' }).generated_cmd, null);
 });
 
 test('a setup command keeps its lines for the shell, and the base branch is trimmed', () => {
