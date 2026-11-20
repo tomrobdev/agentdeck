@@ -16,6 +16,13 @@ const cards = computed(() =>
 );
 const top = computed(() => statsQ.data.value?.failures?.top ?? []);
 const whereLabel = { opened: 'CI when the PR opened', merged: 'CI when it merged', run: 'work run' } as const;
+const mergeWait = computed(() => statsQ.data.value?.scorecard.total.merge_wait ?? null);
+const waitKinds = ['person', 'checks', 'conflict', 'sync', 'other'] as const;
+const waitText = (waits: Record<(typeof waitKinds)[number], number>) =>
+  waitKinds
+    .filter((k) => waits[k] >= 0.05)
+    .map((k) => `${k} ${waits[k].toFixed(1)}`)
+    .join(', ');
 const empty = computed(() => !hasData(cards.value.map((c) => c.series)));
 </script>
 
@@ -54,6 +61,21 @@ const empty = computed(() => !hasData(cards.value.map((c) => c.series)));
         <TrendChart :series="s" />
       </article>
     </div>
+
+    <article v-if="mergeWait?.tasks" class="mt-4 rounded-md border border-border bg-panel p-3" aria-label="Done to merged">
+      <h2 class="m-0 text-md">Done to merged</h2>
+      <p class="text-muted m-0 mb-2 text-sm">
+        Median {{ mergeWait.median_minutes?.toFixed(1) ?? '–' }} min over {{ mergeWait.tasks }} tasks, and the slowest with what each waited
+        on (minutes), in all weeks
+      </p>
+      <ol class="m-0 list-none p-0">
+        <li v-for="s in mergeWait.slowest" :key="s.task_id" class="flex items-baseline gap-2 py-0.5">
+          <span class="font-[650]">#{{ s.task_id }}</span>
+          <span>{{ s.minutes.toFixed(1) }} min</span>
+          <span class="text-muted text-sm">{{ waitText(s.waits) }}</span>
+        </li>
+      </ol>
+    </article>
 
     <article v-if="top.length" class="mt-4 rounded-md border border-border bg-panel p-3" aria-label="Top causes of failure">
       <h2 class="m-0 text-md">Top causes of failure</h2>

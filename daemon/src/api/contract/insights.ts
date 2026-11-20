@@ -1,4 +1,5 @@
 // Insights: the scorecard and what is counted over time.
+import type { MergeWaitMeasures } from '#domain/insights/index.ts';
 
 /** A Wilson 95% interval. */
 export interface Interval {
@@ -35,6 +36,7 @@ export interface ScorecardMeasures {
   queued_minutes: number | null;
   running_minutes: number | null;
   review_minutes: number | null;
+  merge_wait: MergeWaitMeasures;
   pr_checks: { recorded: number; green: number; rate: number | null };
 }
 

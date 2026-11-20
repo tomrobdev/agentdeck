@@ -26,6 +26,7 @@ const card = (over: Partial<Card> = {}): Card => ({
   queued_minutes: null,
   running_minutes: null,
   review_minutes: null,
+  merge_wait: { tasks: 0, median_minutes: null, slowest: [] },
   pr_checks: { recorded: 0, green: 0, rate: null },
   ...over,
 });
