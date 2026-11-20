@@ -1,5 +1,6 @@
 // Adapter for local git: worktrees, and committing and merging in them.
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { WORKTREE_DIR } from '#src/config.ts';
 import { branchName } from '#domain/work/index.ts';
@@ -64,10 +65,22 @@ export async function conflictedFiles(worktree: string): Promise<string[]> {
   return (await git(worktree, 'diff', '--name-only', '--diff-filter=U')).split('\n').filter(Boolean);
 }
 
-export async function mergeRef(worktree: string, ref: string): Promise<MergeOutcome> {
+async function withUnionAttributes<T>(unionPaths: string[], use: (config: string[]) => Promise<T>): Promise<T> {
+  if (!unionPaths.length) return use([]);
+  const dir = mkdtempSync(join(tmpdir(), 'agentdeck-attributes-'));
+  try {
+    const file = join(dir, 'attributes');
+    writeFileSync(file, `${unionPaths.map((glob) => `${glob} merge=union`).join('\n')}\n`);
+    return await use(['-c', `core.attributesFile=${file}`]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+export async function mergeRef(worktree: string, ref: string, unionPaths: string[] = []): Promise<MergeOutcome> {
   const before = await headCommit(worktree);
   try {
-    await git(worktree, 'merge', '--no-edit', ref);
+    await withUnionAttributes(unionPaths, (config) => git(worktree, ...config, 'merge', '--no-edit', ref));
   } catch (err) {
     if (await mergeInProgress(worktree)) {
       const files = await conflictedFiles(worktree);

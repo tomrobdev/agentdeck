@@ -62,6 +62,8 @@ export interface Repo {
   model: string | null;
   /** A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default. */
   escalate: boolean;
+  /** Path globs whose conflicts in a sync's merge keep both sides' lines (git's merge=union); none = empty. */
+  union_paths: string[];
   created_at: string;
 }
 

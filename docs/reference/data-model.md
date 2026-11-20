@@ -76,6 +76,7 @@ erDiagram
     integer code_comment_max_lines
     integer code_comment_max_percent
     integer ci_not_run_ok
+    text union_paths
   }
   review_comments {
     integer id PK

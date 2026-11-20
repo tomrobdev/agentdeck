@@ -46,6 +46,7 @@ export const repos = sqliteTable(
     code_comment_max_lines: integer().default(5).notNull(),
     code_comment_max_percent: integer().default(5).notNull(),
     ci_not_run_ok: integer().default(0).notNull(),
+    union_paths: text().default('[]').notNull(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
 );

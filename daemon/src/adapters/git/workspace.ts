@@ -149,7 +149,7 @@ export const workspace = {
     if (!(await refExists(worktree, ref))) return { kind: 'no_base' as const, ref };
     const before = await headCommit(worktree);
     return orUndo(worktree, before, async () => {
-      const merge = await mergeRef(worktree, ref);
+      const merge = await mergeRef(worktree, ref, repo.union_paths);
       if (merge.kind === 'up_to_date') return merge;
       if (merge.kind === 'merged') return { kind: 'merged' as const, before };
       return { kind: 'conflicts' as const, before, files: merge.files, ...(await mergeSides(worktree)) };

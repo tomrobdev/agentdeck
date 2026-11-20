@@ -50,6 +50,8 @@ export interface Repo {
   code_comment_max_percent?: number;
   /** The model a new task of the repo takes when it names none; null follows the default_model setting. Missing from a daemon that predates it. */
   model?: string | null;
+  /** JSON array of path globs whose conflicts in a sync's merge keep both sides' lines. Missing from a daemon that predates it. */
+  union_paths?: string;
   created_at: string;
 }
 
@@ -100,6 +102,7 @@ export interface RepoPatch {
   model?: string | null;
   /** The repo's own tool rules; null or [] goes back to the detected ones. */
   allowed_tools?: string[] | null;
+  union_paths?: string[];
 }
 
 export interface DoctorCheck {
