@@ -37,6 +37,8 @@ export function startWaits(
       planBranches.find((b) => b.repo_id === task.repo_id && b.name === task.target),
       planBranches.filter((b) => b.name === task.target),
     );
+  const runningIn = app.countRunningByRepo();
+  const repoSlots = (repo: Repo | undefined) => repo && { name: repo.name, running: runningIn.get(repo.id) ?? 0, max: repo.max_concurrent };
   const unblocks = app.liveRuns('unblock');
   const draining = app.draining();
   const ran = draining.daemon || draining.repos.length ? app.queuedThatRan() : new Set<TaskId>();
@@ -52,5 +54,6 @@ export function startWaits(
       unblocking: unblocks.has(task.id),
       running: used,
       max,
+      repo: repoSlots(repos.get(task.repo_id)),
     });
 }

@@ -1,5 +1,22 @@
 // A task's status changes only here: through applyEvent, the claim and crash recovery included, guarded by the current status.
-import { type SQL, and, asc, desc, eq, exists, inArray, isNotNull, isNull, ne, not, notExists, notInArray, or } from 'drizzle-orm';
+import {
+  type SQL,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  not,
+  notExists,
+  notInArray,
+  or,
+} from 'drizzle-orm';
 import { type Draining, NOT_DRAINING } from '#domain/capacity/index.ts';
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
@@ -34,6 +51,8 @@ const depRepo = alias(repos, 'r');
 const taskRepo = alias(repos, 'tr');
 const depPlanBranch = alias(planBranches, 'dp');
 const taskPlanBranch = alias(planBranches, 'tp');
+const runningTask = alias(tasks, 'rt');
+const runningRepo = alias(repos, 'rr');
 
 export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId) => Task | undefined) {
   const inOpenRepo = (col: AnySQLiteColumn) =>
@@ -145,6 +164,17 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
           ),
         ),
     );
+  const repoHasSlot = () =>
+    notInArray(
+      t.repo_id,
+      orm
+        .select({ id: runningTask.repo_id })
+        .from(runningTask)
+        .innerJoin(runningRepo, eq(runningRepo.id, runningTask.repo_id))
+        .where(inArray(runningTask.status, RUNNING_STATUSES))
+        .groupBy(runningTask.repo_id, runningRepo.max_concurrent)
+        .having(gte(count(), runningRepo.max_concurrent)),
+    );
   const claimable = (d: Draining) =>
     and(
       inArray(t.status, fromStatuses({ type: 'claim' })),
@@ -152,6 +182,7 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
       noRunBeside(),
       planBranchClear(),
       inOpenRepo(t.repo_id),
+      repoHasSlot(),
       outsideDrain(d),
     );
 

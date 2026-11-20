@@ -1254,6 +1254,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `union_paths`              | `string[]`         | Path globs whose conflicts in a sync's merge keep both sides' lines (git's merge=union); none = empty.                                                                                      |
 | `generated_paths`          | `string[]`         | Path globs of files generated_cmd rebuilds; a sync conflict in one takes the base's side and reruns the command. None = empty.                                                              |
 | `generated_cmd`            | `string \| null`   | The command that rebuilds generated_paths, run in the worktree; null when the repo has none.                                                                                                |
+| `max_concurrent`           | `number`           | How many of the repo's tasks may run at once (1 to 8, default 1), under the daemon's max_concurrent.                                                                                        |
 | `created_at`               | `string`           |                                                                                                                                                                                             |
 
 ### ToolchainInfo

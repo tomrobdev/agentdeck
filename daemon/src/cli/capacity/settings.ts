@@ -1,4 +1,4 @@
-import { type SettingsPatch } from '#application/actions.ts';
+import { type RepoPatch, type SettingsPatch } from '#application/actions.ts';
 import { BUDGET_KEYS } from '#domain/capacity/index.ts';
 
 export const CAPACITY_SETTINGS: Record<string, (value: string, key: string) => SettingsPatch> = {
@@ -9,4 +9,8 @@ export const CAPACITY_SETTINGS: Record<string, (value: string, key: string) => S
       (value) => ({ budget: { [budgetKey]: Number(value) } }),
     ]),
   ),
+};
+
+export const CAPACITY_REPO_SETTINGS: Record<string, (value: string, key: string) => RepoPatch> = {
+  max_concurrent: (value) => ({ max_concurrent: Number(value) }),
 };

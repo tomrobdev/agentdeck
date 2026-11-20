@@ -54,6 +54,8 @@ export interface Repo {
   union_paths?: string;
   generated_paths?: string;
   generated_cmd?: string | null;
+  /** How many of the repo's tasks may run at once, under the daemon's max_concurrent. Missing from a daemon that predates it. */
+  max_concurrent?: number;
   created_at: string;
 }
 
@@ -107,6 +109,7 @@ export interface RepoPatch {
   union_paths?: string[];
   generated_paths?: string[];
   generated_cmd?: string | null;
+  max_concurrent?: number;
 }
 
 export interface DoctorCheck {

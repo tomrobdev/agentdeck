@@ -30,7 +30,7 @@ export type StartWait =
   | ({ kind: 'dependency' } & Waiting)
   | { kind: 'plan-branch'; name: string; base: string; status: 'conflict' | 'partly_landed' }
   | { kind: 'unblocking' }
-  | { kind: 'slots'; running: number; max: number };
+  | { kind: 'slots'; running: number; max: number; repo: string | null };
 
 export interface QueueState {
   paused: boolean;
@@ -79,6 +79,7 @@ export function startWait(
     unblocking: boolean;
     running: number;
     max: number;
+    repo?: { name: string; running: number; max: number };
   },
 ): StartWait | null {
   if (!waitsToStart(task)) return null;
@@ -89,6 +90,8 @@ export function startWait(
   if (waiting) return { kind: 'dependency', ...waiting };
   if (ctx.planBranch) return { kind: 'plan-branch', ...ctx.planBranch };
   if (ctx.unblocking) return { kind: 'unblocking' };
-  if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max };
+  const { repo } = ctx;
+  if (repo && repo.running >= repo.max) return { kind: 'slots', running: repo.running, max: repo.max, repo: repo.name };
+  if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max, repo: null };
   return null;
 }

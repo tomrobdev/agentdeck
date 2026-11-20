@@ -24,6 +24,7 @@ export type RepoForm = {
   unionPaths: string;
   generatedPaths: string;
   generatedCmd: string;
+  maxConcurrent: number;
   sandbox: boolean;
   network: string;
   model: string;
@@ -54,6 +55,7 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     unionPaths: parseTextList(d.union_paths).join(', '),
     generatedPaths: parseTextList(d.generated_paths).join(', '),
     generatedCmd: d.generated_cmd ?? '',
+    maxConcurrent: d.max_concurrent ?? 1,
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),
     model: d.model ?? '',
@@ -82,6 +84,7 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     union_paths: textList(f.unionPaths),
     generated_paths: textList(f.generatedPaths),
     generated_cmd: f.generatedCmd.trim() || null,
+    max_concurrent: f.maxConcurrent,
     sandbox: f.sandbox,
     network: textList(f.network),
     model: f.model || null,

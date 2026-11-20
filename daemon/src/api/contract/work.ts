@@ -39,7 +39,8 @@ export type StartWait =
   | { kind: 'plan-branch'; name: string; base: string; status: 'conflict' | 'partly_landed' }
   /** An unblock run for the task is still going: a person retried it meanwhile, and it starts once that run stops. */
   | { kind: 'unblocking' }
-  | { kind: 'slots'; running: number; max: number };
+  /** `repo`: the repo whose own slots are all in use, or null when the daemon's are. */
+  | { kind: 'slots'; running: number; max: number; repo: string | null };
 
 /** One link: the task it points at, its kind and where it stands (unlanded is an after link whose other task has not landed yet). */
 export interface TaskLink {

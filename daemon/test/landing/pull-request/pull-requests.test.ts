@@ -54,6 +54,7 @@ writeFileSync(join(dir, 'README.md'), 'demo\n');
 sh(dir, 'add', '-A');
 sh(dir, 'commit', '-q', '-m', 'init');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'test -f fake-output.txt' });
+db.updateRepo(repo.id, { max_concurrent: 8 });
 
 interface Calls {
   push: { repoPath: string; branch: string }[];

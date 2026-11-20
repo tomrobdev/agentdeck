@@ -131,7 +131,7 @@ test('startWait checks the queue, the repo pause, the links, an unblock run and 
   assert.deepEqual(startWait(queued, all), { kind: 'repo-paused', reason: 'paused' });
   assert.deepEqual(startWait(queued, { ...all, repoPaused: null }), { kind: 'dependency', on: [3], stuck: null });
   assert.deepEqual(startWait(queued, { ...all, repoPaused: null, dependency: { kind: 'none' } }), { kind: 'unblocking' });
-  assert.deepEqual(startWait(queued, { ...ctx, running: 2 }), { kind: 'slots', running: 2, max: 2 });
+  assert.deepEqual(startWait(queued, { ...ctx, running: 2 }), { kind: 'slots', running: 2, max: 2, repo: null });
 });
 
 test('attemptsLeft is true while the attempts used are fewer than the maximum', () => {

@@ -79,6 +79,7 @@ erDiagram
     text union_paths
     text generated_paths
     text generated_cmd "nullable"
+    integer max_concurrent
   }
   review_comments {
     integer id PK

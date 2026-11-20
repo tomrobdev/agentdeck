@@ -77,7 +77,20 @@ test('startWait names what a queued task waits for', () => {
     stuck: null,
   });
   assert.equal(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'met' } }), null);
-  assert.deepEqual(startWait({ status: 'queued' }, { ...free, running: 2 }), { kind: 'slots', running: 2, max: 2 });
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, running: 2 }), { kind: 'slots', running: 2, max: 2, repo: null });
+});
+
+test("startWait: a queued task waits on its repo's slots before the daemon's", () => {
+  const repo = { name: 'demo', running: 1, max: 1 };
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, running: 1, repo }), { kind: 'slots', running: 1, max: 1, repo: 'demo' });
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, running: 2, repo }), { kind: 'slots', running: 1, max: 1, repo: 'demo' });
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, running: 2, repo: { ...repo, max: 2 } }), {
+    kind: 'slots',
+    running: 2,
+    max: 2,
+    repo: null,
+  });
+  assert.equal(startWait({ status: 'queued' }, { ...free, running: 1, repo: { ...repo, max: 2 } }), null);
 });
 
 test('startWait: a queued task waits for its unblock run to stop, after its dependencies and before the slots', () => {

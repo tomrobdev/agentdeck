@@ -73,6 +73,15 @@ export function taskQueries(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.repo_id, r.n]));
     },
+    countRunningByRepo(): Map<RepoId, number> {
+      const rows = orm
+        .select({ repo_id: tasks.repo_id, n: count() })
+        .from(tasks)
+        .where(inArray(tasks.status, RUNNING_STATUSES))
+        .groupBy(tasks.repo_id)
+        .all();
+      return new Map(rows.map((r) => [r.repo_id, r.n]));
+    },
     countReview(): number {
       return countWhere(and(inReview, inActiveRepo(tasks.repo_id)));
     },

@@ -197,7 +197,12 @@ test('the status line goes in order: live run, sync, merge request, stop reason,
     statusLine(task({ wait: { kind: 'draining', repo: false } }))?.text,
     'AgentDeck is draining: it finishes the work in flight, then pauses',
   );
-  assert.equal(statusLine(task({ wait: { kind: 'slots', running: 2, max: 2 } })), null, 'a full slot is no sentence');
+  assert.equal(statusLine(task({ wait: { kind: 'slots', running: 2, max: 2, repo: null } })), null, 'a full slot is no sentence');
+  assert.equal(
+    statusLine(task({ wait: { kind: 'slots', running: 1, max: 1, repo: 'demo' } }))?.text,
+    'Waiting for a slot in demo (1 of 1 in use)',
+    "a full repo's slot is worded on its card",
+  );
   assert.equal(
     statusLine(review({ auto_merge_view: autoMerge({ state: 'wait', reasons: ['1 check still running on GitHub'] }) }))?.text,
     'Auto-merges when ready · 1 check still running on GitHub',

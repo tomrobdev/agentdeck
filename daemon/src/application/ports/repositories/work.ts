@@ -69,6 +69,7 @@ export interface TaskRepository {
   runningTasks(): { id: TaskId; title: string }[];
   countByStatus(): Record<string, number>;
   countQueuedByRepo(): Map<RepoId, number>;
+  countRunningByRepo(): Map<RepoId, number>;
   countReview(): number;
   attentionTasks(limit: number): AttentionCandidate[];
   hasQueued(draining?: Draining): boolean;

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import type { TaskId } from '#domain/shared/id.ts';
+import type { StartWait } from '#domain/work/index.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-claim-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -20,11 +21,13 @@ function waits(db: ReturnType<typeof openDb>) {
   return (t: import('#domain/work/task/task.ts').Task) => waitOf(t, startState(t, links.linksOf(t.id), links.target));
 }
 
+const claimable = (wait: StartWait | null): boolean => wait === null || (wait.kind === 'slots' && wait.repo === null);
+
 test('claimNextTask picks the first queued task, by priority then id, that has no startWait', () => {
   const db = openDb(':memory:');
   const open = db.addRepo({ name: 'open', path: '/tmp/open', base_branch: 'main' });
   const paused = db.addRepo({ name: 'paused', path: '/tmp/paused', base_branch: 'main' });
-  db.updateRepo(open.id, { pr_mode: 'off' });
+  db.updateRepo(open.id, { pr_mode: 'off', max_concurrent: 8 });
   db.setRepoPaused(paused.id, 'tests broke');
   db.setPaused(false);
 
@@ -57,19 +60,14 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
   for (;;) {
     const waitOf = waits(db);
     const queued = db.listTasks().filter((t) => t.status === 'queued');
-    const expected = queued
-      .filter((t) => {
-        const wait = waitOf(t);
-        return wait === null || wait.kind === 'slots';
-      })
-      .sort((a, b) => b.priority - a.priority || a.id - b.id)[0];
+    const expected = queued.filter((t) => claimable(waitOf(t))).sort((a, b) => b.priority - a.priority || a.id - b.id)[0];
     assert.equal(db.hasQueued(), expected !== undefined, `hasQueued after ${claimed} claims`);
     const picked = db.claimNextTask();
     assert.equal(picked?.id, expected?.id, `claim ${claimed}`);
     if (!picked) break;
     claimed++;
   }
-  assert.equal(claimed, 2 * 4);
+  assert.equal(claimed, 2 * 4 - 1, "the running dependency takes one of the repo's 8 slots");
   db.close();
 });
 
@@ -89,7 +87,7 @@ test('claimNextTask and startWait agree on a task that builds on a retried task 
 
   const starts = (step: string): boolean => {
     const wait = waits(db)(db.getTask(later.id)!);
-    const domain = wait === null || wait.kind === 'slots';
+    const domain = claimable(wait);
     assert.equal(db.hasQueued(), domain, step);
     return domain;
   };
@@ -110,7 +108,7 @@ test('claimNextTask and startWait agree on a task that builds on a retried task 
 test('claimNextTask and startState agree for tasks with several links, of either kind', () => {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'open', path: '/tmp/open', base_branch: 'main' });
-  db.updateRepo(repo.id, { pr_mode: 'off' });
+  db.updateRepo(repo.id, { pr_mode: 'off', max_concurrent: 8 });
   db.setPaused(false);
   const make = (finish?: 'done' | 'failed' | 'running') => {
     const t = db.addTask({ repo_id: repo.id, title: 'dep', prompt: 'p' });
@@ -141,7 +139,7 @@ test('claimNextTask and startState agree for tasks with several links, of either
     const waitOf = waits(db);
     const expected = db
       .listTasks()
-      .filter((t) => t.status === 'queued' && [null, 'slots'].includes(waitOf(t)?.kind ?? null))
+      .filter((t) => t.status === 'queued' && claimable(waitOf(t)))
       .sort((a, b) => b.priority - a.priority || a.id - b.id)[0];
     const picked = db.claimNextTask();
     assert.equal(picked?.id, expected?.id, `claim ${claimed}`);
@@ -155,6 +153,7 @@ test('claimNextTask and startState agree for tasks with several links, of either
 test('claimNextTask and startWait agree on a task an unblock run keeps waiting, before, during and after the run', () => {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'unblock', path: '/tmp/unblock', base_branch: 'main' });
+  db.updateRepo(repo.id, { max_concurrent: 2 });
   db.setPaused(false);
   const held = db.addTask({ repo_id: repo.id, title: 'held', prompt: 'p', priority: 5 });
   assert.ok(db.applyEvent(held.id, { type: 'claim' }));
@@ -172,7 +171,7 @@ test('claimNextTask and startWait agree on a task an unblock run keeps waiting, 
 
   db.finishRun(run, { outcome: 'cancelled' });
   const wait = heldWait();
-  assert.ok(wait === null || wait.kind === 'slots', 'the run stopped: nothing but a slot to wait for');
+  assert.ok(claimable(wait), "the run stopped: nothing but the daemon's slots to wait for");
   assert.equal(db.hasQueued(), true);
   assert.equal(db.claimNextTask()?.id, held.id);
   db.close();
