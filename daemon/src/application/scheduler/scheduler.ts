@@ -4,6 +4,7 @@ import type { TaskId } from '#domain/shared/index.ts';
 import { MAX_RESTARTS } from '#domain/work/index.ts';
 import { describeWait } from '#domain/work/index.ts';
 import { queueWait } from '#application/capacity/gate.ts';
+import { claimNext } from '#application/capacity/overlap.ts';
 import { notifyLater } from '#application/operations/notifications.ts';
 import { REVIEW_CHECK_MS, checkReviewsDue } from '#application/operations/review-due.ts';
 import { releaseRestartPause } from '#application/operations/restart.ts';
@@ -205,7 +206,7 @@ export class Scheduler {
     const draining = this.app.draining();
     if (!reason && !followingUp) {
       for (let room = free; room > 0; room--) {
-        const task = this.app.claimNextTask(draining);
+        const task = claimNext(this.app, draining);
         if (!task) break;
         const p: Promise<unknown> = startWork(this.app, task, this.opts.log, () => {
           this.running.delete(p);

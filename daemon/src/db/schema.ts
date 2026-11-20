@@ -319,6 +319,8 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE repos ADD COLUMN generated_cmd TEXT;`,
   // 49: repos' max_concurrent, how many of a repo's tasks may run at once under the daemon's max_concurrent.
   `ALTER TABLE repos ADD COLUMN max_concurrent INTEGER NOT NULL DEFAULT 1;`,
+  // 50: runs' changed_paths, a JSON array of the files a work run's branch had changed when it ended.
+  `ALTER TABLE runs ADD COLUMN changed_paths TEXT;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

@@ -18,7 +18,7 @@ const { prFields, pullRequestOf } = await import('#domain/landing/pull-request/p
 const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
 const { autoMerge } = await import('#application/landing/merge/auto-merge.ts');
 const { setAutoMerge, taskDetail, updateRepo } = await import('#application/actions.ts');
-const { measureBranch } = await import('#application/work/files.ts');
+const { branchPaths, measureBranch } = await import('#application/work/files.ts');
 const { digest } = await import('#domain/operations/digest.ts');
 const { fmtAutoMerge, fmtTask } = await import('#cli/format.ts');
 type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
@@ -237,6 +237,11 @@ test('measureBranch counts the lines and paths a branch changed against the base
   const t = doneTask(db, repo, { branch: 'agentdeck/measured' });
   const view = (await taskDetail(db, t.id)).auto_merge_view!;
   assert.deepEqual([view.state, view.reasons], ['on', ['touches .github/ci.yml']]);
+
+  assert.deepEqual(await branchPaths(db, t), ['.github/ci.yml', 'a.ts']);
+  assert.equal(await branchPaths(db, { ...t, checkout: null }), null, 'no branch yet');
+  assert.equal(await branchPaths(db, { ...t, checkout: { branch: 'agentdeck/nope', worktree: null, syncing_since: null } }), null);
+  assert.equal(await branchPaths(db, { ...t, target: 'no-such-target' }), null, 'no common history with the target');
 });
 
 test('a PR with 150 changed files is measured in full from git, and auto-merges under the line limit', async () => {

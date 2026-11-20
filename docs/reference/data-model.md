@@ -137,6 +137,7 @@ erDiagram
     text base_commit "nullable"
     integer code_comment_lines "nullable"
     real code_comment_percent "nullable"
+    text changed_paths "nullable"
   }
   settings {
     text key PK

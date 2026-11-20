@@ -25,6 +25,8 @@ export function describeWait(h: StartWait): string {
         : `Waits: ${h.name} conflicts with ${h.base}; it starts once a merge of ${h.base} into it is pushed`;
     case 'unblocking':
       return 'Waits for its unblock run to stop';
+    case 'overlap':
+      return `Waits for #${h.with}: same files`;
     case 'slots':
       return h.repo
         ? `Waiting for a slot in ${h.repo} (${h.running} of ${h.max} in use)`

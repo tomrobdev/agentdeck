@@ -1,6 +1,6 @@
 // Task runs: one row per worker claude process.
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, max, notInArray, or, sql } from 'drizzle-orm';
-import { type PlannerRunId, type RunId, type TaskId, stored } from '#domain/shared/index.ts';
+import { type PlannerRunId, type RunId, type TaskId, parseTextList, stored } from '#domain/shared/index.ts';
 import type { PidRun, Run, RunKind, RunningTaskRun } from '#domain/runs/index.ts';
 import { RUNNING_STATUSES } from '#domain/work/index.ts';
 import { toRun } from '#db/mappers.ts';
@@ -76,6 +76,16 @@ export function runStore(orm: Orm) {
         )
         .all();
       return new Map(rows.flatMap((r) => (r.model ? [[r.task_id, r.model] as const] : [])));
+    },
+    changedPathsOf(task_ids: readonly TaskId[]): Map<TaskId, string[]> {
+      if (!task_ids.length) return new Map();
+      const rows = orm
+        .select({ task_id: runs.task_id, changed_paths: runs.changed_paths })
+        .from(runs)
+        .where(and(eq(runs.kind, 'work'), isNotNull(runs.changed_paths), inArray(runs.task_id, [...task_ids])))
+        .orderBy(asc(runs.id))
+        .all();
+      return new Map(rows.map((r) => [r.task_id, parseTextList(r.changed_paths)]));
     },
     finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void {
       const given = Object.fromEntries(Object.entries(stored(r)).map(([k, v]) => [k, v ?? null]));

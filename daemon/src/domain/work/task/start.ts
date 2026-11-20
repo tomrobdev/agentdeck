@@ -30,6 +30,7 @@ export type StartWait =
   | ({ kind: 'dependency' } & Waiting)
   | { kind: 'plan-branch'; name: string; base: string; status: 'conflict' | 'partly_landed' }
   | { kind: 'unblocking' }
+  | { kind: 'overlap'; with: TaskId }
   | { kind: 'slots'; running: number; max: number; repo: string | null };
 
 export interface QueueState {
@@ -77,6 +78,7 @@ export function startWait(
     dependency: StartState;
     planBranch?: { name: string; base: string; status: 'conflict' | 'partly_landed' } | null;
     unblocking: boolean;
+    overlap?: TaskId | null;
     running: number;
     max: number;
     repo?: { name: string; running: number; max: number };
@@ -90,6 +92,7 @@ export function startWait(
   if (waiting) return { kind: 'dependency', ...waiting };
   if (ctx.planBranch) return { kind: 'plan-branch', ...ctx.planBranch };
   if (ctx.unblocking) return { kind: 'unblocking' };
+  if (ctx.overlap != null) return { kind: 'overlap', with: ctx.overlap };
   const { repo } = ctx;
   if (repo && repo.running >= repo.max) return { kind: 'slots', running: repo.running, max: repo.max, repo: repo.name };
   if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max, repo: null };

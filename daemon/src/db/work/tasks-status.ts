@@ -241,10 +241,11 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
     hasQueued(draining: Draining = NOT_DRAINING): boolean {
       return !!orm.select({ id: t.id }).from(t).where(claimable(draining)).limit(1).get();
     },
-    claimNextTask(draining: Draining = NOT_DRAINING): Task | undefined {
+    claimNextTask(draining: Draining = NOT_DRAINING, overlapping: ReadonlySet<TaskId> = new Set()): Task | undefined {
       return atomically(db, () => {
         const ids = orm.select({ id: t.id }).from(t).where(claimable(draining)).orderBy(desc(t.priority), asc(t.id)).all();
         for (const { id } of ids) {
+          if (overlapping.has(id)) continue;
           const claimed = applyEvent(id, { type: 'claim' });
           if (claimed) return claimed.task;
         }
