@@ -6,7 +6,7 @@ import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
 import { type Filters, applyFilters, emptyFilters, groupTasks } from '#lib/work/task-view.ts';
 import { requestedView } from '#composables/work/queue/useView.ts';
 
-const MODES: Display['mode'][] = ['list', 'board', 'graph'];
+const MODES: Display['mode'][] = ['list', 'board', 'graph', 'running'];
 
 export function useQueueDisplay(tasks: () => TaskSummary[]) {
   const route = useRoute();

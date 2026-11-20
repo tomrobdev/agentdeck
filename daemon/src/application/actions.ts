@@ -10,6 +10,7 @@ export {
   uninstallService,
 } from '#application/operations/service.ts';
 export { type SyncReport, syncNow } from '#application/runs/sync.ts';
+export { liveRuns } from '#application/runs/live-runs.ts';
 export { type VerifyReport, type VerifyStart, startVerify } from '#application/runs/verify.ts';
 export { daemonHealth, daemonReport, restartNow } from '#application/operations/doctor.ts';
 export type { Check as HealthCheck } from '#domain/operations/index.ts';

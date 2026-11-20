@@ -368,6 +368,24 @@ const ROWS: Row[] = [
   { method: 'GET', path: '/api/tasks/:task', params: task(queued), shape: TASK_DETAIL },
   {
     method: 'GET',
+    path: '/api/runs/live',
+    params: () => {
+      const t = failedTask(app, repo);
+      const run = app.startRun(t.id, 1, join(home, `live-${t.id}.jsonl`), 'review', 'opus');
+      app.setRunLive(run, 4, 'Read a.ts');
+      return {};
+    },
+    shape: { each: ['run_id', 'task_id', 'title', 'kind', 'model', 'started_at', 'turns', 'max_turns', 'tool', 'lines'] },
+    check: (runs) => {
+      const review = runs.find((r: Json) => r.kind === 'review');
+      assert.equal(review.turns, 4);
+      assert.equal(review.max_turns, 30);
+      assert.equal(review.tool, 'Read a.ts');
+      assert.deepEqual(review.lines, []);
+    },
+  },
+  {
+    method: 'GET',
     path: '/api/tasks/:task?run',
     params: task(() => {
       const t = failedTask(app, repo);

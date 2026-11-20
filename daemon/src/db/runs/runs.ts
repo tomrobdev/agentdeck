@@ -57,6 +57,9 @@ export function runStore(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
     },
+    openRuns(): Run[] {
+      return orm.select().from(runs).where(isNull(runs.ended_at)).orderBy(asc(runs.id)).all().map(toRun);
+    },
     latestRunModels(): Map<TaskId, string> {
       const rows = orm
         .select({ task_id: runs.task_id, model: runs.model })

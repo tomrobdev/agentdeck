@@ -34,6 +34,7 @@ The dashboard's routes, and the use case each calls.
 | POST   | `/api/reviews/:id/comments`           | `actions.addReviewComment`                     |
 | POST   | `/api/reviews/:id/submit`             | `actions.submitReview`                         |
 | POST   | `/api/reviews/:id`                    | `actions.editReview`                           |
+| GET    | `/api/runs/live`                      | `actions.liveRuns`                             |
 | GET    | `/api/service`                        | `actions.serviceStatus`                        |
 | GET    | `/api/settings`                       | `actions.getSettings`                          |
 | POST   | `/api/settings`                       | `actions.updateSettings`                       |

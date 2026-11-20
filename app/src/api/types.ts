@@ -43,7 +43,7 @@ export type {
   TaskPlan,
   TaskSummary,
 } from '#daemon/api/contract/work.ts';
-export type { LiveView, Run, RunSummary, SyncResult, SyncView, VerifyResult } from '#daemon/api/contract/runs.ts';
+export type { LiveRun, LiveView, Run, RunSummary, SyncResult, SyncView, VerifyResult } from '#daemon/api/contract/runs.ts';
 export type {
   AutoMergeCheck,
   AutoMergeRequest,
