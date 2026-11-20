@@ -165,6 +165,15 @@ async function drain() {
           </template>
         </FieldSection>
 
+        <FieldSection title="Merging">
+          <FieldRow
+            label="Keep both sides"
+            hint="Path globs, comma-separated. A conflict in one of these in a sync keeps both sides' lines, for files every task appends to."
+          >
+            <input v-model="form.unionPaths" class="font-mono" placeholder="docs/review-areas.md, *.lock" data-testid="repo-union-paths" />
+          </FieldRow>
+        </FieldSection>
+
         <FieldSection title="Code comments" hint="A branch over either limit is flagged. 0 turns a limit off.">
           <FieldRow label="Most lines" hint="Code comment lines a branch may add.">
             <NumberInput v-model="form.codeCommentMaxLines" class="w-28" label="Code comment lines" data-testid="repo-code-comment-lines" />

@@ -83,7 +83,7 @@ beforeEach(() => {
   pushes = [];
   pushError = null;
   details = {};
-  updateRepo(db, 'demo', { pr_mode: 'ready', auto_resolve: true, test_cmd: TEST_CMD });
+  updateRepo(db, 'demo', { pr_mode: 'ready', auto_resolve: true, test_cmd: TEST_CMD, union_paths: '' });
 });
 
 let n = 0;
@@ -253,6 +253,43 @@ test('a conflict starts a resolve run that keeps both sides; the task stays done
   assert.match(prompt, /- shared\.txt/);
   assert.ok(prompt.includes(`Task ${n} changes line two`) && prompt.includes(`Main changes line two (${n})`), prompt);
   assert.ok(prompt.includes('FAKE_DONE'), 'the task goal');
+});
+
+async function appendConflict(file: string) {
+  advanceMain(file, 'first\n', `Add ${file}`);
+  const t = await doneTask();
+  writeFileSync(join(t.wt, file), 'first\ntask line\n');
+  sh(t.wt, 'commit', '-q', '-am', 'Task appends');
+  advanceMain(file, 'first\nmain line\n', 'Main appends');
+  return t;
+}
+
+test('union_paths: two appends to a listed file sync clean and keep both lines, with nothing written to the repo', async () => {
+  updateRepo(db, 'demo', { union_paths: 'union-log.txt' });
+  const t = await appendConflict('union-log.txt');
+  const before = resolveCalls();
+
+  const r = await syncNow(db, t.id);
+  assert.equal(r.outcome, 'clean');
+  assert.equal(resolveCalls(), before);
+  const text = readFileSync(join(t.wt, 'union-log.txt'), 'utf8');
+  assert.ok(text.includes('task line') && text.includes('main line'), text);
+  assert.ok(!/^(<{7}|>{7})/m.test(text));
+  clean(t.wt);
+  assert.equal(sh(dir, 'status', '--porcelain'), '');
+  assert.ok(!existsSync(join(dir, '.git', 'info', 'attributes')));
+  assert.ok(!existsSync(join(dir, '.gitattributes')));
+});
+
+test('union_paths: the same conflict in an unlisted file still needs a resolve run', async () => {
+  updateRepo(db, 'demo', { union_paths: 'union-log.txt' });
+  const t = await appendConflict('plain-log.txt');
+  const before = resolveCalls();
+
+  const r = await syncNow(db, t.id);
+  assert.equal(r.outcome, 'resolved');
+  assert.equal(resolveCalls(), before + 1);
+  assert.ok(kinds(t.id).includes('resolve'));
 });
 
 test('a resolve run that stages but does not commit still concludes the merge', async () => {

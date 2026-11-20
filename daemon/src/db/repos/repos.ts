@@ -184,6 +184,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           | 'code_comment_max_percent'
           | 'model'
           | 'allowed_tools'
+          | 'union_paths'
         >
       >,
     ): void {

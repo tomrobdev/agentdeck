@@ -36,6 +36,7 @@ export type RepoUpdate = Partial<
     | 'code_comment_max_percent'
     | 'model'
     | 'allowed_tools'
+    | 'union_paths'
   >
 >;
 

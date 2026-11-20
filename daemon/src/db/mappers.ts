@@ -169,6 +169,7 @@ export const toRepo = (row: RepoRow): Repo => ({
   auto_merge: row.auto_merge === 1,
   ci_not_run_ok: row.ci_not_run_ok === 1,
   auto_merge_skip: parseTextList(row.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP),
+  union_paths: parseTextList(row.union_paths),
 });
 
 export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
@@ -184,6 +185,7 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
     auto_merge,
     ci_not_run_ok,
     auto_merge_skip,
+    union_paths,
     ...same
   } = fields;
   const bit = (on: boolean | undefined) => (on === undefined ? undefined : on ? 1 : 0);
@@ -201,6 +203,7 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
     auto_merge: bit(auto_merge),
     ci_not_run_ok: bit(ci_not_run_ok),
     auto_merge_skip: json(auto_merge_skip) ?? undefined,
+    union_paths: json(union_paths) ?? undefined,
   };
   return Object.fromEntries(Object.entries(columns).filter(([, v]) => v !== undefined));
 }

@@ -79,6 +79,7 @@ export interface RepoPatch {
   code_comment_max_percent?: number;
   model?: string | null;
   allowed_tools?: string | string[] | null;
+  union_paths?: string | string[];
 }
 
 export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
@@ -103,6 +104,8 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const skip = list(body, 'auto_merge_skip', { split: true });
   const auto_merge_skip = skip && textList(skip);
   const ci_not_run_ok = flag(body, 'ci_not_run_ok');
+  const unions = list(body, 'union_paths', { split: true });
+  const union_paths = unions && textList(unions);
   const code_comment_max_lines = whole(body, 'code_comment_max_lines', codeCommentMaxLinesError);
   const code_comment_max_percent = whole(body, 'code_comment_max_percent', codeCommentMaxPercentError);
   const model = textOrNull(body, 'model');
@@ -154,6 +157,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
     ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
     ...(ci_not_run_ok !== undefined ? { ci_not_run_ok } : {}),
+    ...(union_paths !== undefined ? { union_paths } : {}),
     ...(code_comment_max_lines !== undefined ? { code_comment_max_lines } : {}),
     ...(code_comment_max_percent !== undefined ? { code_comment_max_percent } : {}),
     ...(model !== undefined ? { model: model || null } : {}),

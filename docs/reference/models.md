@@ -1227,6 +1227,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `code_comment_max_percent` | `number`           | A branch whose added lines are a greater share of code comments than this percent is over the limit; 0 turns this limit off.                                                                |
 | `model`                    | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                                                         |
 | `escalate`                 | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default.                                                                                |
+| `union_paths`              | `string[]`         | Path globs whose conflicts in a sync's merge keep both sides' lines (git's merge=union); none = empty.                                                                                      |
 | `created_at`               | `string`           |                                                                                                                                                                                             |
 
 ### ToolchainInfo
