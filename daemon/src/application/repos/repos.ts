@@ -7,6 +7,7 @@ import { autoMergeMaxLinesError, codeCommentMaxLinesError, codeCommentMaxPercent
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '#domain/repos/index.ts';
 import { goalsError, networkError, parseToolRules, repoNameError, toolRulesError } from '#domain/repos/index.ts';
 import { detectToolchain } from '#domain/repos/index.ts';
+import { validateSlots } from '#domain/capacity/index.ts';
 import { present, textList } from '#domain/shared/index.ts';
 import { modelError } from '#domain/work/index.ts';
 import { type Check, runDoctor } from '#application/repos/doctor.ts';
@@ -82,6 +83,7 @@ export interface RepoPatch {
   union_paths?: string | string[];
   generated_paths?: string | string[];
   generated_cmd?: string | null;
+  max_concurrent?: number;
 }
 
 export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
@@ -113,6 +115,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const generated_cmd = textOrNull(body, 'generated_cmd');
   const code_comment_max_lines = whole(body, 'code_comment_max_lines', codeCommentMaxLinesError);
   const code_comment_max_percent = whole(body, 'code_comment_max_percent', codeCommentMaxPercentError);
+  const max_concurrent = whole(body, 'max_concurrent', validateSlots);
   const model = textOrNull(body, 'model');
   refuse(modelError(model ?? undefined));
   const rules =
@@ -167,6 +170,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(generated_cmd !== undefined ? { generated_cmd: generated_cmd?.trim() || null } : {}),
     ...(code_comment_max_lines !== undefined ? { code_comment_max_lines } : {}),
     ...(code_comment_max_percent !== undefined ? { code_comment_max_percent } : {}),
+    ...(max_concurrent !== undefined ? { max_concurrent } : {}),
     ...(model !== undefined ? { model: model || null } : {}),
     ...(allowed_tools !== undefined ? { allowed_tools } : {}),
   });

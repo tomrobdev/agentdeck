@@ -25,7 +25,8 @@ test('the dashboard words each wait of a queued task', () => {
     /landed in only some repos/,
   );
   assert.equal(describeWait({ kind: 'unblocking' }), 'Waits for its unblock run to stop');
-  assert.equal(describeWait({ kind: 'slots', running: 2, max: 2 }), 'Waiting for a free slot (2 of 2 in use)');
+  assert.equal(describeWait({ kind: 'slots', running: 2, max: 2, repo: null }), 'Waiting for a free slot (2 of 2 in use)');
+  assert.equal(describeWait({ kind: 'slots', running: 1, max: 1, repo: 'demo' }), 'Waiting for a slot in demo (1 of 1 in use)');
 });
 
 test('a list of tasks and the size of a file', () => {

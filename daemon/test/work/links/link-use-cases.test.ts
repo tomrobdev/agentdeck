@@ -20,7 +20,7 @@ const { autoMergeCheck } = await import('#domain/landing/merge/auto-merge.ts');
 function setup() {
   const db = testApp(openDb(':memory:'));
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
-  db.updateRepo(repo.id, { pr_mode: 'ready' });
+  db.updateRepo(repo.id, { pr_mode: 'ready', max_concurrent: 8 });
   const add = () => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   return { db, repo, add };
 }

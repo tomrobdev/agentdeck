@@ -288,6 +288,7 @@ test('the store lists links and dependents, and addTask turns after_task into on
 test('a task with two builds-on links is claimed only once both are met; an after link never holds it', () => {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  db.updateRepo(repo.id, { max_concurrent: 2 });
   const add = () => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   const a = add();
   const b = add();

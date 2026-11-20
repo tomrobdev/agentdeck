@@ -24,6 +24,7 @@ type TaskStatus = (typeof TASK_STATUSES)[number];
 function setup() {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  db.updateRepo(repo.id, { max_concurrent: 8 });
   const add = (after_task?: number) =>
     db.addTask({
       repo_id: repo.id,

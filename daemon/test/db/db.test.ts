@@ -27,6 +27,8 @@ test('hasQueued is true only while a queued task exists', () => {
   assert.equal(db.hasQueued(), false);
 
   assert.ok(db.applyEvent(proposed.id, { type: 'approve' }));
+  assert.equal(db.hasQueued(), false, "the repo's one slot is in use");
+  db.updateRepo(repo.id, { max_concurrent: 2 });
   assert.equal(db.hasQueued(), true);
 });
 test('latestRunModels gives each task the model of its latest work run', () => {

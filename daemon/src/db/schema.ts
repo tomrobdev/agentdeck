@@ -317,6 +317,8 @@ export const MIGRATIONS: Migration[] = [
   // 48: repos' generated files: generated_paths, a JSON array of path globs, and generated_cmd, the command that rebuilds them.
   `ALTER TABLE repos ADD COLUMN generated_paths TEXT NOT NULL DEFAULT '[]';
    ALTER TABLE repos ADD COLUMN generated_cmd TEXT;`,
+  // 49: repos' max_concurrent, how many of a repo's tasks may run at once under the daemon's max_concurrent.
+  `ALTER TABLE repos ADD COLUMN max_concurrent INTEGER NOT NULL DEFAULT 1;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

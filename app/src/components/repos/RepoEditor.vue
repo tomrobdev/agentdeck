@@ -114,6 +114,9 @@ async function drain() {
               <option v-for="m in modelChoices(form.model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
             </select>
           </FieldRow>
+          <FieldRow label="Slots" hint="How many of its tasks may run at once, 1 to 8, under the daemon's slots.">
+            <NumberInput v-model="form.maxConcurrent" class="w-24" label="Slots" data-testid="repo-slots" />
+          </FieldRow>
         </FieldSection>
 
         <FieldSection title="Pull requests">

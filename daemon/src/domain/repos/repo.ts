@@ -68,6 +68,8 @@ export interface Repo {
   generated_paths: string[];
   /** The command that rebuilds generated_paths, run in the worktree; null when the repo has none. */
   generated_cmd: string | null;
+  /** How many of the repo's tasks may run at once (1 to 8, default 1), under the daemon's max_concurrent. */
+  max_concurrent: number;
   created_at: string;
 }
 

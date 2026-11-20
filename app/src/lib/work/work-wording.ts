@@ -26,7 +26,9 @@ export function describeWait(h: StartWait): string {
     case 'unblocking':
       return 'Waits for its unblock run to stop';
     case 'slots':
-      return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
+      return h.repo
+        ? `Waiting for a slot in ${h.repo} (${h.running} of ${h.max} in use)`
+        : `Waiting for a free slot (${h.running} of ${h.max} in use)`;
   }
 }
 

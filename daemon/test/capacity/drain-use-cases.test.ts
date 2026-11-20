@@ -20,7 +20,7 @@ function setup() {
   db.setPaused(false);
   const web = db.addRepo({ name: 'web', path: '/tmp/web', base_branch: 'main' });
   const api = db.addRepo({ name: 'api', path: '/tmp/api', base_branch: 'main' });
-  for (const r of [web, api]) db.updateRepo(r.id, { pr_mode: 'ready' });
+  for (const r of [web, api]) db.updateRepo(r.id, { pr_mode: 'ready', max_concurrent: 8 });
   const add = (repo = web) => db.addTask({ repo_id: repo.id, title: 'work', prompt: 'p' });
   const ranOnce = (repo = web) => {
     const task = add(repo);

@@ -39,6 +39,7 @@ export type RepoUpdate = Partial<
     | 'union_paths'
     | 'generated_paths'
     | 'generated_cmd'
+    | 'max_concurrent'
   >
 >;
 

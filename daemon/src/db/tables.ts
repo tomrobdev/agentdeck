@@ -49,6 +49,7 @@ export const repos = sqliteTable(
     union_paths: text().default('[]').notNull(),
     generated_paths: text().default('[]').notNull(),
     generated_cmd: text(),
+    max_concurrent: integer().default(1).notNull(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
 );

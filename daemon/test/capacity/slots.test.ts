@@ -11,6 +11,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('#test/fixtures/open-db.ts');
 const { startWaits } = await import('#application/capacity/queue.ts');
 const { canStartResolve } = await import('#application/runs/sync.ts');
+const { updateRepo } = await import('#application/actions.ts');
+const { repoSettingPatch } = await import('#cli/operations/settings-args.ts');
 
 function setup() {
   const db = openDb(':memory:');
@@ -22,7 +24,8 @@ function setup() {
 }
 
 test('a running task and an open resolve run fill two slots: nothing else is claimed', () => {
-  const { db, task } = setup();
+  const { db, repo, task } = setup();
+  db.updateRepo(repo.id, { max_concurrent: 2 });
   const running = task('running');
   const done = task('done');
   assert.ok(db.applyEvent(done.id, { type: 'claim' }));
@@ -33,7 +36,39 @@ test('a running task and an open resolve run fill two slots: nothing else is cla
 
   assert.equal(db.slotsUsed(), 2);
   assert.equal(canStartResolve(db), false);
-  assert.deepEqual(startWaits(db)(db.getTask(queued.id)!, { kind: 'none' }), { kind: 'slots', running: 2, max: 2 });
+  assert.deepEqual(startWaits(db)(db.getTask(queued.id)!, { kind: 'none' }), { kind: 'slots', running: 2, max: 2, repo: null });
+  db.close();
+});
+
+test('daemon cap 2, two repos at 1 slot each, a queued task in each: both start', () => {
+  const { db, repo, task } = setup();
+  const other = db.addRepo({ name: 'o', path: '/tmp/o', base_branch: 'main' });
+  const a = task('a');
+  const b = db.addTask({ repo_id: other.id, title: 'b', prompt: 'p' });
+  assert.equal(repo.max_concurrent, 1);
+  assert.deepEqual([db.claimNextTask()?.id, db.claimNextTask()?.id].sort(), [a.id, b.id].sort());
+  db.close();
+});
+
+test("daemon cap 2, one repo at 1 slot with two queued tasks: one starts, the other waits on the repo's slot", () => {
+  const { db, task } = setup();
+  const first = task('first');
+  const second = task('second');
+  assert.equal(db.claimNextTask()?.id, first.id);
+  assert.equal(db.claimNextTask(), undefined);
+  assert.equal(db.hasQueued(), false);
+  assert.deepEqual(startWaits(db)(db.getTask(second.id)!, { kind: 'none' }), { kind: 'slots', running: 1, max: 1, repo: 'r' });
+  db.close();
+});
+
+test("a repo raised to 2 slots runs two of its tasks at once, and the repo's slots save through repo set", () => {
+  const { db, repo, task } = setup();
+  const first = task('first');
+  const second = task('second');
+  updateRepo(db, repo.name, repoSettingPatch('max_concurrent', '2'));
+  assert.equal(db.getRepo(repo.id)?.max_concurrent, 2);
+  assert.deepEqual([db.claimNextTask()?.id, db.claimNextTask()?.id], [first.id, second.id]);
+  assert.throws(() => updateRepo(db, repo.name, { max_concurrent: 9 }), /max_concurrent must be a whole number from 1 to 8/);
   db.close();
 });
 
