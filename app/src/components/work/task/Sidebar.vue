@@ -68,6 +68,8 @@ async function setAutoMerge(select: HTMLSelectElement) {
 
 const AUTO_MERGE_TEXT = { off: 'text-muted', on: 'text-muted', merge: 'text-done', wait: 'text-blocked', never: 'text-failed' } as const;
 
+const SOURCE_LABEL = { manual: 'Added by you', planner: 'Planner', issue: 'GitHub issue' } as const;
+
 const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).label);
 </script>
 
@@ -157,7 +159,7 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
     </div>
     <div :class="prop">
       <div :class="name">Source</div>
-      <div :class="row">{{ task.source === 'planner' ? 'Planner' : 'Added by you' }}</div>
+      <div :class="row">{{ SOURCE_LABEL[task.source] }}</div>
     </div>
   </aside>
 </template>
