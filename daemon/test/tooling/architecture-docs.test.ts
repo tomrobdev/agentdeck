@@ -60,8 +60,7 @@ test('docs: identifiers in backticks in the hand-written sections are exported f
   const docs = readDocs();
   const texts: [string, string][] = [
     ['System context', section(docs, 'System context')],
-    ["One task's run", section(docs, "One task's run")],
-    ['reference/runs.md', readFileSync(join(REFERENCE_DIR, 'runs.md'), 'utf8')],
+    ['flows.md', readFileSync(join(REFERENCE_DIR, '../flows.md'), 'utf8')],
   ];
   const unknown: string[] = [];
   for (const [where, text] of texts) {

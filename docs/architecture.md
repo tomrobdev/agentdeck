@@ -116,38 +116,9 @@ Grouped by the daemon's contexts. The layers `lib/` (pure helpers: shared 11, wo
 
 <!-- /generated -->
 
-## One task's run
+## Flows
 
-`Scheduler` ticks, asks the governor (`decide`, behind `startGate`) whether new work may start, and claims the next queued task into a slot. `runTask` syncs the branch (`syncBranch`), runs claude through `runClaude`, then the repo's tests, and opens the pull request (`openPullRequest`). A repo with auto-merge on is merged by `autoMerge`; otherwise a person merges, and `refreshPrStates` finds the merged PR and moves the task on with the pr_merged event. How a run's plan travels and how a cut-off run resumes are in [runs](reference/runs.md).
-
-```mermaid
-sequenceDiagram
-  participant S as Scheduler tick
-  participant G as Governor
-  participant D as SQLite
-  participant W as Worker
-  participant C as claude
-  participant H as git and gh
-  S->>G: may new work start?
-  G-->>S: go, or a hold
-  S->>D: claim the next queued task (queued to running)
-  S->>W: run the task in its worktree
-  W->>H: sync: bring the base branch into the task's branch
-  W->>C: run claude -p
-  C-->>W: result, usage, session
-  W->>W: run the repo's tests
-  W->>D: finish: done, blocked or failed
-  W->>H: push the branch and open the PR
-  alt auto-merge allowed
-    W->>H: merge the PR
-    H-->>W: merged
-    W->>D: pr_merged (blocked or failed to done)
-  else a person merges
-    S->>H: refresh PR states on a later tick
-    H-->>S: merged
-    S->>D: pr_merged
-  end
-```
+How the parts work together, one path at a time, each with a sequence diagram: a task's run, landing, a sync and its resolve run, a question, a task from a GitHub issue, a proposal, a plan branch, and a crash and resuming a run. They are in [flows](flows.md).
 
 ## Reference
 
@@ -157,4 +128,3 @@ sequenceDiagram
 - [Adapters](reference/adapters.md): what each file in `daemon/src/adapters/` does.
 - [Context map](reference/context-map.md): the folders under `domain/` and the imports between them.
 - [Models](reference/models.md), [use cases](reference/use-cases.md) and [state machines](reference/state-machines.md): the entities, `application/actions.ts` and the rule tables. [Exceptions](reference/progress.md) counts what the rules still let through, and [coverage floors](reference/coverage.md) the least coverage each layer and context may have.
-- [Runs](reference/runs.md): plans in a run, and resuming a cut-off run.
