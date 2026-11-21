@@ -150,7 +150,7 @@ sequenceDiagram
 ## Reference
 
 - [Data model](reference/data-model.md), [migrations](reference/migrations.md) and [settings](reference/settings.md): the tables and their keys, the steps of `db/schema.ts`, and each setting with its default and meaning.
-- [Task lifecycle](reference/lifecycle.md): every status change and its event.
+- [Task lifecycle](reference/state-machines.md#task-lifecycle): every status change and its event.
 - [HTTP API](reference/routes.md): the routes and the use case each calls.
 - [Adapters](reference/adapters.md): what each file in `daemon/src/adapters/` does.
 - [Context map](reference/context-map.md): the folders under `domain/` and the imports between them.

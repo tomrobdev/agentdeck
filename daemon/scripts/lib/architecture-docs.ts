@@ -6,7 +6,6 @@ import ts from 'typescript';
 import { SETTING_DEFAULTS } from '#db/operations/settings.ts';
 import { LAYERS, layerOf, mayImport } from '#scripts/lib/layers.ts';
 import * as tables from '#db/tables.ts';
-import { RULES, TASK_STATUSES, type TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 import { dashboardBody, dashboardReference } from '#scripts/lib/dashboard-layout.ts';
 import { contextMap } from '#scripts/lib/graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from '#scripts/lib/model-docs.ts';
@@ -231,27 +230,6 @@ function dataModel(): string {
   return mermaid([...lines, ...relations.sort()]);
 }
 
-function lifecycle(): string {
-  const runEnds = Object.entries(RULES)
-    .filter(([, r]) => r.cancel_requested)
-    .map(([key]) => key)
-    .sort();
-  const edges = new Map<string, string[]>();
-  for (const [event, rule] of Object.entries(RULES)) {
-    for (const [from, to] of Object.entries(rule)) edges.set(`${from}\0${to}`, [...(edges.get(`${from}\0${to}`) ?? []), event]);
-  }
-  const order = (s: string) => TASK_STATUSES.indexOf(s as TaskStatus);
-  const lines = [...edges]
-    .map(([key, events]) => {
-      const [from, to] = key.split('\0');
-      const label = events.length === runEnds.length && [...events].sort().join() === runEnds.join() ? 'any run end' : events.join(', ');
-      return { from, to, label: label.replace(/:/g, '/') };
-    })
-    .sort((a, b) => order(a.from) - order(b.from) || order(a.to) - order(b.to))
-    .map((e) => `  ${e.from} --> ${e.to}: ${e.label}`);
-  return mermaid(['stateDiagram-v2', ...lines]);
-}
-
 function routePath(regex: string): string {
   let n = 0;
   return regex
@@ -370,7 +348,6 @@ export function generateReference(): Record<string, string> {
       'Solid lines are foreign keys. Dotted lines are columns that name another row but have no foreign key.',
       dataModel(),
     ),
-    'lifecycle.md': file('Task lifecycle', 'Every status change a task can make, and the events that cause it.', lifecycle()),
     'routes.md': file('HTTP API', "The dashboard's routes, and the use case each calls.", routes()),
     'settings.md': file('Settings', 'The rows of the settings table, with their defaults.', settings()),
     'migrations.md': file('Migrations', 'The steps of `db/schema.ts`, in order.', migrations(sources)),
