@@ -188,6 +188,8 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           | 'generated_paths'
           | 'generated_cmd'
           | 'max_concurrent'
+          | 'issues'
+          | 'issues_allow'
         >
       >,
     ): void {

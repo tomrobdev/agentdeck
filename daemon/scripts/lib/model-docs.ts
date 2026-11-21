@@ -180,12 +180,15 @@ export function readUseCases(): UseCase[] {
   return out.sort((a, b) => cmp(a.name, b.name));
 }
 
+const LONGEST_TYPE = 200;
+const brief = (type: string): string => (type.length > LONGEST_TYPE ? `${type.slice(0, LONGEST_TYPE - 1)}…` : type);
+
 export function useCasesBody(): string {
   const rows = readUseCases().map((u) => [
     code(u.name),
     u.kind,
-    u.input === null ? '' : code(`(${u.input})`),
-    code(u.output),
+    u.input === null ? '' : code(brief(`(${u.input})`)),
+    code(brief(u.output)),
     u.adapters.map((a) => code(a)).join(', '),
   ]);
   return table(['Export', 'Kind', 'Input', 'Output', 'Adapters reached'], rows);

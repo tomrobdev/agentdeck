@@ -6,9 +6,8 @@ import ts from 'typescript';
 import { SETTING_DEFAULTS } from '#db/operations/settings.ts';
 import { LAYERS, layerOf, mayImport } from '#scripts/lib/layers.ts';
 import * as tables from '#db/tables.ts';
-import { RULES, TASK_STATUSES, type TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 import { dashboardBody, dashboardReference } from '#scripts/lib/dashboard-layout.ts';
-import { adapterUse, contextMap } from '#scripts/lib/graphs.ts';
+import { contextMap } from '#scripts/lib/graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from '#scripts/lib/model-docs.ts';
 import { COVERAGE_FLOORS, progress } from '#scripts/lib/progress.ts';
 import { UNCHECKED } from '#scripts/lib/rules.ts';
@@ -134,16 +133,6 @@ export function contextMapBody(sources: Source[]): string {
   return [mermaid(['flowchart LR', ...map.contexts.map((c) => `  ${ident(c)}["${c}"]`), ...lines]), cycles].join('\n\n');
 }
 
-export function adapterUseBody(sources: Source[]): string {
-  return table(
-    ['Area', 'Adapters imported'],
-    adapterUse(sources).map((u) => [
-      `\`application/${u.area}\``,
-      u.adapters.map((a) => `\`${a.adapter}\`${a.imports > 1 ? ` (${a.imports})` : ''}`).join(', '),
-    ]),
-  );
-}
-
 function strictnessRows(): string[][] {
   const offences = readStrictnessOffences();
   const count = (rule: string) => offences.filter((o) => o.rule === rule);
@@ -175,18 +164,26 @@ export function progressBody(sources: Source[]): string {
     ],
     ...strictnessRows(),
   ];
+  const left = rows.filter((r) => r[1] !== '0');
+  const listed = lists.filter((l) => l.size > 0);
   const cycleLines = p.cycles.map((c) => `- \`${c.layer}/\`: ${c.folders.map((f) => `\`${f}\``).join(', ')}`);
   return [
-    table(['Measure', 'Count', 'Where'], rows),
+    left.length ? table(['Measure', 'Count', 'Where'], left) : 'Every measure is at zero.',
     '## Shrinking lists',
     'Each list can only shrink: an entry that stops applying fails `pnpm test`.',
-    table(
-      ['List', 'Entries'],
-      lists.map((l) => [l.name, String(l.size)]),
-    ),
-    '## Folder cycles',
-    'Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).',
-    cycleLines.length ? cycleLines.join('\n') : 'None.',
+    listed.length
+      ? table(
+          ['List', 'Entries'],
+          listed.map((l) => [l.name, String(l.size)]),
+        )
+      : 'Every list is empty.',
+    ...(cycleLines.length
+      ? [
+          '## Folder cycles',
+          'Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).',
+          cycleLines.join('\n'),
+        ]
+      : []),
   ].join('\n\n');
 }
 
@@ -239,27 +236,6 @@ function dataModel(): string {
     }
   }
   return mermaid([...lines, ...relations.sort()]);
-}
-
-function lifecycle(): string {
-  const runEnds = Object.entries(RULES)
-    .filter(([, r]) => r.cancel_requested)
-    .map(([key]) => key)
-    .sort();
-  const edges = new Map<string, string[]>();
-  for (const [event, rule] of Object.entries(RULES)) {
-    for (const [from, to] of Object.entries(rule)) edges.set(`${from}\0${to}`, [...(edges.get(`${from}\0${to}`) ?? []), event]);
-  }
-  const order = (s: string) => TASK_STATUSES.indexOf(s as TaskStatus);
-  const lines = [...edges]
-    .map(([key, events]) => {
-      const [from, to] = key.split('\0');
-      const label = events.length === runEnds.length && [...events].sort().join() === runEnds.join() ? 'any run end' : events.join(', ');
-      return { from, to, label: label.replace(/:/g, '/') };
-    })
-    .sort((a, b) => order(a.from) - order(b.from) || order(a.to) - order(b.to))
-    .map((e) => `  ${e.from} --> ${e.to}: ${e.label}`);
-  return mermaid(['stateDiagram-v2', ...lines]);
 }
 
 function routePath(regex: string): string {
@@ -380,7 +356,6 @@ export function generateReference(): Record<string, string> {
       'Solid lines are foreign keys. Dotted lines are columns that name another row but have no foreign key.',
       dataModel(),
     ),
-    'lifecycle.md': file('Task lifecycle', 'Every status change a task can make, and the events that cause it.', lifecycle()),
     'routes.md': file('HTTP API', "The dashboard's routes, and the use case each calls.", routes()),
     'settings.md': file('Settings', 'The rows of the settings table, with their defaults.', settings()),
     'migrations.md': file('Migrations', 'The steps of `db/schema.ts`, in order.', migrations(sources)),
@@ -389,11 +364,6 @@ export function generateReference(): Record<string, string> {
       'The folders under `domain/` and the imports between them. A solid arrow is a runtime import, a dotted one is type-only; an edge inside a cycle is labelled `cycle`.',
       contextMapBody(sources),
     ),
-    'adapter-use.md': file(
-      'Adapter use',
-      'Each area of `application/` and the adapters it imports, with the number of imports where there is more than one.',
-      adapterUseBody(sources),
-    ),
     'models.md': file(
       'Models',
       'The exported interfaces and object types of `domain/`, grouped by folder, with their fields as the type checker reads them.',
@@ -401,13 +371,13 @@ export function generateReference(): Record<string, string> {
     ),
     'use-cases.md': file(
       'Use cases',
-      'Every export of `application/actions.ts`, the module the CLI and the API call, with its input and output and the adapters the file that declares it imports.',
+      'Every export of `application/actions.ts`, the module the CLI and the API call, with its input and output (a type over 200 characters cut short) and the adapters the file that declares it imports.',
       useCasesBody(),
     ),
     'state-machines.md': file('State machines', 'Each state machine of `domain/`, read from its rule table.', stateMachinesBody()),
     'progress.md': file(
-      'Migration progress',
-      'How far the move to a domain model has come, counted from the code. Each number should fall to zero.',
+      'Exceptions',
+      'What the rules still let through, counted from the code. Each count only falls; one at zero is left out, and `daemon/test/architecture/` keeps it there.',
       progressBody(sources),
     ),
     'coverage.md': file(

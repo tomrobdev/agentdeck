@@ -7,7 +7,7 @@ import type { TaskDetail } from '#api/types.ts';
 import AutoMergeMark from '#components/ui/status/AutoMergeMark.vue';
 import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '#platform/native.ts';
 import { editorArgv, editorTemplate } from '#lib/runs/terminal.ts';
-import { canEdit, levelOf, priorityLevel, statusLabel } from '#lib/work/task-view.ts';
+import { TASK_SOURCE, canEdit, levelOf, priorityLevel, statusLabel } from '#lib/work/task-view.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import { useTerminal } from '#composables/runs/useTerminal.ts';
 import { useFixTask } from '#composables/work/useFixTask.ts';
@@ -20,6 +20,7 @@ const props = defineProps<{ task: TaskDetail }>();
 const { run, flash } = useActions();
 
 const editable = computed(() => canEdit(props.task));
+const issue = computed(() => props.task.issue ?? null);
 const { copied, copy } = useCopy();
 const terminal = useTerminal();
 const { canFixHere, fix } = useFixTask();
@@ -100,6 +101,10 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
       <div :class="name">Pull request</div>
       <button :class="[rowButton, 'text-accent']" @click="openExternal(task.pr_url)">{{ task.pr_state ?? 'open' }} ↗</button>
     </div>
+    <div v-if="issue" :class="prop">
+      <div :class="name">Issue</div>
+      <button :class="[rowButton, 'text-accent']" data-task-issue @click="openExternal(issue.url)">#{{ issue.number }} ↗</button>
+    </div>
     <div v-if="autoMergeShown" :class="prop">
       <div :class="name">Auto-merge</div>
       <select
@@ -152,7 +157,7 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
     </div>
     <div :class="prop">
       <div :class="name">Source</div>
-      <div :class="row">{{ task.source === 'planner' ? 'Planner' : 'Added by you' }}</div>
+      <div :class="row">{{ TASK_SOURCE[task.source].label }}</div>
     </div>
   </aside>
 </template>

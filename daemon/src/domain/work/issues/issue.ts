@@ -1,0 +1,64 @@
+// A GitHub issue a task came from, the labels the daemon reads and writes on it, and what it last reported there.
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+
+export const ISSUE_LABELS = {
+  ready: 'ready-for-agent',
+  info: 'needs-info',
+  human: 'ready-for-human',
+  running: 'agentdeck:running',
+} as const;
+
+/** How an issue was closed: done, or set aside. */
+export type IssueCloseReason = 'completed' | 'not_planned';
+
+/** An issue another issue is blocked by. */
+export interface IssueBlocker {
+  number: number;
+  open: boolean;
+}
+
+/** An issue as the poll reads it from GitHub. */
+export interface Issue {
+  number: number;
+  url: string;
+  title: string;
+  body: string;
+  open: boolean;
+  /** Why a closed issue was closed; null while it is open. */
+  closed_as: IssueCloseReason | null;
+  labels: string[];
+  blocked_by: IssueBlocker[];
+  /** The issue this one is a sub-issue of: its title and body give the worker context. */
+  parent: { number: number; title: string; body: string } | null;
+}
+
+/** A comment on an issue, by its author's login. */
+export interface IssueComment {
+  author: string;
+  body: string;
+  created_at: string;
+}
+
+/** What the daemon last told an issue about its task, so each change is reported once. */
+export type IssueReport = 'queued' | 'running' | 'question' | 'stopped' | 'pr_open' | 'merged' | 'cancelled';
+
+/** A task's link to the issue it came from. */
+export interface TaskIssue {
+  task_id: TaskId;
+  repo_id: RepoId;
+  number: number;
+  url: string;
+  /** The last change reported on the issue; null before the first. */
+  reported: IssueReport | null;
+  /** When it was reported, so a person's later comments can be told apart. */
+  reported_at: string | null;
+}
+
+export const ISSUE_MARK = '<!-- agentdeck -->';
+
+export const signed = (body: string): string => `${body}\n\n${ISSUE_MARK}`;
+
+export function issueRepoAddError(repo: { name: string; issues: boolean }): string | null {
+  if (!repo.issues) return null;
+  return `${repo.name} takes its tasks from GitHub Issues: open an issue and label it ${ISSUE_LABELS.ready} (gh issue create --label ${ISSUE_LABELS.ready})`;
+}

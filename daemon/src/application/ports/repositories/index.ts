@@ -10,6 +10,7 @@ import type {
   PlanBranchRepository,
   PlanRepository,
   TaskEventRepository,
+  TaskIssueRepository,
   TaskLinkRepository,
   TaskRepository,
 } from '#application/ports/repositories/work.ts';
@@ -28,6 +29,7 @@ export type {
   PlanRepository,
   TaskEdit,
   TaskEventRepository,
+  TaskIssueRepository,
   TaskLinkRepository,
   TaskRepository,
 } from '#application/ports/repositories/work.ts';
@@ -35,6 +37,7 @@ export type {
 export type Repositories = TaskRepository &
   TaskEventRepository &
   TaskLinkRepository &
+  TaskIssueRepository &
   PlanRepository &
   PlanBranchRepository &
   RepoRepository &

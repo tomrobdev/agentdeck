@@ -15,6 +15,8 @@ export interface RepoView extends Omit<
   | 'ci_not_run_ok'
   | 'union_paths'
   | 'generated_paths'
+  | 'issues'
+  | 'issues_allow'
 > {
   allowed_tools: string | null;
   tools_source: ToolRulesSource;
@@ -29,6 +31,8 @@ export interface RepoView extends Omit<
   ci_not_run_ok: number;
   union_paths: string;
   generated_paths: string;
+  issues: number;
+  issues_allow: string;
 }
 
 const bit = (on: boolean): number => (on ? 1 : 0);
@@ -47,6 +51,8 @@ export function repoView(repo: Repo): RepoView {
     auto_merge: bit(repo.auto_merge),
     auto_merge_skip: JSON.stringify(repo.auto_merge_skip),
     ci_not_run_ok: bit(repo.ci_not_run_ok),
+    issues: bit(repo.issues),
+    issues_allow: JSON.stringify(repo.issues_allow),
     union_paths: JSON.stringify(repo.union_paths),
     generated_paths: JSON.stringify(repo.generated_paths),
   };

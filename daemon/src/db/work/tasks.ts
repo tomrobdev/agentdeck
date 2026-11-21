@@ -10,6 +10,7 @@ import {
   PLAN_ATTACHABLE_STATUSES,
   type Task,
   type TaskPlan,
+  type TaskSource,
   type TaskStatus,
   type UnblockQuestion,
   maxTurnsChanges,
@@ -19,7 +20,7 @@ import {
 import { TASK_COLUMNS, mapFound, toTask } from '#db/mappers.ts';
 import type { Orm } from '#db/orm.ts';
 import { NOW_SQL, atomically } from '#db/sql.ts';
-import { tasks } from '#db/tables.ts';
+import { taskIssues, tasks } from '#db/tables.ts';
 import { insertOwnPlan, saveOwnPlan } from '#db/work/plans.ts';
 import { recordEvent } from '#db/work/task-events.ts';
 import { insertLinks } from '#db/work/task-links.ts';
@@ -58,7 +59,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       max_turns?: number;
       max_attempts?: number;
       status?: 'queued' | 'proposed';
-      source?: 'manual' | 'planner';
+      source?: TaskSource;
+      issue?: { number: number; url: string };
       target?: string | null;
       links?: { on: TaskId; kind: LinkKind }[];
       plan_task?: TaskId | null;
@@ -89,6 +91,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           insertOwnPlan(orm, id, n.own_plan, 'attached');
           orm.update(tasks).set({ plan_task: id }).where(eq(tasks.id, id)).run();
         }
+        if (n.issue) orm.insert(taskIssues).values({ task_id: id, repo_id: n.repo_id, number: n.issue.number, url: n.issue.url }).run();
         insertLinks(orm, id, n.links ?? []);
         recordEvent(orm, id, 'created', null, status);
         return id;

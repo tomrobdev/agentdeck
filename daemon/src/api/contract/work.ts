@@ -252,6 +252,8 @@ export interface TaskDetail extends Task {
   events: TaskEventRow[];
   plans: TaskPlan[];
   plan_branch: PlanBranchView | null;
+  /** The GitHub issue an issue-backed task came from; null for any other task. Missing from a daemon that predates it. */
+  issue?: { number: number; url: string } | null;
 }
 
 /** A plan branch on a task's page, with how far it is ahead of and behind its base; each null once it has landed, or when git could not say. */

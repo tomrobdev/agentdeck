@@ -1,7 +1,7 @@
 // Use cases for tasks: add, edit, list them and remove their worktrees.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
-import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '#domain/work/index.ts';
+import { archivedRepoError, issueRepoAddError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '#domain/work/index.ts';
 import { missingTargetError, planOwnerOf, targetChangeError } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import { type ModelSource, newTaskModel } from '#domain/work/index.ts';
@@ -38,6 +38,7 @@ export async function addTask(
     plan_steps?: string[] | string;
     propose?: boolean;
   },
+  from: { source: 'manual' } | { source: 'issue'; issue: { number: number; url: string } } = { source: 'manual' },
 ): Promise<Task & { model_source: ModelSource }> {
   const body = object(input);
   const propose = flag(body, 'propose');
@@ -62,6 +63,7 @@ export async function addTask(
       repoName ? 'not_found' : 'invalid',
     );
   refuse(archivedRepoError(repo));
+  if (from.source === 'manual') refuse(issueRepoAddError(repo));
   const steps = stepList(input.plan_steps);
   const checked = checkPlanLink(app, planAsked ?? { task: null }, steps);
   const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
@@ -89,6 +91,7 @@ export async function addTask(
     own_plan,
     plan_steps: linked && steps ? steps : null,
     status: propose ? 'proposed' : 'queued',
+    ...(from.source === 'issue' ? { source: 'issue', issue: from.issue } : {}),
   });
   return { ...task, model_source: chosen.source };
 }

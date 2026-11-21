@@ -1,6 +1,6 @@
 # Architecture
 
-A map of AgentDeck's code, layers first. The block between `<!-- generated:layers -->` and `<!-- /generated -->` and every file in `docs/reference/` marked generated are written by `pnpm docs:gen` from the code (Claude's edit hook runs it after each edit under `daemon/src`), and `pnpm test` fails when they are stale. The two sections written by hand here are checked too: every file in `daemon/src/adapters/` must be named in the system context, and every identifier in backticks in them must be exported from `daemon/src`. The rules the layers follow are in CLAUDE.md. The decisions behind the design are in `docs/adr/`: [0001 worker sandbox](adr/0001-worker-sandbox.md), [0002 functional DDD](adr/0002-functional-ddd.md), [0003 one table, a rich aggregate, a flat API](adr/0003-one-table-rich-aggregate.md), [0004 `task_events` as the outbox](adr/0004-task-events-outbox.md), [0005 a few deep ports](adr/0005-few-deep-ports.md) and [0006 who may call the API](adr/0006-api-access.md).
+A map of AgentDeck's code, layers first. The block between `<!-- generated:layers -->` and `<!-- /generated -->` and every file in `docs/reference/` marked generated are written by `pnpm docs:gen` from the code (Claude's edit hook runs it after each edit under `daemon/src`), and `pnpm test` fails when they are stale. The two sections written by hand here are checked too: every file in `daemon/src/adapters/` must be named in the system context, and every identifier in backticks in them must be exported from `daemon/src`. The rules the layers follow are in CLAUDE.md. The decisions behind the design are in `docs/adr/`: [0001 worker sandbox](adr/0001-worker-sandbox.md), [0002 functional DDD](adr/0002-functional-ddd.md), [0003 one table, a rich aggregate, a flat API](adr/0003-one-table-rich-aggregate.md), [0004 `task_events` as the outbox](adr/0004-task-events-outbox.md), [0005 a few deep ports](adr/0005-few-deep-ports.md), [0006 who may call the API](adr/0006-api-access.md) and [0007 plan branches](adr/0007-plan-branches.md).
 
 ## Layers
 
@@ -56,12 +56,13 @@ flowchart LR
   subgraph daemon["Daemon (Node)"]
     api["api/"]
     scheduler["application/scheduler"]
-    worker["application/run"]
+    worker["application/runs"]
     db["db/"]
     claude["adapters/claude/claude.ts"]
     workspace["adapters/git/workspace.ts"]
     git["adapters/git/exec.ts, adapters/git/refs.ts,<br/>adapters/git/diffs.ts, adapters/git/worktrees.ts"]
     github["adapters/github/github.ts"]
+    issues["adapters/github/issues.ts"]
     service["adapters/macos/service.ts"]
     notify["adapters/macos/notify.ts"]
     processes["adapters/process/processes.ts"]
@@ -92,6 +93,7 @@ flowchart LR
   worker --> claude --> claudecli
   worker -- "the Workspace port" --> workspace --> git --> gitbin
   worker --> github --> ghbin
+  scheduler -- "the issue poll" --> issues --> ghbin
   workspace --> shell & reporoot
   claude --> processes
   worker --> runlog
@@ -110,49 +112,42 @@ flowchart LR
 
 <!-- generated:dashboard -->
 
-Grouped by the daemon's contexts. The layers `lib/` (pure helpers: shared 11, work 17, runs 10, landing 1, repos 1, operations 2, insights 1), `composables/` (`useX` functions: shared 8, work 17, runs 1, landing 2, operations 2), `components/` (Vue components: ui 48, work 36, runs 11, landing 7, repos 4, operations 11, insights 2) each have a folder per context, the shared one first, with its number of files; beside them `api/` 9, `platform/` 3, `components/layout/` 8, `pages/` 3. Imports point down `pages/` → `components/` → `composables/` → `lib/` → `api/`. Within a layer a context imports only itself and the shared folder, which imports no context; `work/` may also import `runs/` and `landing/`, because the queue and the task overview show a run's summary, a pull request and the merge buttons; `operations/` may also import `runs/` and `landing/`, because the activity pill words a run, a sync and a merge request the way the task rows do. `pages/` and `components/layout/` combine the contexts. Each area's rule and why: [dashboard](reference/dashboard.md), from `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts`, which `daemon/test/architecture/dashboard-layout.test.ts` enforces.
+Grouped by the daemon's contexts. Each layer has a folder per context, the shared one first (`components/ui/` in `components/`); the table counts each folder's files.
+
+| Layer          | Holds            | shared | work | runs | landing | repos | operations | insights |
+| -------------- | ---------------- | ------ | ---- | ---- | ------- | ----- | ---------- | -------- |
+| `lib/`         | pure helpers     | 11     | 17   | 10   | 1       | 1     | 2          | 1        |
+| `composables/` | `useX` functions | 8      | 17   | 1    | 2       | –     | 2          | –        |
+| `components/`  | Vue components   | 48     | 36   | 11   | 7       | 4     | 11         | 2        |
+
+Beside the layers:
+
+- `api/`: 9 files
+- `platform/`: 3 files
+- `components/layout/`: 8 files
+- `pages/`: 3 files
+
+Imports:
+
+- Point down `pages/` → `components/` → `composables/` → `lib/` → `api/`.
+- Within a layer, a context imports only itself and the shared folder, which imports no context.
+- `work/` may also import `runs/` and `landing/`: the queue and the task overview show a run's summary, a pull request and the merge buttons.
+- `operations/` may also import `runs/` and `landing/`: the activity pill words a run, a sync and a merge request the way the task rows do.
+- `pages/` and `components/layout/` combine the contexts.
+
+Each area's rule and why: [dashboard](reference/dashboard.md), from `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts`, which `daemon/test/architecture/dashboard-layout.test.ts` enforces.
 
 <!-- /generated -->
 
-## One task's run
+## Flows
 
-`Scheduler` ticks, asks the governor (`decide`, behind `startGate`) whether new work may start, and claims the next queued task into a slot. `runTask` syncs the branch (`syncBranch`), runs claude through `runClaude`, then the repo's tests, and opens the pull request (`openPullRequest`). A repo with auto-merge on is merged by `autoMerge`; otherwise a person merges, and `refreshPrStates` finds the merged PR and moves the task on with the pr_merged event. How a run's plan travels and how a cut-off run resumes are in [runs](reference/runs.md).
-
-```mermaid
-sequenceDiagram
-  participant S as Scheduler tick
-  participant G as Governor
-  participant D as SQLite
-  participant W as Worker
-  participant C as claude
-  participant H as git and gh
-  S->>G: may new work start?
-  G-->>S: go, or a hold
-  S->>D: claim the next queued task (queued to running)
-  S->>W: run the task in its worktree
-  W->>H: sync: bring the base branch into the task's branch
-  W->>C: run claude -p
-  C-->>W: result, usage, session
-  W->>W: run the repo's tests
-  W->>D: finish: done, blocked or failed
-  W->>H: push the branch and open the PR
-  alt auto-merge allowed
-    W->>H: merge the PR
-    H-->>W: merged
-    W->>D: pr_merged (blocked or failed to done)
-  else a person merges
-    S->>H: refresh PR states on a later tick
-    H-->>S: merged
-    S->>D: pr_merged
-  end
-```
+How the parts work together, one path at a time, each with a sequence diagram: a task's run, landing, a sync and its resolve run, a question, a task from a GitHub issue, a proposal, a plan branch, and a crash and resuming a run. They are in [flows](flows.md).
 
 ## Reference
 
 - [Data model](reference/data-model.md), [migrations](reference/migrations.md) and [settings](reference/settings.md): the tables and their keys, the steps of `db/schema.ts`, and each setting with its default and meaning.
-- [Task lifecycle](reference/lifecycle.md): every status change and its event.
+- [Task lifecycle](reference/state-machines.md#task-lifecycle): every status change and its event.
 - [HTTP API](reference/routes.md): the routes and the use case each calls.
-- [Adapters](reference/adapters.md) and [adapter use](reference/adapter-use.md): what each file in `daemon/src/adapters/` does, and which adapters each area of `application/` imports.
+- [Adapters](reference/adapters.md): what each file in `daemon/src/adapters/` does.
 - [Context map](reference/context-map.md): the folders under `domain/` and the imports between them.
-- [Models](reference/models.md), [use cases](reference/use-cases.md) and [state machines](reference/state-machines.md): the entities, `application/actions.ts` and the rule tables. [Migration progress](reference/progress.md) counts what is left of the move to a domain model, and [coverage floors](reference/coverage.md) the least coverage each layer and context may have.
-- [Runs](reference/runs.md): plans in a run, and resuming a cut-off run.
+- [Models](reference/models.md), [use cases](reference/use-cases.md) and [state machines](reference/state-machines.md): the entities, `application/actions.ts` and the rule tables. [Exceptions](reference/progress.md) counts what the rules still let through, and [coverage floors](reference/coverage.md) the least coverage each layer and context may have.

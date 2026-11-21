@@ -70,6 +70,10 @@ export interface Repo {
   generated_cmd: string | null;
   /** How many of the repo's tasks may run at once (1 to 8, default 1), under the daemon's max_concurrent. */
   max_concurrent: number;
+  /** The repo takes its tasks from GitHub Issues labelled ready-for-agent, and reports back on them (domain/work/issues/); off by default. */
+  issues: boolean;
+  /** GitHub logins whose ready-for-agent label starts a task; none = the login gh is signed in as. */
+  issues_allow: string[];
   created_at: string;
 }
 

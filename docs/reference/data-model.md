@@ -80,6 +80,8 @@ erDiagram
     text generated_paths
     text generated_cmd "nullable"
     integer max_concurrent
+    integer issues
+    text issues_allow
   }
   review_comments {
     integer id PK
@@ -153,6 +155,14 @@ erDiagram
     text at
     integer follow_up_pending
   }
+  task_issues {
+    integer task_id PK,FK
+    integer repo_id FK
+    integer number
+    text url
+    text reported "nullable"
+    text reported_at "nullable"
+  }
   task_links {
     integer task_id PK,FK
     integer on_task PK,FK
@@ -225,6 +235,7 @@ erDiagram
   }
   repos ||--o{ plan_branches : "repo_id"
   repos ||--o{ planner_runs : "repo_id"
+  repos ||--o{ task_issues : "repo_id"
   repos ||--o{ tasks : "repo_id"
   reviews ||--o{ review_comments : "review_id"
   tasks |o..o{ notifications : "task_id"
@@ -232,6 +243,7 @@ erDiagram
   tasks ||--o{ plan_branches : "plan_task"
   tasks ||--o{ reviews : "task_id"
   tasks ||--o{ runs : "task_id"
+  tasks ||--o{ task_issues : "task_id"
   tasks ||--o{ task_links : "on_task"
   tasks ||--o{ task_links : "task_id"
   tasks ||..o{ task_events : "task_id"

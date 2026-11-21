@@ -1,4 +1,4 @@
-// The import graphs behind docs/reference/context-map.md and adapter-use.md, worked out from `Source`s. Pure: no file reads.
+// The import graphs behind docs/reference/context-map.md, worked out from `Source`s. Pure: no file reads.
 import type { Source } from '#scripts/lib/sources.ts';
 
 export function contextOf(path: string): string | null {
@@ -84,37 +84,6 @@ export function contextMap(sources: Source[]): ContextMap {
     })
     .sort((a, b) => (a.from + '\0' + a.to < b.from + '\0' + b.to ? -1 : 1));
   return { contexts: nodes, edges, cycles };
-}
-
-export function areaOf(path: string): string | null {
-  const parts = path.split('/');
-  return parts[0] === 'application' && parts.length > 1 ? parts[1] : null;
-}
-
-export interface AdapterUse {
-  area: string;
-  adapters: { adapter: string; imports: number }[];
-}
-
-export function adapterUse(sources: Source[]): AdapterUse[] {
-  const byArea = new Map<string, Map<string, number>>();
-  for (const s of sources) {
-    const area = areaOf(s.path);
-    if (!area) continue;
-    for (const i of s.imports) {
-      if (!i.target?.startsWith('adapters/')) continue;
-      const counts = byArea.get(area) ?? new Map<string, number>();
-      const name = i.target.slice('adapters/'.length);
-      counts.set(name, (counts.get(name) ?? 0) + 1);
-      byArea.set(area, counts);
-    }
-  }
-  return [...byArea]
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([area, counts]) => ({
-      area,
-      adapters: [...counts].sort(([a], [b]) => (a < b ? -1 : 1)).map(([adapter, imports]) => ({ adapter, imports })),
-    }));
 }
 
 export function folderOf(path: string, layer: string): string | null {

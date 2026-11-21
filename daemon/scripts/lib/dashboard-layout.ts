@@ -105,31 +105,42 @@ function importsLabel(area: string, areas: string[]): string {
 const code = (area: string) => `\`${area === 'router' ? 'router.ts' : `${area}/`}\``;
 
 export function dashboardBody(): string {
-  const counted = (areas: string[]) =>
-    areas
-      .filter((a) => fileCount(a) > 0)
-      .map((a) => `${a.split('/')[1]} ${fileCount(a)}`)
-      .join(', ');
-  const layers = CONTEXT_LAYERS.map((l) => `\`${l.layer}/\` (${l.holds}: ${counted(areasOf(l.layer))})`).join(', ');
-  const whole = ['api', 'platform', 'components/layout', 'pages'].map((a) => `${code(a)} ${fileCount(a)}`).join(', ');
-  const also = Object.entries(ALSO_IMPORTS)
-    .map(([c, { contexts, why }]) => `\`${c}/\` may also import ${contexts.map((a) => `\`${a}/\``).join(' and ')}, because ${why}`)
-    .join('; ');
+  const count = (area: string) => String(fileCount(area) || '–');
+  const contextHeads = ['shared', ...DASHBOARD_CONTEXTS];
+  const head = ['Layer', 'Holds', ...contextHeads];
+  const rows = CONTEXT_LAYERS.map((l) => [`\`${l.layer}/\``, l.holds, ...areasOf(l.layer).map(count)]);
+  const beside = ['api', 'platform', 'components/layout', 'pages'].map((a) => `- ${code(a)}: ${fileCount(a)} files`);
+  const also = Object.entries(ALSO_IMPORTS).map(
+    ([c, { contexts, why }]) => `- \`${c}/\` may also import ${contexts.map((a) => `\`${a}/\``).join(' and ')}: ${why}.`,
+  );
   return [
-    `Grouped by the daemon's contexts. The layers ${layers} each have a folder per context, the shared one first, with its number of files; beside them ${whole}.`,
-    `Imports point down \`pages/\` → \`components/\` → \`composables/\` → \`lib/\` → \`api/\`. Within a layer a context imports only itself and the shared folder, which imports no context; ${also}. \`pages/\` and \`components/layout/\` combine the contexts.`,
-    `Each area's rule and why: [dashboard](reference/dashboard.md), from \`MAY_IMPORT\` in \`daemon/scripts/lib/dashboard-layout.ts\`, which \`daemon/test/architecture/dashboard-layout.test.ts\` enforces.`,
-  ].join(' ');
+    "Grouped by the daemon's contexts. Each layer has a folder per context, the shared one first (`components/ui/` in `components/`); the table counts each folder's files.",
+    markdownTable(head, rows),
+    'Beside the layers:',
+    beside.join('\n'),
+    'Imports:',
+    [
+      '- Point down `pages/` → `components/` → `composables/` → `lib/` → `api/`.',
+      '- Within a layer, a context imports only itself and the shared folder, which imports no context.',
+      ...also,
+      '- `pages/` and `components/layout/` combine the contexts.',
+    ].join('\n'),
+    "Each area's rule and why: [dashboard](reference/dashboard.md), from `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts`, which `daemon/test/architecture/dashboard-layout.test.ts` enforces.",
+  ].join('\n\n');
+}
+
+function markdownTable(head: string[], rows: string[][]): string {
+  const cells = [head, ...rows].map((r) => r.map((c) => c.replace(/\|/g, '\\|')));
+  const widths = head.map((_, i) => Math.max(3, ...cells.map((r) => r[i].length)));
+  const line = (r: string[]) => `| ${r.map((c, i) => c.padEnd(widths[i])).join(' | ')} |`;
+  return [line(cells[0]), `| ${widths.map((w) => '-'.repeat(w)).join(' | ')} |`, ...cells.slice(1).map(line)].join('\n');
 }
 
 export function dashboardReference(): string {
   const shown = Object.entries(MAY_IMPORT).filter(([area]) => fileCount(area) > 0);
   const rows = shown.map(([area, rule]) => [code(area), importsLabel(area, rule.areas), rule.why, String(fileCount(area))]);
   const head = ['Area', 'May import', 'Why', 'Files'];
-  const cells = [head, ...rows].map((r) => r.map((c) => c.replace(/\|/g, '\\|')));
-  const widths = head.map((_, i) => Math.max(...cells.map((r) => r[i].length)));
-  const line = (r: string[]) => `| ${r.map((c, i) => c.padEnd(widths[i])).join(' | ')} |`;
-  const table = [line(cells[0]), `| ${widths.map((w) => '-'.repeat(w)).join(' | ')} |`, ...cells.slice(1).map(line)].join('\n');
+  const table = markdownTable(head, rows);
   const contexts = DASHBOARD_CONTEXTS.map((c) => `\`${c}/\``).join(', ');
   const layers = CONTEXT_LAYERS.map((l) => `\`${l.layer}/\` (${l.holds}, shared ones in \`${l.shared}/\`)`).join(', ');
   return [

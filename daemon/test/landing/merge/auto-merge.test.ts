@@ -349,6 +349,12 @@ test('the PR body says in one line that a person needs to merge a branch over th
   assert.ok(!buildPrBody({ id: 7 }, []).includes('code comment'));
 });
 
+test('the PR body of an issue-backed task refers to its issue, which the daemon closes itself on merge', async () => {
+  const { buildPrBody } = await import('#domain/landing/pull-request/pr.ts');
+  assert.ok(buildPrBody({ id: 7 }, [], null, null, 21).includes('\nRefs #21.\n'));
+  assert.ok(!buildPrBody({ id: 7 }, []).includes('Refs #'));
+});
+
 test('autoMergeView: the tag comes from the measurement before a PR', () => {
   const repoView = { ...limited, auto_merge: true, auto_approve: false, auto_review: false };
   const task = { auto_merge: null, source: 'manual', pr: null };

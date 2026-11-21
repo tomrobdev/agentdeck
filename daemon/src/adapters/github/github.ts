@@ -31,7 +31,7 @@ export function failure(err: unknown, tool = 'gh', timeoutMs = GH_TIMEOUT_MS): E
   return new Error(typeof e.code === 'number' ? `${tool} exited with code ${e.code}` : `${tool} failed`);
 }
 
-async function gh(args: string[], opts: { cwd?: string; timeoutMs?: number; maxBuffer?: number } = {}): Promise<string> {
+export async function gh(args: string[], opts: { cwd?: string; timeoutMs?: number; maxBuffer?: number } = {}): Promise<string> {
   const { cwd, timeoutMs = GH_TIMEOUT_MS, maxBuffer } = opts;
   try {
     const { stdout } = await exec('gh', args, { cwd, timeout: timeoutMs, maxBuffer });

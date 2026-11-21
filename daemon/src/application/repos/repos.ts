@@ -84,6 +84,8 @@ export interface RepoPatch {
   generated_paths?: string | string[];
   generated_cmd?: string | null;
   max_concurrent?: number;
+  issues?: boolean;
+  issues_allow?: string | string[];
 }
 
 export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
@@ -116,6 +118,9 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const code_comment_max_lines = whole(body, 'code_comment_max_lines', codeCommentMaxLinesError);
   const code_comment_max_percent = whole(body, 'code_comment_max_percent', codeCommentMaxPercentError);
   const max_concurrent = whole(body, 'max_concurrent', validateSlots);
+  const issues = flag(body, 'issues');
+  const allow = list(body, 'issues_allow', { split: true });
+  const issues_allow = allow && textList(allow);
   const model = textOrNull(body, 'model');
   refuse(modelError(model ?? undefined));
   const rules =
@@ -171,6 +176,8 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(code_comment_max_lines !== undefined ? { code_comment_max_lines } : {}),
     ...(code_comment_max_percent !== undefined ? { code_comment_max_percent } : {}),
     ...(max_concurrent !== undefined ? { max_concurrent } : {}),
+    ...(issues !== undefined ? { issues } : {}),
+    ...(issues_allow !== undefined ? { issues_allow } : {}),
     ...(model !== undefined ? { model: model || null } : {}),
     ...(allowed_tools !== undefined ? { allowed_tools } : {}),
   });

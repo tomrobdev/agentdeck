@@ -107,3 +107,9 @@ export function withHost(networkJson: string, host: string): string[] {
 }
 
 export const statusLabel = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
+
+export const TASK_SOURCE: Record<TaskSummary['source'], { label: string; author: string }> = {
+  manual: { label: 'Added by you', author: 'You' },
+  planner: { label: 'Planner', author: 'The planner' },
+  issue: { label: 'GitHub issue', author: 'Its GitHub issue' },
+};
