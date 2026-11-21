@@ -112,7 +112,30 @@ flowchart LR
 
 <!-- generated:dashboard -->
 
-Grouped by the daemon's contexts. The layers `lib/` (pure helpers: shared 11, work 17, runs 10, landing 1, repos 1, operations 2, insights 1), `composables/` (`useX` functions: shared 8, work 17, runs 1, landing 2, operations 2), `components/` (Vue components: ui 48, work 36, runs 11, landing 7, repos 4, operations 11, insights 2) each have a folder per context, the shared one first, with its number of files; beside them `api/` 9, `platform/` 3, `components/layout/` 8, `pages/` 3. Imports point down `pages/` → `components/` → `composables/` → `lib/` → `api/`. Within a layer a context imports only itself and the shared folder, which imports no context; `work/` may also import `runs/` and `landing/`, because the queue and the task overview show a run's summary, a pull request and the merge buttons; `operations/` may also import `runs/` and `landing/`, because the activity pill words a run, a sync and a merge request the way the task rows do. `pages/` and `components/layout/` combine the contexts. Each area's rule and why: [dashboard](reference/dashboard.md), from `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts`, which `daemon/test/architecture/dashboard-layout.test.ts` enforces.
+Grouped by the daemon's contexts. Each layer has a folder per context, the shared one first (`components/ui/` in `components/`); the table counts each folder's files.
+
+| Layer          | Holds            | shared | work | runs | landing | repos | operations | insights |
+| -------------- | ---------------- | ------ | ---- | ---- | ------- | ----- | ---------- | -------- |
+| `lib/`         | pure helpers     | 11     | 17   | 10   | 1       | 1     | 2          | 1        |
+| `composables/` | `useX` functions | 8      | 17   | 1    | 2       | –     | 2          | –        |
+| `components/`  | Vue components   | 48     | 36   | 11   | 7       | 4     | 11         | 2        |
+
+Beside the layers:
+
+- `api/`: 9 files
+- `platform/`: 3 files
+- `components/layout/`: 8 files
+- `pages/`: 3 files
+
+Imports:
+
+- Point down `pages/` → `components/` → `composables/` → `lib/` → `api/`.
+- Within a layer, a context imports only itself and the shared folder, which imports no context.
+- `work/` may also import `runs/` and `landing/`: the queue and the task overview show a run's summary, a pull request and the merge buttons.
+- `operations/` may also import `runs/` and `landing/`: the activity pill words a run, a sync and a merge request the way the task rows do.
+- `pages/` and `components/layout/` combine the contexts.
+
+Each area's rule and why: [dashboard](reference/dashboard.md), from `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts`, which `daemon/test/architecture/dashboard-layout.test.ts` enforces.
 
 <!-- /generated -->
 
