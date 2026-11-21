@@ -43,7 +43,7 @@ async function takeInOne(app: App, repo: Repo, issue: Issue, allowed: string[], 
   if (intake.kind === 'refuse') {
     await app.issues.editLabels(repo.path, issue.number, { add: [], remove: [ISSUE_LABELS.ready] });
     await app.issues.comment(repo.path, issue.number, signed(intake.comment));
-    log(`${repo.name} issue #${issue.number}: label from ${by ?? 'nobody'} ignored`);
+    log(`${repo.name} issue #${issue.number}: label from ${by ?? 'nobody'} taken off`);
     return;
   }
   const task = await addTask(

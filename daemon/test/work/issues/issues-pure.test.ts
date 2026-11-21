@@ -115,13 +115,15 @@ test('agentdeck add is refused on an issue-backed repo, naming the label', () =>
   assert.equal(issueRepoAddError({ name: 'AgentDeck', issues: false }), null);
 });
 
-test('a labelled issue from an allowed login becomes a task; anyone else is refused', () => {
+test('a labelled issue from an allowed login becomes a task; anyone else, or an empty body, is refused', () => {
   const add = issueIntake(issue(), { labelledBy: 'tom', allowed: ['tom'], taskOf: none });
   assert.deepEqual(add, { kind: 'add', title: 'Fill the ticket pool', prompt: issue().body, builds_on: [] });
   const refused = issueIntake(issue(), { labelledBy: 'eve', allowed: ['tom'], taskOf: none });
   assert.equal(refused.kind, 'refuse');
   assert.match(refused.kind === 'refuse' ? refused.comment : '', /only when tom adds the ready-for-agent label, not eve/);
   assert.equal(issueIntake(issue(), { labelledBy: 'Tom', allowed: ['tom'], taskOf: none }).kind, 'add');
+  const empty = issueIntake(issue({ body: ' ' }), { labelledBy: 'tom', allowed: ['tom'], taskOf: none });
+  assert.match(empty.kind === 'refuse' ? empty.comment : '', /no body/);
 });
 
 test('a login is allowed whatever its case, and no login never is', () => {

@@ -29,6 +29,11 @@ export function issueIntake(
   ctx: { labelledBy: string | null; allowed: readonly string[]; taskOf: (number: number) => TaskId | undefined },
 ): Intake {
   if (!isAllowed(ctx.allowed, ctx.labelledBy)) return { kind: 'refuse', comment: labelRefusal(ctx.allowed, ctx.labelledBy) };
+  if (!issue.body.trim())
+    return {
+      kind: 'refuse',
+      comment: `This issue has no body for the task's prompt, so the label is taken off. Write its ## Current problem and ## Expected outcome, then put the ${ISSUE_LABELS.ready} label back.`,
+    };
   const open = issue.blocked_by.filter((b) => b.open);
   const untracked = open.filter((b) => ctx.taskOf(b.number) === undefined);
   if (untracked.length)
