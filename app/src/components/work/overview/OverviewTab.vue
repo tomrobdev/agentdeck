@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { type PersonEventText, describeEvent } from '#daemon/domain/work/index.ts';
 import { fmtTokens, runLabel, totalTokens } from '#lib/runs/run-wording.ts';
 import { ago, runDuration } from '#lib/shared/time.ts';
+import { TASK_SOURCE } from '#lib/work/task-view.ts';
 import type { Changes, Run, TaskDetail, TaskEventRow } from '#api/types.ts';
 import Markdown from '#components/ui/Markdown.vue';
 import DependenciesCard from '#components/work/overview/DependenciesCard.vue';
@@ -58,7 +59,7 @@ const when = 'ml-auto text-sm text-muted';
 
     <article class="card">
       <header class="card-head gap-1.5 px-3.5 py-2">
-        <b>{{ task.source === 'planner' ? 'Planner' : 'You' }}</b>
+        <b>{{ TASK_SOURCE[task.source].author }}</b>
         <span class="text-muted">wrote the prompt {{ ago(task.created_at) }}</span>
       </header>
       <div
@@ -104,7 +105,7 @@ const when = 'ml-auto text-sm text-muted';
         <template v-if="it.kind === 'created'">
           <span :class="node">○</span>
           <span
-            ><b>{{ task.source === 'planner' ? 'The planner' : 'You' }}</b> created this task</span
+            ><b>{{ TASK_SOURCE[task.source].author }}</b> created this task</span
           >
           <span :class="when">{{ ago(it.at) }}</span>
         </template>

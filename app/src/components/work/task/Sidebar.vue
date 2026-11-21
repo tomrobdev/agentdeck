@@ -7,7 +7,7 @@ import type { TaskDetail } from '#api/types.ts';
 import AutoMergeMark from '#components/ui/status/AutoMergeMark.vue';
 import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '#platform/native.ts';
 import { editorArgv, editorTemplate } from '#lib/runs/terminal.ts';
-import { canEdit, levelOf, priorityLevel, statusLabel } from '#lib/work/task-view.ts';
+import { TASK_SOURCE, canEdit, levelOf, priorityLevel, statusLabel } from '#lib/work/task-view.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import { useTerminal } from '#composables/runs/useTerminal.ts';
 import { useFixTask } from '#composables/work/useFixTask.ts';
@@ -67,8 +67,6 @@ async function setAutoMerge(select: HTMLSelectElement) {
 }
 
 const AUTO_MERGE_TEXT = { off: 'text-muted', on: 'text-muted', merge: 'text-done', wait: 'text-blocked', never: 'text-failed' } as const;
-
-const SOURCE_LABEL = { manual: 'Added by you', planner: 'Planner', issue: 'GitHub issue' } as const;
 
 const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).label);
 </script>
@@ -159,7 +157,7 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
     </div>
     <div :class="prop">
       <div :class="name">Source</div>
-      <div :class="row">{{ SOURCE_LABEL[task.source] }}</div>
+      <div :class="row">{{ TASK_SOURCE[task.source].label }}</div>
     </div>
   </aside>
 </template>
