@@ -6,10 +6,12 @@ import {
   type Issue,
   type Task,
   dueIssueWrite,
+  isAllowed,
   issueIntake,
   issueMove,
   issueNote,
   issueRepoAddError,
+  labelRefusal,
   signed,
   labelledBy,
   parseIssue,
@@ -119,6 +121,14 @@ test('a labelled issue from an allowed login becomes a task; anyone else is refu
   const refused = issueIntake(issue(), { labelledBy: 'eve', allowed: ['tom'], taskOf: none });
   assert.equal(refused.kind, 'refuse');
   assert.match(refused.kind === 'refuse' ? refused.comment : '', /only when tom adds the ready-for-agent label, not eve/);
+  assert.equal(issueIntake(issue(), { labelledBy: 'Tom', allowed: ['tom'], taskOf: none }).kind, 'add');
+});
+
+test('a login is allowed whatever its case, and no login never is', () => {
+  assert.equal(isAllowed(['TomRobDev'], 'tomrobdev'), true);
+  assert.equal(isAllowed(['tom'], 'eve'), false);
+  assert.equal(isAllowed(['tom'], null), false);
+  assert.match(labelRefusal([], null), /only when a listed login adds the ready-for-agent label, so/);
 });
 
 test('an open blocker with a task becomes a builds-on link; one with no task yet makes the issue wait; a closed one is met', () => {

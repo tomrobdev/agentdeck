@@ -6,9 +6,11 @@ import {
   type TaskIssue,
   ISSUE_LABELS,
   dueIssueWrite,
+  isAllowed,
   issueIntake,
   issueMove,
   issueNote,
+  labelRefusal,
   shapePrompt,
   signed,
 } from '#domain/work/index.ts';
@@ -62,6 +64,13 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
     log(`task #${before.id}: cancelled, ${move.reason}`);
   } else if (move.kind === 'edit') await editTask(app, before.id, { title: move.title, prompt: move.prompt });
   else if (move.kind === 'retry') {
+    const by = await app.issues.labelledBy(repo.path, link.number, ISSUE_LABELS.ready);
+    if (!isAllowed(allowed, by)) {
+      await app.issues.editLabels(repo.path, link.number, { add: [], remove: [ISSUE_LABELS.ready] });
+      await app.issues.comment(repo.path, link.number, signed(labelRefusal(allowed, by)));
+      log(`task #${before.id}: not retried, issue #${link.number} labelled by ${by ?? 'nobody'}`);
+      return;
+    }
     const note = issueNote(await app.issues.comments(repo.path, link.number), link.reported_at, allowed);
     retryTask(app, before.id, { note });
     log(`task #${before.id}: retried from issue #${link.number}`);

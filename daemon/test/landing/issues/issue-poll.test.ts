@@ -71,6 +71,7 @@ function fakeIssues() {
     written,
     closed,
     file,
+    labelledAgain: (n: number, by: string) => labelBy.set(n, by),
     said: (n: number) => written.filter((w) => w.number === n).map((w) => w.body.replace('\n\n<!-- agentdeck -->', '')),
   };
 }
@@ -179,4 +180,20 @@ test('removing the label from a queued issue cancels its task; editing the issue
   await pollIssues(db);
   assert.equal(db.getTask(taskOf(9))?.status, 'cancelled');
   assert.equal(db.getTask(taskOf(10))?.title, 'Issue ten, retitled');
+});
+
+test('the label put back by someone not allowed does not retry the task, and is taken off again', async () => {
+  const { db, gh, taskOf } = setup();
+  gh.file(11);
+  await pollIssues(db);
+  const id = taskOf(11);
+  advance(db, id, 'blocked');
+  db.recordQuestion(id, { question: 'Which table?', options: [] }, 'asked');
+  await pollIssues(db);
+  gh.issues.get(11)?.labels.push('ready-for-agent');
+  gh.labelledAgain(11, 'eve');
+  await pollIssues(db);
+  assert.equal(db.getTask(id)?.status, 'blocked');
+  assert.deepEqual(gh.issues.get(11)?.labels, ['needs-info']);
+  assert.match(gh.said(11).at(-1) ?? '', /not eve/);
 });

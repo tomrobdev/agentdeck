@@ -17,15 +17,18 @@ export function issuePrompt(issue: Pick<Issue, 'body' | 'parent'>): string {
   return `${body}\n\n## Context\nThis is part of #${issue.parent.number}, ${issue.parent.title}.${parent ? `\n\n${parent}` : ''}`;
 }
 
+export const isAllowed = (allowed: readonly string[], login: string | null): boolean =>
+  login !== null && allowed.some((a) => a.toLowerCase() === login.toLowerCase());
+
+export function labelRefusal(allowed: readonly string[], by: string | null): string {
+  return `AgentDeck takes an issue only when ${allowed.join(' or ') || 'a listed login'} adds the ${ISSUE_LABELS.ready} label${by ? `, not ${by}` : ''}, so the label is taken off.`;
+}
+
 export function issueIntake(
   issue: Issue,
   ctx: { labelledBy: string | null; allowed: readonly string[]; taskOf: (number: number) => TaskId | undefined },
 ): Intake {
-  if (!ctx.labelledBy || !ctx.allowed.includes(ctx.labelledBy))
-    return {
-      kind: 'refuse',
-      comment: `AgentDeck takes an issue only when ${ctx.allowed.join(' or ') || 'a listed login'} adds the ${ISSUE_LABELS.ready} label${ctx.labelledBy ? `, not ${ctx.labelledBy}` : ''}, so the label is taken off.`,
-    };
+  if (!isAllowed(ctx.allowed, ctx.labelledBy)) return { kind: 'refuse', comment: labelRefusal(ctx.allowed, ctx.labelledBy) };
   const open = issue.blocked_by.filter((b) => b.open);
   const untracked = open.filter((b) => ctx.taskOf(b.number) === undefined);
   if (untracked.length)
@@ -62,7 +65,7 @@ export function issueMove(task: Pick<Task, 'status' | 'title' | 'prompt'>, issue
 
 export function issueNote(comments: readonly IssueComment[], since: string | null, allowed: readonly string[]): string {
   const said = comments
-    .filter((c) => !c.body.includes(ISSUE_MARK) && allowed.includes(c.author) && (since === null || c.created_at > since))
+    .filter((c) => !c.body.includes(ISSUE_MARK) && isAllowed(allowed, c.author) && (since === null || c.created_at > since))
     .map((c) => c.body.trim());
   return said.filter(Boolean).join('\n\n') || 'The issue was labelled ready-for-agent again with no new comment.';
 }
