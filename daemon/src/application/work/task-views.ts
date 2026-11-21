@@ -108,7 +108,13 @@ export async function taskDetail(app: App, id: TaskId) {
     events: app.eventsForTask(id),
     plans: plansShown(app, task),
     plan_branch: await planBranchView(app, task, repo),
+    issue: issueLinkOf(app, id),
   };
+}
+
+function issueLinkOf(app: App, id: TaskId): { number: number; url: string } | null {
+  const link = app.issueOf(id);
+  return link ? { number: link.number, url: link.url } : null;
 }
 
 async function planBranchView(app: App, task: Task, repo: Repo | undefined) {

@@ -20,6 +20,7 @@ const props = defineProps<{ task: TaskDetail }>();
 const { run, flash } = useActions();
 
 const editable = computed(() => canEdit(props.task));
+const issue = computed(() => props.task.issue ?? null);
 const { copied, copy } = useCopy();
 const terminal = useTerminal();
 const { canFixHere, fix } = useFixTask();
@@ -99,6 +100,10 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
     <div v-if="task.pr_url" :class="prop">
       <div :class="name">Pull request</div>
       <button :class="[rowButton, 'text-accent']" @click="openExternal(task.pr_url)">{{ task.pr_state ?? 'open' }} ↗</button>
+    </div>
+    <div v-if="issue" :class="prop">
+      <div :class="name">Issue</div>
+      <button :class="[rowButton, 'text-accent']" data-task-issue @click="openExternal(issue.url)">#{{ issue.number }} ↗</button>
     </div>
     <div v-if="autoMergeShown" :class="prop">
       <div :class="name">Auto-merge</div>
