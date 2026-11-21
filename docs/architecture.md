@@ -152,7 +152,7 @@ sequenceDiagram
 - [Data model](reference/data-model.md), [migrations](reference/migrations.md) and [settings](reference/settings.md): the tables and their keys, the steps of `db/schema.ts`, and each setting with its default and meaning.
 - [Task lifecycle](reference/lifecycle.md): every status change and its event.
 - [HTTP API](reference/routes.md): the routes and the use case each calls.
-- [Adapters](reference/adapters.md) and [adapter use](reference/adapter-use.md): what each file in `daemon/src/adapters/` does, and which adapters each area of `application/` imports.
+- [Adapters](reference/adapters.md): what each file in `daemon/src/adapters/` does.
 - [Context map](reference/context-map.md): the folders under `domain/` and the imports between them.
 - [Models](reference/models.md), [use cases](reference/use-cases.md) and [state machines](reference/state-machines.md): the entities, `application/actions.ts` and the rule tables. [Migration progress](reference/progress.md) counts what is left of the move to a domain model, and [coverage floors](reference/coverage.md) the least coverage each layer and context may have.
 - [Runs](reference/runs.md): plans in a run, and resuming a cut-off run.

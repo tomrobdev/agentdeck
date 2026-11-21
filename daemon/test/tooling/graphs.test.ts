@@ -1,8 +1,8 @@
-// The context map and the adapter-use table, on small sample sources.
+// The context map, on small sample sources.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { adapterUseBody, contextMapBody } from '#scripts/lib/architecture-docs.ts';
-import { adapterUse, contextMap } from '#scripts/lib/graphs.ts';
+import { contextMapBody } from '#scripts/lib/architecture-docs.ts';
+import { contextMap } from '#scripts/lib/graphs.ts';
 import { parseSource } from '#scripts/lib/sources.ts';
 
 const src = (path: string, text: string) => parseSource(path, text);
@@ -47,24 +47,4 @@ test('context map: a cycle is marked, a runtime import beside a type-only one ma
   assert.match(body, /domain_task -->\|cycle\| domain_repo/);
   assert.match(body, /domain_repo -\.->\|cycle\| domain_task/);
   assert.match(body, /`domain\/repo` ↔ `domain\/task`/);
-});
-
-test('adapter use: each application area lists the adapters it imports', () => {
-  const sources = [
-    src('application/run/worker.ts', "import { a } from '#adapters/git.ts';\nimport { b } from '#adapters/claude.ts';"),
-    src('application/run/other.ts', "import { a } from '#adapters/git.ts';"),
-    src('application/planner.ts', "import { c } from '#adapters/claude.ts';\nimport { d } from '#db/index.ts';"),
-    src('application/settings.ts', "import { d } from '#db/index.ts';"),
-  ];
-  assert.deepEqual(adapterUse(sources), [
-    { area: 'planner.ts', adapters: [{ adapter: 'claude.ts', imports: 1 }] },
-    {
-      area: 'run',
-      adapters: [
-        { adapter: 'claude.ts', imports: 1 },
-        { adapter: 'git.ts', imports: 2 },
-      ],
-    },
-  ]);
-  assert.match(adapterUseBody(sources), /`application\/run`\s+\| `claude\.ts`, `git\.ts` \(2\)/);
 });

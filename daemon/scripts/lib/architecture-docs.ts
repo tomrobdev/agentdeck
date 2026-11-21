@@ -8,7 +8,7 @@ import { LAYERS, layerOf, mayImport } from '#scripts/lib/layers.ts';
 import * as tables from '#db/tables.ts';
 import { RULES, TASK_STATUSES, type TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 import { dashboardBody, dashboardReference } from '#scripts/lib/dashboard-layout.ts';
-import { adapterUse, contextMap } from '#scripts/lib/graphs.ts';
+import { contextMap } from '#scripts/lib/graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from '#scripts/lib/model-docs.ts';
 import { COVERAGE_FLOORS, progress } from '#scripts/lib/progress.ts';
 import { UNCHECKED } from '#scripts/lib/rules.ts';
@@ -132,16 +132,6 @@ export function contextMapBody(sources: Source[]): string {
     ? `Cycles:\n\n${map.cycles.map((c) => `- ${c.map((n) => `\`${n}\``).join(' ↔ ')}`).join('\n')}`
     : 'No cycles.';
   return [mermaid(['flowchart LR', ...map.contexts.map((c) => `  ${ident(c)}["${c}"]`), ...lines]), cycles].join('\n\n');
-}
-
-export function adapterUseBody(sources: Source[]): string {
-  return table(
-    ['Area', 'Adapters imported'],
-    adapterUse(sources).map((u) => [
-      `\`application/${u.area}\``,
-      u.adapters.map((a) => `\`${a.adapter}\`${a.imports > 1 ? ` (${a.imports})` : ''}`).join(', '),
-    ]),
-  );
 }
 
 function strictnessRows(): string[][] {
@@ -388,11 +378,6 @@ export function generateReference(): Record<string, string> {
       'Context map',
       'The folders under `domain/` and the imports between them. A solid arrow is a runtime import, a dotted one is type-only; an edge inside a cycle is labelled `cycle`.',
       contextMapBody(sources),
-    ),
-    'adapter-use.md': file(
-      'Adapter use',
-      'Each area of `application/` and the adapters it imports, with the number of imports where there is more than one.',
-      adapterUseBody(sources),
     ),
     'models.md': file(
       'Models',
