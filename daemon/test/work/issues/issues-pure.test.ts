@@ -17,6 +17,7 @@ import {
   parseIssue,
   parseIssueComments,
   parseIssues,
+  parseLabelNames,
 } from '#domain/work/index.ts';
 
 const issue = (o: Partial<Issue> = {}): Issue => ({
@@ -89,6 +90,8 @@ test('gh issue JSON reads into issues: labels, blockers as a list or nodes, a cl
 test('a list gh did not answer with a list throws, so the poll never reads it as no issues', () => {
   assert.throws(() => parseIssues('{"error":"rate limited"}'), /did not answer with a list/);
   assert.throws(() => parseIssues(''), /did not answer with a list/);
+  assert.deepEqual(parseLabelNames('[{"name":"bug"},{"name":"needs-info"}]'), ['bug', 'needs-info']);
+  assert.throws(() => parseLabelNames('{"message":"Not Found"}'), /did not answer with a list of labels/);
 });
 
 test('comments read with their author, and the last person to add a label is found in the timeline', () => {

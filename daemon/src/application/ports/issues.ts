@@ -3,6 +3,7 @@ import type { Issue, IssueCloseReason, IssueComment } from '#domain/work/index.t
 
 export interface IssueHost {
   whoami(cwd: string): Promise<string>;
+  ensureLabels(cwd: string, labels: readonly { name: string; description: string; color: string }[]): Promise<void>;
   openIssues(cwd: string, label: string): Promise<Issue[]>;
   issue(cwd: string, number: number): Promise<Issue | null>;
   comments(cwd: string, number: number): Promise<IssueComment[]>;

@@ -25,8 +25,12 @@ function fakeIssues() {
   const comments = new Map<number, Comment[]>();
   const written: { number: number; body: string }[] = [];
   const closed: number[] = [];
+  const labels = new Set<string>();
   const host: IssueHost = {
     whoami: async () => 'tom',
+    ensureLabels: async (_cwd, want) => {
+      for (const l of want) labels.add(l.name);
+    },
     openIssues: async (_cwd, label) => [...issues.values()].filter((i) => i.open && i.labels.includes(label)),
     issue: async (_cwd, n) => issues.get(n) ?? null,
     comments: async (_cwd, n) => comments.get(n) ?? [],
@@ -70,6 +74,7 @@ function fakeIssues() {
     comments,
     written,
     closed,
+    labels,
     file,
     labelledAgain: (n: number, by: string) => labelBy.set(n, by),
     said: (n: number) => written.filter((w) => w.number === n).map((w) => w.body.replace('\n\n<!-- agentdeck -->', '')),
@@ -98,6 +103,7 @@ test('a labelled issue becomes a queued task, once, and the issue is told its nu
   const task = db.getTask(taskOf(7));
   assert.deepEqual([task?.status, task?.source, task?.title], ['queued', 'issue', 'Issue 7']);
   assert.deepEqual(gh.said(7), [`Queued as AgentDeck task #${task?.id}.`]);
+  assert.deepEqual([...gh.labels].sort(), ['agentdeck:running', 'needs-info', 'ready-for-agent', 'ready-for-human']);
 });
 
 test('agentdeck add is refused on an issue-backed repo', async () => {

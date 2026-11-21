@@ -253,6 +253,6 @@ export type {
   TaskSummary,
 } from '#domain/work/task/task.ts';
 export { ISSUE_LABELS, issueRepoAddError, signed } from '#domain/work/issues/issue.ts';
-export { ISSUE_FIELDS, labelledBy, parseIssue, parseIssueComments, parseIssues } from '#domain/work/issues/parse.ts';
+export { ISSUE_FIELDS, labelledBy, parseIssue, parseIssueComments, parseIssues, parseLabelNames } from '#domain/work/issues/parse.ts';
 export type { Issue, IssueCloseReason, IssueComment, IssueReport, TaskIssue } from '#domain/work/issues/issue.ts';
 export { dueIssueWrite, isAllowed, issueIntake, issueMove, issueNote, labelRefusal } from '#domain/work/issues/sync.ts';

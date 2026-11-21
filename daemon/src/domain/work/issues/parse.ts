@@ -71,3 +71,9 @@ export function labelledBy(text: string, label: string): string | null {
   const last = events.at(-1);
   return last && isObject(last.actor) ? str(last.actor.login) || null : null;
 }
+
+export function parseLabelNames(text: string): string[] {
+  const list = parse(text);
+  if (!Array.isArray(list)) throw new Error(`gh did not answer with a list of labels: ${text.slice(0, 200)}`);
+  return list.flatMap((l) => (isObject(l) && typeof l.name === 'string' ? [l.name] : []));
+}

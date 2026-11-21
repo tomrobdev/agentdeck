@@ -30,6 +30,7 @@ export const realAgent = (): Agent => ({ run: (session) => runClaude(session), f
 
 export const realIssueHost = (): IssueHost => ({
   whoami: (cwd) => githubIssues.whoami(cwd),
+  ensureLabels: (cwd, labels) => githubIssues.ensureLabels(cwd, labels),
   openIssues: (cwd, label) => githubIssues.openIssues(cwd, label),
   issue: (cwd, number) => githubIssues.issue(cwd, number),
   comments: (cwd, number) => githubIssues.comments(cwd, number),

@@ -10,6 +10,7 @@ import {
   parseIssue,
   parseIssueComments,
   parseIssues,
+  parseLabelNames,
 } from '#domain/work/index.ts';
 import { failure } from '#adapters/github/github.ts';
 
@@ -35,6 +36,12 @@ async function withParentBody(cwd: string, issue: Issue): Promise<Issue> {
 export const githubIssues = {
   async whoami(cwd: string): Promise<string> {
     return (await gh(cwd, ['api', 'user', '--jq', '.login'])).trim();
+  },
+
+  async ensureLabels(cwd: string, labels: readonly { name: string; description: string; color: string }[]): Promise<void> {
+    const have = new Set(parseLabelNames(await gh(cwd, ['label', 'list', '--limit', '500', '--json', 'name'])));
+    for (const l of labels.filter((l) => !have.has(l.name)))
+      await gh(cwd, ['label', 'create', l.name, '--description', l.description, '--color', l.color]);
   },
 
   async openIssues(cwd: string, label: string): Promise<Issue[]> {

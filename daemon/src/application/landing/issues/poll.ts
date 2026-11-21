@@ -21,7 +21,12 @@ export const ISSUE_POLL_MS = 120_000;
 
 type Log = (msg: string) => void;
 
-const RUNNING_LABEL = { name: ISSUE_LABELS.running, description: 'An AgentDeck run is working on this issue', color: '1d76db' };
+const LABELS = [
+  { name: ISSUE_LABELS.ready, description: 'AgentDeck may work on this issue', color: '0e8a16' },
+  { name: ISSUE_LABELS.info, description: 'AgentDeck asked a question on this issue', color: 'd876e3' },
+  { name: ISSUE_LABELS.human, description: 'A person, not AgentDeck, does this issue', color: 'fbca04' },
+  { name: ISSUE_LABELS.running, description: 'An AgentDeck run is working on this issue', color: '1d76db' },
+];
 
 const settled = (link: TaskIssue): boolean => link.reported === 'merged' || link.reported === 'cancelled';
 
@@ -87,7 +92,7 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
 }
 
 async function pollRepo(app: App, repo: Repo, now: number, log: Log): Promise<void> {
-  await app.codeHost.ensureLabel(repo.path, RUNNING_LABEL);
+  await app.issues.ensureLabels(repo.path, LABELS);
   const allowed = await allowedLogins(app, repo);
   await takeIn(app, repo, allowed, log);
   for (const link of app.issuesOfRepo(repo.id).filter((l) => !settled(l))) {
