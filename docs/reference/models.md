@@ -1889,6 +1889,18 @@ A finished task, and whether a person finished it.
 | `status`  | `"done"`           |                                        |
 | `done_by` | `"person" \| null` | 'person' when mark_done set the status |
 
+### DueIssueWrite
+
+What to write on an issue now: only the labels it lacks or still has, and a close only while it is open.
+
+| Field     | Type          | Comment |
+| --------- | ------------- | ------- |
+| `add`     | `string[]`    |         |
+| `remove`  | `string[]`    |         |
+| `comment` | `string`      |         |
+| `close`   | `boolean`     |         |
+| `to`      | `IssueReport` |         |
+
 ### FailedState
 
 A task that ran out of attempts.
@@ -1967,17 +1979,6 @@ A comment on an issue, by its author's login.
 | `author`     | `string` |         |
 | `body`       | `string` |         |
 | `created_at` | `string` |         |
-
-### IssueWrite
-
-What to write on the issue when its task's report changes.
-
-| Field     | Type       | Comment |
-| --------- | ---------- | ------- |
-| `add`     | `string[]` |         |
-| `remove`  | `string[]` |         |
-| `comment` | `string`   |         |
-| `close`   | `boolean`  |         |
 
 ### LandingBranch
 
