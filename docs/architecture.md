@@ -1,6 +1,6 @@
 # Architecture
 
-A map of AgentDeck's code, layers first. The block between `<!-- generated:layers -->` and `<!-- /generated -->` and every file in `docs/reference/` marked generated are written by `pnpm docs:gen` from the code (Claude's edit hook runs it after each edit under `daemon/src`), and `pnpm test` fails when they are stale. The two sections written by hand here are checked too: every file in `daemon/src/adapters/` must be named in the system context, and every identifier in backticks in them must be exported from `daemon/src`. The rules the layers follow are in CLAUDE.md. The decisions behind the design are in `docs/adr/`: [0001 worker sandbox](adr/0001-worker-sandbox.md), [0002 functional DDD](adr/0002-functional-ddd.md), [0003 one table, a rich aggregate, a flat API](adr/0003-one-table-rich-aggregate.md), [0004 `task_events` as the outbox](adr/0004-task-events-outbox.md), [0005 a few deep ports](adr/0005-few-deep-ports.md) and [0006 who may call the API](adr/0006-api-access.md).
+A map of AgentDeck's code, layers first. The block between `<!-- generated:layers -->` and `<!-- /generated -->` and every file in `docs/reference/` marked generated are written by `pnpm docs:gen` from the code (Claude's edit hook runs it after each edit under `daemon/src`), and `pnpm test` fails when they are stale. The two sections written by hand here are checked too: every file in `daemon/src/adapters/` must be named in the system context, and every identifier in backticks in them must be exported from `daemon/src`. The rules the layers follow are in CLAUDE.md. The decisions behind the design are in `docs/adr/`: [0001 worker sandbox](adr/0001-worker-sandbox.md), [0002 functional DDD](adr/0002-functional-ddd.md), [0003 one table, a rich aggregate, a flat API](adr/0003-one-table-rich-aggregate.md), [0004 `task_events` as the outbox](adr/0004-task-events-outbox.md), [0005 a few deep ports](adr/0005-few-deep-ports.md), [0006 who may call the API](adr/0006-api-access.md) and [0007 plan branches](adr/0007-plan-branches.md).
 
 ## Layers
 
@@ -56,12 +56,13 @@ flowchart LR
   subgraph daemon["Daemon (Node)"]
     api["api/"]
     scheduler["application/scheduler"]
-    worker["application/run"]
+    worker["application/runs"]
     db["db/"]
     claude["adapters/claude/claude.ts"]
     workspace["adapters/git/workspace.ts"]
     git["adapters/git/exec.ts, adapters/git/refs.ts,<br/>adapters/git/diffs.ts, adapters/git/worktrees.ts"]
     github["adapters/github/github.ts"]
+    issues["adapters/github/issues.ts"]
     service["adapters/macos/service.ts"]
     notify["adapters/macos/notify.ts"]
     processes["adapters/process/processes.ts"]
@@ -92,6 +93,7 @@ flowchart LR
   worker --> claude --> claudecli
   worker -- "the Workspace port" --> workspace --> git --> gitbin
   worker --> github --> ghbin
+  scheduler -- "the issue poll" --> issues --> ghbin
   workspace --> shell & reporoot
   claude --> processes
   worker --> runlog

@@ -45,7 +45,7 @@ test('docs/architecture.md links every file of docs/reference/', () => {
 
 test('docs: every adapters/*.ts file is named in the system context', () => {
   const context = section(readDocs(), 'System context');
-  const missing = readdirSync(join(SRC, 'adapters'))
+  const missing = readdirSync(join(SRC, 'adapters'), { recursive: true, encoding: 'utf8' })
     .filter((f) => f.endsWith('.ts'))
     .filter((f) => !context.includes(`adapters/${f}`));
   assert.deepEqual(
