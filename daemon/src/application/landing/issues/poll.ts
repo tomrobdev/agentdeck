@@ -86,7 +86,7 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
   const add = write.add.filter((l) => !issue.labels.includes(l));
   const remove = write.remove.filter((l) => issue.labels.includes(l));
   await app.issues.editLabels(repo.path, link.number, { add, remove });
-  if (write.close && issue.open) await app.issues.close(repo.path, link.number, 'completed', signed(write.comment));
+  if (write.close && issue.open) await app.issues.close(repo.path, link.number, signed(write.comment));
   else await app.issues.comment(repo.path, link.number, signed(write.comment));
   app.reportIssue(task.id, write.to, new Date(now).toISOString());
 }

@@ -28,17 +28,7 @@ import { openDb } from '#db/index.ts';
 
 export const realAgent = (): Agent => ({ run: (session) => runClaude(session), find: async () => findClaude() });
 
-export const realIssueHost = (): IssueHost => ({
-  whoami: (cwd) => githubIssues.whoami(cwd),
-  ensureLabels: (cwd, labels) => githubIssues.ensureLabels(cwd, labels),
-  openIssues: (cwd, label) => githubIssues.openIssues(cwd, label),
-  issue: (cwd, number) => githubIssues.issue(cwd, number),
-  comments: (cwd, number) => githubIssues.comments(cwd, number),
-  labelledBy: (cwd, number, label) => githubIssues.labelledBy(cwd, number, label),
-  comment: (cwd, number, body) => githubIssues.comment(cwd, number, body),
-  editLabels: (cwd, number, change) => githubIssues.editLabels(cwd, number, change),
-  close: (cwd, number, reason, comment) => githubIssues.close(cwd, number, reason, comment),
-});
+export const realIssueHost = (): IssueHost => githubIssues;
 
 export const realCodeHost = (): CodeHost => ({
   auth: () => github.auth(),

@@ -1,10 +1,7 @@
 // Adapter for reading a repo's GitHub issues and reporting back on them with gh.
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import {
   ISSUE_FIELDS,
   type Issue,
-  type IssueCloseReason,
   type IssueComment,
   labelledBy,
   parseIssue,
@@ -12,20 +9,11 @@ import {
   parseIssues,
   parseLabelNames,
 } from '#domain/work/index.ts';
-import { failure } from '#adapters/github/github.ts';
+import { gh as run } from '#adapters/github/github.ts';
 
-const exec = promisify(execFile);
-const GH_TIMEOUT_MS = 30_000;
 const MAX_BUFFER = 16 * 1024 * 1024;
 
-async function gh(cwd: string, args: string[]): Promise<string> {
-  try {
-    const { stdout } = await exec('gh', args, { cwd, timeout: GH_TIMEOUT_MS, maxBuffer: MAX_BUFFER });
-    return stdout;
-  } catch (err) {
-    throw failure(err, 'gh', GH_TIMEOUT_MS);
-  }
-}
+const gh = (cwd: string, args: string[]): Promise<string> => run(args, { cwd, maxBuffer: MAX_BUFFER });
 
 async function withParentBody(cwd: string, issue: Issue): Promise<Issue> {
   if (!issue.parent || issue.parent.body) return issue;
@@ -78,15 +66,7 @@ export const githubIssues = {
     await gh(cwd, ['issue', 'edit', String(number), ...args]);
   },
 
-  async close(cwd: string, number: number, reason: IssueCloseReason, comment: string): Promise<void> {
-    await gh(cwd, [
-      'issue',
-      'close',
-      String(number),
-      '--reason',
-      reason === 'not_planned' ? 'not planned' : 'completed',
-      '--comment',
-      comment,
-    ]);
+  async close(cwd: string, number: number, comment: string): Promise<void> {
+    await gh(cwd, ['issue', 'close', String(number), '--reason', 'completed', '--comment', comment]);
   },
 };

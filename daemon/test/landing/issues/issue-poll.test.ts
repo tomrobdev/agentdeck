@@ -46,7 +46,7 @@ function fakeIssues() {
       const i = issues.get(n);
       if (i) i.labels = [...i.labels.filter((l) => !change.remove.includes(l)), ...change.add];
     },
-    close: async (_cwd, n, _reason, body) => {
+    close: async (_cwd, n, body) => {
       const i = issues.get(n);
       if (i) Object.assign(i, { open: false, closed_as: 'completed' });
       closed.push(n);
