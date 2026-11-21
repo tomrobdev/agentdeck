@@ -11,7 +11,7 @@ export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_stat
   repo?: string | null;
   branch?: string | null;
 };
-export type ViewMode = 'list' | 'board' | 'graph';
+export type ViewMode = 'list' | 'board' | 'graph' | 'running';
 
 export interface PaletteHandlers {
   open: (id: number) => void;
@@ -148,6 +148,7 @@ export function paletteItems({ tasks, selected, picked = [], paused, handlers: h
     command('view-list', 'Show list', () => h.view('list')),
     command('view-board', 'Show board', () => h.view('board')),
     command('view-graph', 'Show graph', () => h.view('graph')),
+    command('view-running', 'Show running', () => h.view('running')),
     command('theme', 'Toggle light and dark', h.toggleTheme),
     ...FILTER_STATES.map((s) => command(`show-${s.key}`, `Show ${s.label.toLowerCase()}`, () => h.showStates([s.key]))),
     ...GO_KEYS.map((g) => command(`go-${g.to}`, g.label, () => h.goTo(g.to), keyCaps(g.key).join(' then '))),

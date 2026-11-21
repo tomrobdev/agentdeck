@@ -1,5 +1,5 @@
 // Runs: a task's attempts, live state, syncs and verify runs.
-import type { RunId } from '#domain/shared/index.ts';
+import type { RunId, TaskId } from '#domain/shared/index.ts';
 import type { RunKind, VerifyFinding } from '#domain/runs/index.ts';
 import type { TaskDetail } from '#api/contract/work.ts';
 
@@ -9,6 +9,21 @@ export interface LiveView {
   turns: number;
   max_turns: number;
   tool: string | null;
+}
+
+/** A run under way, from GET /api/runs/live: its task, kind, model, turns of its limit, last tool call and the last lines of its log. */
+export interface LiveRun {
+  run_id: RunId;
+  task_id: TaskId;
+  title: string;
+  kind: RunKind;
+  model: string | null;
+  /** UTC `YYYY-MM-DD HH:MM:SS`. */
+  started_at: string;
+  turns: number;
+  max_turns: number;
+  tool: string | null;
+  lines: string[];
 }
 
 /** A sync of a done task under way. `since` is null for a clean sync (no claude), else the resolve run's start, UTC `YYYY-MM-DD HH:MM:SS`. */

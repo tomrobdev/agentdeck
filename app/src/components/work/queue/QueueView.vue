@@ -6,6 +6,7 @@ import { emptyFilters, hasFilters } from '#lib/work/task-view.ts';
 import BulkMergeDialog from '#components/landing/BulkMergeDialog.vue';
 import EditKeyDialog from '#components/work/task/EditKeyDialog.vue';
 import MergeDialog from '#components/landing/MergeDialog.vue';
+import RunningView from '#components/runs/RunningView.vue';
 import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
 import BoardView from '#components/work/queue/BoardView.vue';
 import BulkBar from '#components/work/queue/BulkBar.vue';
@@ -58,6 +59,7 @@ const {
           { value: 'list', label: '≡ List', title: 'List (v)' },
           { value: 'board', label: '▦ Board', title: 'Board (v)' },
           { value: 'graph', label: '⑂ Graph', title: 'Graph (v)' },
+          { value: 'running', label: '▶ Running', title: 'Running (v)' },
         ]"
         :model-value="display.mode"
         @update:model-value="(mode) => (display = { ...display, mode })"
@@ -68,7 +70,8 @@ const {
 
     <div class="flex min-h-0 flex-1">
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-        <p v-if="!shown.length && hasFilters(filters)" class="text-muted px-4 py-6">
+        <RunningView v-if="display.mode === 'running'" @open="emit('open', $event)" />
+        <p v-else-if="!shown.length && hasFilters(filters)" class="text-muted px-4 py-6">
           Nothing matches these filters.
           <button class="btn-ghost text-accent underline" @click="filters = emptyFilters()">Clear filters</button>
         </p>

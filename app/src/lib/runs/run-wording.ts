@@ -13,6 +13,16 @@ export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
   return `Run ${r.attempt}`;
 }
 
+export const KIND_NAMES: Record<Run['kind'], string> = {
+  work: 'Work run',
+  resolve: 'Resolve run',
+  unblock: 'Unblock run',
+  review: 'Review run',
+  verify: 'Verify run',
+  plan_resolve: 'Plan resolve run',
+  plan_review: 'Plan review',
+};
+
 export function runHint(r: Pick<Run, 'kind'>): string | undefined {
   if (r.kind === 'resolve') return 'Merged the base branch into the branch; uses no attempt';
   if (r.kind === 'unblock') return 'Read why the task blocked, then retried it with a note or asked you; uses no attempt';

@@ -17,7 +17,7 @@ export interface ShowProps {
 }
 
 export interface Display {
-  mode: 'list' | 'board' | 'graph';
+  mode: 'list' | 'board' | 'graph' | 'running';
   groupBy: GroupBy;
   sort: string;
   show: ShowProps;

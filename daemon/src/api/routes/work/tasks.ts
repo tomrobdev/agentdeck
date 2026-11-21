@@ -3,7 +3,7 @@ import * as actions from '#application/actions.ts';
 import { type TaskId, parseId } from '#domain/shared/index.ts';
 import { TASK_STATUSES, shapePrompt } from '#domain/work/index.ts';
 import type { CancelResult, TaskDetail, TaskSaved, TaskSummary } from '#api/contract/work.ts';
-import type { SyncResult, VerifyResult } from '#api/contract/runs.ts';
+import type { LiveRun, SyncResult, VerifyResult } from '#api/contract/runs.ts';
 import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam } from '#api/http.ts';
 import { streamLog } from '#api/log-stream.ts';
 import * as wire from '#api/wire.ts';
@@ -21,6 +21,7 @@ export function routes({ db, scheduler, log }: ApiContext): Route[] {
       const before = beforeParam === null ? undefined : (parseId<TaskId>(beforeParam) ?? undefined);
       return wire.taskViews(db, { status: status ?? undefined, limit, before });
     }),
+    route<LiveRun[]>('GET', /^\/api\/runs\/live$/, () => actions.liveRuns(db)),
     route<TaskSaved>('POST', /^\/api\/tasks$/, async ({ body }) => {
       const links = { builds_on: idsField(body, 'builds_on'), after: idsField(body, 'after') };
       const task = await actions.addTask(db, { ...body, ...links } as Parameters<typeof actions.addTask>[1]);

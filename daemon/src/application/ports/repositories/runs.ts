@@ -9,6 +9,7 @@ export interface RunRepository {
   setRunLive(id: Run['id'], live_turns: number, live_tool: string | null): void;
   setRunSession(id: Run['id'], session_id: string): void;
   liveRuns(kind: RunKind): Map<TaskId, { started_at: string; live_turns: number; live_tool: string | null }>;
+  openRuns(): Run[];
   latestRunModels(): Map<TaskId, string>;
   changedPathsOf(task_ids: readonly TaskId[]): Map<TaskId, string[]>;
   finishRun(id: Run['id'], r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void;
