@@ -164,18 +164,26 @@ export function progressBody(sources: Source[]): string {
     ],
     ...strictnessRows(),
   ];
+  const left = rows.filter((r) => r[1] !== '0');
+  const listed = lists.filter((l) => l.size > 0);
   const cycleLines = p.cycles.map((c) => `- \`${c.layer}/\`: ${c.folders.map((f) => `\`${f}\``).join(', ')}`);
   return [
-    table(['Measure', 'Count', 'Where'], rows),
+    left.length ? table(['Measure', 'Count', 'Where'], left) : 'Every measure is at zero.',
     '## Shrinking lists',
     'Each list can only shrink: an entry that stops applying fails `pnpm test`.',
-    table(
-      ['List', 'Entries'],
-      lists.map((l) => [l.name, String(l.size)]),
-    ),
-    '## Folder cycles',
-    'Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).',
-    cycleLines.length ? cycleLines.join('\n') : 'None.',
+    listed.length
+      ? table(
+          ['List', 'Entries'],
+          listed.map((l) => [l.name, String(l.size)]),
+        )
+      : 'Every list is empty.',
+    ...(cycleLines.length
+      ? [
+          '## Folder cycles',
+          'Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).',
+          cycleLines.join('\n'),
+        ]
+      : []),
   ].join('\n\n');
 }
 
@@ -368,8 +376,8 @@ export function generateReference(): Record<string, string> {
     ),
     'state-machines.md': file('State machines', 'Each state machine of `domain/`, read from its rule table.', stateMachinesBody()),
     'progress.md': file(
-      'Migration progress',
-      'How far the move to a domain model has come, counted from the code. Each number should fall to zero.',
+      'Exceptions',
+      'What the rules still let through, counted from the code. Each count only falls; one at zero is left out, and `daemon/test/architecture/` keeps it there.',
       progressBody(sources),
     ),
     'coverage.md': file(
