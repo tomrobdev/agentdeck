@@ -66,7 +66,7 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
     log(`task #${before.id}: retried from issue #${link.number}`);
   }
   const task = app.getTask(link.task_id);
-  const write = task && dueIssueWrite(task, link, { warnings: shapePrompt(task.prompt).warnings });
+  const write = task && dueIssueWrite(task, link, { opens_prs: repo.pr_mode !== 'off', warnings: shapePrompt(task.prompt).warnings });
   if (!task || !write) return;
   const add = write.add.filter((l) => !issue.labels.includes(l));
   const remove = write.remove.filter((l) => issue.labels.includes(l));

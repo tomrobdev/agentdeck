@@ -65,7 +65,7 @@ export function issueNote(comments: readonly IssueComment[], since: string | nul
   return said.filter(Boolean).join('\n\n') || 'The issue was labelled ready-for-agent again with no new comment.';
 }
 
-export function issueReportFor(task: Task): IssueReport | null {
+export function issueReportFor(task: Task, opensPrs: boolean): IssueReport | null {
   switch (task.status) {
     case 'queued':
       return 'queued';
@@ -77,7 +77,8 @@ export function issueReportFor(task: Task): IssueReport | null {
     case 'failed':
       return 'stopped';
     case 'done':
-      return task.pr?.state === 'open' ? 'pr_open' : task.pr?.state === 'merged' || !task.pr ? 'merged' : null;
+      if (!task.pr) return opensPrs ? null : 'merged';
+      return task.pr.state === 'open' ? 'pr_open' : task.pr.state === 'merged' ? 'merged' : null;
     case 'cancelled':
       return 'cancelled';
     case 'proposed':
@@ -152,9 +153,9 @@ export function issueWrite(to: IssueReport, task: Task, ctx: { warnings?: readon
 export function dueIssueWrite(
   task: Task,
   link: Pick<TaskIssue, 'reported'>,
-  ctx: { warnings?: readonly string[] } = {},
+  ctx: { opens_prs: boolean; warnings?: readonly string[] },
 ): (IssueWrite & { to: IssueReport }) | null {
-  const to = issueReportFor(task);
+  const to = issueReportFor(task, ctx.opens_prs);
   if (to === null || to === link.reported) return null;
   return { ...issueWrite(to, task, ctx), to };
 }

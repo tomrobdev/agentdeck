@@ -42,6 +42,7 @@ const task = (o: Record<string, unknown> = {}): Task =>
   }) as unknown as Task;
 
 const none = () => undefined;
+const PRS = { opens_prs: true };
 
 test('gh issue JSON reads into issues: labels, blockers as a list or nodes, a closed reason, a parent', () => {
   const [read] = parseIssues(
@@ -178,24 +179,35 @@ test('the label put back on a blocked or failed task retries it; the note is wha
 });
 
 test('the issue is told each change once: queued, running, a question, a stop, the PR, the merge', () => {
-  const queued = dueIssueWrite(task(), { reported: null }, { warnings: ['the prompt has no ## Expected outcome section'] });
+  const queued = dueIssueWrite(
+    task(),
+    { reported: null },
+    { opens_prs: true, warnings: ['the prompt has no ## Expected outcome section'] },
+  );
   assert.equal(queued?.to, 'queued');
   assert.deepEqual(queued?.add, ['ready-for-agent']);
   assert.match(queued?.comment ?? '', /Queued as AgentDeck task #12\.\n\nThe body should follow/);
-  assert.equal(dueIssueWrite(task(), { reported: 'queued' }), null);
-  const running = dueIssueWrite(task({ status: 'running' }), { reported: 'queued' });
+  assert.equal(dueIssueWrite(task(), { reported: 'queued' }, PRS), null);
+  const running = dueIssueWrite(task({ status: 'running' }), { reported: 'queued' }, PRS);
   assert.deepEqual([running?.add, running?.comment], [['agentdeck:running'], 'Task #12 started (attempt 1 of 2).']);
-  const question = dueIssueWrite(task({ status: 'blocked', question: { question: 'Which table?', options: ['wallets', 'orders'] } }), {
-    reported: 'running',
-  });
+  const question = dueIssueWrite(
+    task({ status: 'blocked', question: { question: 'Which table?', options: ['wallets', 'orders'] } }),
+    { reported: 'running' },
+    PRS,
+  );
   assert.deepEqual([question?.add, question?.remove], [['needs-info'], ['ready-for-agent', 'agentdeck:running']]);
   assert.match(question?.comment ?? '', /> Which table\?\n\n- wallets\n- orders/);
-  const failed = dueIssueWrite(task({ status: 'failed', stop_reason: 'tests failed' }), { reported: 'running' });
+  const failed = dueIssueWrite(task({ status: 'failed', stop_reason: 'tests failed' }), { reported: 'running' }, PRS);
   assert.match(failed?.comment ?? '', /Task #12 failed: tests failed/);
-  const pr = dueIssueWrite(task({ status: 'done', pr: { state: 'open', url: 'https://x/pull/9' } }), { reported: 'running' });
+  const pr = dueIssueWrite(task({ status: 'done', pr: { state: 'open', url: 'https://x/pull/9' } }), { reported: 'running' }, PRS);
   assert.deepEqual([pr?.to, pr?.close], ['pr_open', false]);
-  const merged = dueIssueWrite(task({ status: 'done', pr: { state: 'merged', url: 'https://x/pull/9' } }), { reported: 'pr_open' });
+  const merged = dueIssueWrite(task({ status: 'done', pr: { state: 'merged', url: 'https://x/pull/9' } }), { reported: 'pr_open' }, PRS);
   assert.deepEqual([merged?.to, merged?.close, merged?.comment], ['merged', true, 'Merged in https://x/pull/9.']);
-  assert.equal(dueIssueWrite(task({ status: 'cancelled' }), { reported: 'queued' })?.close, false);
-  assert.equal(dueIssueWrite(task({ status: 'proposed' }), { reported: null }), null);
+  assert.equal(dueIssueWrite(task({ status: 'cancelled' }), { reported: 'queued' }, PRS)?.close, false);
+  assert.equal(dueIssueWrite(task({ status: 'proposed' }), { reported: null }, PRS), null);
+});
+
+test("a done task's issue waits for its pull request; in a repo that opens none, done is the end", () => {
+  assert.equal(dueIssueWrite(task({ status: 'done', pr: null }), { reported: 'running' }, PRS), null);
+  assert.equal(dueIssueWrite(task({ status: 'done', pr: null }), { reported: 'running' }, { opens_prs: false })?.close, true);
 });
