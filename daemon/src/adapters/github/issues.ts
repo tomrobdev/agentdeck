@@ -54,7 +54,7 @@ export const githubIssues = {
   },
 
   async labelledBy(cwd: string, number: number, label: string): Promise<string | null> {
-    const events = await gh(cwd, ['api', '--paginate', '--slurp', `repos/{owner}/{repo}/issues/${number}/timeline`, '--jq', 'add']);
+    const events = await gh(cwd, ['api', '--paginate', '--slurp', `repos/{owner}/{repo}/issues/${number}/timeline`]);
     return labelledBy(events, label);
   },
 

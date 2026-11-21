@@ -98,6 +98,11 @@ test('comments read with their author, and the last person to add a label is fou
     { event: 'labeled', label: { name: 'ready-for-agent' }, actor: { login: 'tom' } },
   ]);
   assert.equal(labelledBy(timeline, 'ready-for-agent'), 'tom');
+  const pages = JSON.stringify([
+    [{ event: 'labeled', label: { name: 'ready-for-agent' }, actor: { login: 'bot' } }],
+    [{ event: 'labeled', label: { name: 'ready-for-agent' }, actor: { login: 'tom' } }],
+  ]);
+  assert.equal(labelledBy(pages, 'ready-for-agent'), 'tom', 'gh --paginate --slurp gives one array per page');
   assert.equal(labelledBy('[]', 'ready-for-agent'), null);
 });
 

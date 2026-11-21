@@ -65,9 +65,9 @@ export function parseIssueComments(text: string): IssueComment[] {
 }
 
 export function labelledBy(text: string, label: string): string | null {
-  const events = listOf(parse(text)).filter(
-    (e): e is Json => isObject(e) && e.event === 'labeled' && isObject(e.label) && e.label.name === label,
-  );
+  const events = listOf(parse(text))
+    .flat()
+    .filter((e): e is Json => isObject(e) && e.event === 'labeled' && isObject(e.label) && e.label.name === label);
   const last = events.at(-1);
   return last && isObject(last.actor) ? str(last.actor.login) || null : null;
 }
