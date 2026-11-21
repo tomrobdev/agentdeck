@@ -321,6 +321,18 @@ export const MIGRATIONS: Migration[] = [
   `ALTER TABLE repos ADD COLUMN max_concurrent INTEGER NOT NULL DEFAULT 1;`,
   // 50: runs' changed_paths, a JSON array of the files a work run's branch had changed when it ended.
   `ALTER TABLE runs ADD COLUMN changed_paths TEXT;`,
+  // 51: issue-backed repos (domain/work/issues/): repos' issues switch and issues_allow logins, and task_issues, a task's link to its GitHub issue.
+  `ALTER TABLE repos ADD COLUMN issues INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE repos ADD COLUMN issues_allow TEXT NOT NULL DEFAULT '[]';
+   CREATE TABLE task_issues (
+     task_id INTEGER PRIMARY KEY REFERENCES tasks(id),
+     repo_id INTEGER NOT NULL REFERENCES repos(id),
+     number INTEGER NOT NULL,
+     url TEXT NOT NULL,
+     reported TEXT,
+     reported_at TEXT
+   );
+   CREATE UNIQUE INDEX task_issues_repo_number ON task_issues(repo_id, number);`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

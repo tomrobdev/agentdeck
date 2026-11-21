@@ -27,6 +27,17 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 - app/src/components/work/overview/PlanCard.vue
 - docs/plan-format.md
 
+## issues
+
+Issue-backed repos: GitHub issues labelled ready-for-agent become tasks, and the daemon reports back on them.
+
+- daemon/src/domain/work/issues/
+- daemon/src/application/landing/issues/
+- daemon/src/application/ports/issues.ts
+- daemon/src/adapters/github/issues.ts
+- daemon/src/db/work/task-issues.ts
+- daemon/src/application/scheduler/periodic.ts
+
 ## task-links
 
 Builds on and After links: a task's dependencies and dependents.

@@ -1274,6 +1274,8 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `generated_paths`          | `string[]`         | Path globs of files generated_cmd rebuilds; a sync conflict in one takes the base's side and reruns the command. None = empty.                                                              |
 | `generated_cmd`            | `string \| null`   | The command that rebuilds generated_paths, run in the worktree; null when the repo has none.                                                                                                |
 | `max_concurrent`           | `number`           | How many of the repo's tasks may run at once (1 to 8, default 1), under the daemon's max_concurrent.                                                                                        |
+| `issues`                   | `boolean`          | The repo takes its tasks from GitHub Issues labelled ready-for-agent, and reports back on them (domain/work/issues/); off by default.                                                       |
+| `issues_allow`             | `string[]`         | GitHub logins whose ready-for-agent label starts a task; none = the login gh is signed in as.                                                                                               |
 | `created_at`               | `string`           |                                                                                                                                                                                             |
 
 ### ToolchainInfo
@@ -1931,6 +1933,52 @@ A task that ran out of attempts.
 | `id`    | `TaskId`            |         |
 | `paths` | `readonly string[]` |         |
 
+### Issue
+
+An issue as the poll reads it from GitHub.
+
+| Field        | Type                                                       | Comment                                                                           |
+| ------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `number`     | `number`                                                   |                                                                                   |
+| `url`        | `string`                                                   |                                                                                   |
+| `title`      | `string`                                                   |                                                                                   |
+| `body`       | `string`                                                   |                                                                                   |
+| `open`       | `boolean`                                                  |                                                                                   |
+| `closed_as`  | `IssueCloseReason \| null`                                 | Why a closed issue was closed; null while it is open.                             |
+| `labels`     | `string[]`                                                 |                                                                                   |
+| `blocked_by` | `IssueBlocker[]`                                           |                                                                                   |
+| `parent`     | `{ number: number; title: string; body: string; } \| null` | The issue this one is a sub-issue of: its title and body give the worker context. |
+
+### IssueBlocker
+
+An issue another issue is blocked by.
+
+| Field    | Type      | Comment |
+| -------- | --------- | ------- |
+| `number` | `number`  |         |
+| `open`   | `boolean` |         |
+
+### IssueComment
+
+A comment on an issue, by its author's login.
+
+| Field        | Type     | Comment |
+| ------------ | -------- | ------- |
+| `author`     | `string` |         |
+| `body`       | `string` |         |
+| `created_at` | `string` |         |
+
+### IssueWrite
+
+What to write on the issue when its task's report changes.
+
+| Field     | Type       | Comment |
+| --------- | ---------- | ------- |
+| `add`     | `string[]` |         |
+| `remove`  | `string[]` |         |
+| `comment` | `string`   |         |
+| `close`   | `boolean`  |         |
+
 ### LandingBranch
 
 One repo's plan branch as the landing saga reads it.
@@ -2514,6 +2562,19 @@ The counters an event sets, with their new values. A counter not listed is left 
 | `to_status`   | `TaskStatus \| null` |                    |
 | `reason`      | `string \| null`     |                    |
 | `at`          | `string`             |                    |
+
+### TaskIssue
+
+A task's link to the issue it came from.
+
+| Field         | Type                  | Comment                                                               |
+| ------------- | --------------------- | --------------------------------------------------------------------- |
+| `task_id`     | `TaskId`              |                                                                       |
+| `repo_id`     | `RepoId`              |                                                                       |
+| `number`      | `number`              |                                                                       |
+| `url`         | `string`              |                                                                       |
+| `reported`    | `IssueReport \| null` | The last change reported on the issue; null before the first.         |
+| `reported_at` | `string \| null`      | When it was reported, so a person's later comments can be told apart. |
 
 ### TaskPlan
 

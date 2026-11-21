@@ -131,7 +131,13 @@ function planSection(plan: PrPlan): string[] {
   return [...out, ''];
 }
 
-export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | null = null, codeComments: string | null = null): string {
+export function buildPrBody(
+  task: { id: number },
+  runs: PrRun[],
+  plan: PrPlan | null = null,
+  codeComments: string | null = null,
+  issue: number | null = null,
+): string {
   const rows = runs
     .filter((r) => r.kind !== 'verify')
     .map((r) => {
@@ -142,6 +148,7 @@ export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | 
   return [
     finalMessage(runs) || '(the agent left no final message)',
     '',
+    ...(issue === null ? [] : [`Refs #${issue}.`, '']),
     ...(codeComments ? [`A person needs to merge this: ${codeComments}.`, ''] : []),
     '<details><summary>Plan and runs</summary>',
     '',

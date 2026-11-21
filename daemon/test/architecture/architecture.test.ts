@@ -304,7 +304,13 @@ test('[domain-pure] domain/ reads no clock, randomness or environment, except as
   assert.deepEqual(found, []);
 });
 
-const OUTSIDE_JSON = ['domain/runs/translate/log.ts', 'domain/runs/review.ts', 'domain/landing/merge/merge.ts', 'domain/shared/text.ts'];
+const OUTSIDE_JSON = [
+  'domain/runs/translate/log.ts',
+  'domain/runs/review.ts',
+  'domain/landing/merge/merge.ts',
+  'domain/shared/text.ts',
+  'domain/work/issues/parse.ts',
+];
 
 test('[domain-pure] domain/ calls JSON.parse only in the parsers of outside formats', () => {
   const found = sources

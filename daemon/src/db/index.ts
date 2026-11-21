@@ -16,6 +16,7 @@ import { migrate } from '#db/schema.ts';
 import { planBranchStore } from '#db/work/plan-branches.ts';
 import { planStore } from '#db/work/plans.ts';
 import { taskEventStore } from '#db/work/task-events.ts';
+import { taskIssueStore } from '#db/work/task-issues.ts';
 import { taskLinkStore } from '#db/work/task-links.ts';
 import { taskStore } from '#db/work/tasks.ts';
 
@@ -38,6 +39,7 @@ export function openDb(path = DB_PATH) {
     ...repoStore(db, orm),
     ...taskStore(db, orm),
     ...taskLinkStore(orm),
+    ...taskIssueStore(orm),
     ...taskEventStore(orm),
     ...reviewStore(orm),
     ...runStore(orm),

@@ -252,3 +252,7 @@ export type {
   TaskState,
   TaskSummary,
 } from '#domain/work/task/task.ts';
+export { ISSUE_LABELS, issueRepoAddError } from '#domain/work/issues/issue.ts';
+export { ISSUE_FIELDS, labelledBy, parseIssue, parseIssueComments, parseIssues } from '#domain/work/issues/parse.ts';
+export type { Issue, IssueCloseReason, IssueComment, IssueReport, TaskIssue } from '#domain/work/issues/issue.ts';
+export { dueIssueWrite, issueIntake, issueMove, issueNote } from '#domain/work/issues/sync.ts';

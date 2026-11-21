@@ -25,7 +25,10 @@ import type {
   Task,
   TaskEvent,
   TaskEventRow,
+  TaskIssue,
+  IssueReport,
   TaskPlan,
+  TaskSource,
   TaskStatus,
   TaskSummary,
   UnblockQuestion,
@@ -45,7 +48,8 @@ export interface NewTask {
   max_turns?: number;
   max_attempts?: number;
   status?: 'queued' | 'proposed';
-  source?: 'manual' | 'planner';
+  source?: TaskSource;
+  issue?: { number: number; url: string };
   target?: string | null;
   links?: { on: TaskId; kind: LinkKind }[];
   plan_task?: TaskId | null;
@@ -170,4 +174,11 @@ export interface PlanRepository {
   planFollowers(task_id: TaskId): PlanFollower[];
   plansForTask(task_id: TaskId): TaskPlan[];
   planHtml(task_id: TaskId, id: number): string | undefined;
+}
+
+export interface TaskIssueRepository {
+  issueOf(id: TaskId): TaskIssue | undefined;
+  issuesOfRepo(repo_id: RepoId): TaskIssue[];
+  taskOfIssue(repo_id: RepoId, number: number): TaskId | undefined;
+  reportIssue(id: TaskId, reported: IssueReport, at: string): void;
 }

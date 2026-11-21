@@ -19,6 +19,8 @@ import { nextUnblockable } from '#application/runs/unblock.ts';
 import { nextReviewable } from '#application/runs/review.ts';
 import { startReview, startUnblock, startWork } from '#application/scheduler/start-runs.ts';
 import { finishDrains } from '#application/scheduler/drain.ts';
+import { periodic } from '#application/scheduler/periodic.ts';
+import { ISSUE_POLL_MS, pollIssues } from '#application/landing/issues/poll.ts';
 import { type Draining, isDraining } from '#domain/capacity/index.ts';
 import type { App } from '#application/ports/app.ts';
 import type { KeepAwake } from '#application/ports/processes.ts';
@@ -61,8 +63,11 @@ export class Scheduler {
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
-  private lastReviewCheck = 0;
-  private checkingReviews = false;
+  private readonly log = (msg: string): void => this.opts.log(msg);
+  private readonly periodicChores = [
+    periodic(REVIEW_CHECK_MS, 'area review check', (now) => checkReviewsDue(this.app, now), this.log),
+    periodic(ISSUE_POLL_MS, 'issue poll', (now) => pollIssues(this.app, this.log, now), this.log),
+  ];
   private followingUp = false;
   private handledPrCheck = Date.now();
   private recheckLeft = 0;
@@ -223,7 +228,7 @@ export class Scheduler {
     }
     if (!this.opts.once) this.maybeFinishDrains();
     this.maybeRefreshPrs();
-    this.maybeCheckReviews();
+    this.maybeRunPeriodic();
     this.awake.set(this.running.size > 0 || this.proposing);
     if (
       this.opts.once &&
@@ -289,16 +294,10 @@ export class Scheduler {
       });
   }
 
-  private maybeCheckReviews(): void {
+  private maybeRunPeriodic(): void {
+    if (this.opts.once) return;
     const now = Date.now();
-    if (this.opts.once || this.checkingReviews || now - this.lastReviewCheck < REVIEW_CHECK_MS) return;
-    this.lastReviewCheck = now;
-    this.checkingReviews = true;
-    checkReviewsDue(this.app, now)
-      .catch((err) => this.opts.log(`area review check crashed: ${err?.stack ?? err}`))
-      .finally(() => {
-        this.checkingReviews = false;
-      });
+    for (const chore of this.periodicChores) chore(now);
   }
 
   private resolveConflicts(ids: TaskId[]): void {

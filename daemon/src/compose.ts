@@ -17,6 +17,8 @@ import type { Notifier } from '#application/ports/notifier.ts';
 import type { Processes } from '#application/ports/processes.ts';
 import type { RunLog } from '#application/ports/run-log.ts';
 import type { Service } from '#application/ports/service.ts';
+import type { IssueHost } from '#application/ports/issues.ts';
+import { githubIssues } from '#adapters/github/issues.ts';
 import type { Source } from '#application/ports/source.ts';
 import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from '#adapters/git/refs.ts';
 import { watchSource } from '#adapters/macos/watch.ts';
@@ -25,6 +27,17 @@ import { workspace } from '#adapters/git/workspace.ts';
 import { openDb } from '#db/index.ts';
 
 export const realAgent = (): Agent => ({ run: (session) => runClaude(session), find: async () => findClaude() });
+
+export const realIssueHost = (): IssueHost => ({
+  whoami: (cwd) => githubIssues.whoami(cwd),
+  openIssues: (cwd, label) => githubIssues.openIssues(cwd, label),
+  issue: (cwd, number) => githubIssues.issue(cwd, number),
+  comments: (cwd, number) => githubIssues.comments(cwd, number),
+  labelledBy: (cwd, number, label) => githubIssues.labelledBy(cwd, number, label),
+  comment: (cwd, number, body) => githubIssues.comment(cwd, number, body),
+  editLabels: (cwd, number, change) => githubIssues.editLabels(cwd, number, change),
+  close: (cwd, number, reason, comment) => githubIssues.close(cwd, number, reason, comment),
+});
 
 export const realCodeHost = (): CodeHost => ({
   auth: () => github.auth(),
@@ -92,6 +105,7 @@ export const realPorts = (): Ports => ({
   source: realSource(),
   agent: realAgent(),
   codeHost: realCodeHost(),
+  issues: realIssueHost(),
   workspace: realWorkspace(),
   notifier: realNotifier(),
   runLog: realRunLog(),

@@ -44,6 +44,7 @@ const lazySync = <T extends object>(load: (compose: Awaited<ReturnType<typeof re
 const testPorts = (): Ports => ({
   agent: lazy((c) => c.realAgent()),
   codeHost: lazy((c) => c.realCodeHost()),
+  issues: lazy((c) => c.realIssueHost()),
   workspace: lazy((c) => c.realWorkspace()),
   notifier: lazy((c) => c.realNotifier()),
   service: lazy((c) => c.realService()),

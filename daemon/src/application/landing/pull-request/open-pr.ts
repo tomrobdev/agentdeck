@@ -51,7 +51,7 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
         base: target,
         head: branch,
         title: task.title,
-        body: buildPrBody(task, app.runsForTask(task.id), prPlanFor(app, task), await over),
+        body: buildPrBody(task, app.runsForTask(task.id), prPlanFor(app, task), await over, app.issueOf(task.id)?.number ?? null),
         draft: repo.pr_mode === 'draft',
         labels: labelled ? [AUTO_MERGE_LABEL.name] : [],
       })

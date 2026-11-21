@@ -6,8 +6,8 @@ import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 import type { Needs, UnblockQuestion } from '#domain/work/task/needs.ts';
 import type { PlanLink } from '#domain/work/plans/plan-link.ts';
 
-/** Who made a task: a person, or the planner proposing it. */
-export type TaskSource = 'manual' | 'planner';
+/** Who made a task: a person, the planner proposing it, or a GitHub issue a person labelled ready-for-agent. */
+export type TaskSource = 'manual' | 'planner' | 'issue';
 
 /** What every task has, whatever its status. */
 export interface TaskCore {

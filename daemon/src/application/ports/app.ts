@@ -2,6 +2,7 @@
 import type { Agent } from '#application/ports/agent.ts';
 import type { CodeHost } from '#application/ports/code-host.ts';
 import type { Goals } from '#application/ports/goals.ts';
+import type { IssueHost } from '#application/ports/issues.ts';
 import type { Notifier } from '#application/ports/notifier.ts';
 import type { Processes } from '#application/ports/processes.ts';
 import type { Repositories } from '#application/ports/repositories/index.ts';
@@ -13,6 +14,7 @@ import type { Workspace } from '#application/ports/workspace.ts';
 export interface Ports {
   agent: Agent;
   codeHost: CodeHost;
+  issues: IssueHost;
   workspace: Workspace;
   notifier: Notifier;
   runLog: RunLog;

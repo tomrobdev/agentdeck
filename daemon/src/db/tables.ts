@@ -8,7 +8,7 @@ import type { RunEnd, RunKind, RunOutcome } from '#domain/runs/index.ts';
 import type { TaskEventType } from '#domain/work/index.ts';
 import type { LinkKind } from '#domain/work/index.ts';
 import type { TaskStatus } from '#domain/work/index.ts';
-import type { TaskSource } from '#domain/work/index.ts';
+import type { IssueReport, TaskSource } from '#domain/work/index.ts';
 import type { LandingPolicy, PlanBranchStatus, PlanReviewState } from '#domain/work/index.ts';
 import { index, integer, primaryKey, real, sqliteTable, text, unique, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
@@ -50,6 +50,8 @@ export const repos = sqliteTable(
     generated_paths: text().default('[]').notNull(),
     generated_cmd: text(),
     max_concurrent: integer().default(1).notNull(),
+    issues: integer().default(0).notNull(),
+    issues_allow: text().default('[]').notNull(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
 );
@@ -308,4 +310,23 @@ export const reviewComments = sqliteTable(
     updated_at: text().default(NOW_DEFAULT).notNull(),
   },
   (table) => [index('review_comments_review').on(table.review_id, table.id)],
+);
+
+export const taskIssues = sqliteTable(
+  'task_issues',
+  {
+    task_id: integer()
+      .$type<TaskId>()
+      .primaryKey()
+      .references(() => tasks.id),
+    repo_id: integer()
+      .$type<RepoId>()
+      .notNull()
+      .references(() => repos.id),
+    number: integer().notNull(),
+    url: text().notNull(),
+    reported: text().$type<IssueReport>(),
+    reported_at: text(),
+  },
+  (table) => [uniqueIndex('task_issues_repo_number').on(table.repo_id, table.number)],
 );

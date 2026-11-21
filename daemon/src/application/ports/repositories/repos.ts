@@ -40,6 +40,8 @@ export type RepoUpdate = Partial<
     | 'generated_paths'
     | 'generated_cmd'
     | 'max_concurrent'
+    | 'issues'
+    | 'issues_allow'
   >
 >;
 

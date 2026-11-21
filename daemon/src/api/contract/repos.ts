@@ -56,6 +56,10 @@ export interface Repo {
   generated_cmd?: string | null;
   /** How many of the repo's tasks may run at once, under the daemon's max_concurrent. Missing from a daemon that predates it. */
   max_concurrent?: number;
+  /** 1 when the repo takes its tasks from GitHub Issues labelled ready-for-agent. Missing from a daemon that predates it. */
+  issues?: number;
+  /** JSON array of the GitHub logins whose label starts a task; [] = the login gh is signed in as. Missing from a daemon that predates it. */
+  issues_allow?: string;
   created_at: string;
 }
 
@@ -110,6 +114,8 @@ export interface RepoPatch {
   generated_paths?: string[];
   generated_cmd?: string | null;
   max_concurrent?: number;
+  issues?: boolean;
+  issues_allow?: string[];
 }
 
 export interface DoctorCheck {
