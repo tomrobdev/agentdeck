@@ -10,6 +10,7 @@ import {
   issueMove,
   issueNote,
   shapePrompt,
+  signed,
 } from '#domain/work/index.ts';
 import { addTask, editTask } from '#application/work/tasks.ts';
 import { cancelTask, retryTask } from '#application/landing/person-events.ts';
@@ -39,7 +40,7 @@ async function takeInOne(app: App, repo: Repo, issue: Issue, allowed: string[], 
   if (intake.kind === 'wait') return;
   if (intake.kind === 'refuse') {
     await app.issues.editLabels(repo.path, issue.number, { add: [], remove: [ISSUE_LABELS.ready] });
-    await app.issues.comment(repo.path, issue.number, intake.comment);
+    await app.issues.comment(repo.path, issue.number, signed(intake.comment));
     log(`${repo.name} issue #${issue.number}: label from ${by ?? 'nobody'} ignored`);
     return;
   }
@@ -71,8 +72,8 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
   const add = write.add.filter((l) => !issue.labels.includes(l));
   const remove = write.remove.filter((l) => issue.labels.includes(l));
   await app.issues.editLabels(repo.path, link.number, { add, remove });
-  if (write.close && issue.open) await app.issues.close(repo.path, link.number, 'completed', write.comment);
-  else await app.issues.comment(repo.path, link.number, write.comment);
+  if (write.close && issue.open) await app.issues.close(repo.path, link.number, 'completed', signed(write.comment));
+  else await app.issues.comment(repo.path, link.number, signed(write.comment));
   app.reportIssue(task.id, write.to, new Date(now).toISOString());
 }
 

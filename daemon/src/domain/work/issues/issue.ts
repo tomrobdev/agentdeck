@@ -54,6 +54,10 @@ export interface TaskIssue {
   reported_at: string | null;
 }
 
+export const ISSUE_MARK = '<!-- agentdeck -->';
+
+export const signed = (body: string): string => `${body}\n\n${ISSUE_MARK}`;
+
 export function issueRepoAddError(repo: { name: string; issues: boolean }): string | null {
   if (!repo.issues) return null;
   return `${repo.name} takes its tasks from GitHub Issues: open an issue and label it ${ISSUE_LABELS.ready} (gh issue create --label ${ISSUE_LABELS.ready})`;

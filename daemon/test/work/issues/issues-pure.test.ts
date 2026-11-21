@@ -10,6 +10,7 @@ import {
   issueMove,
   issueNote,
   issueRepoAddError,
+  signed,
   labelledBy,
   parseIssue,
   parseIssueComments,
@@ -163,7 +164,7 @@ test('an issue closed as not planned cancels any task not done; a running task i
   assert.equal(issueMove(task({ status: 'running' }), issue({ labels: [] }), { reported: 'running' }).kind, 'none');
 });
 
-test('the label put back on a blocked or failed task retries it; the note is what allowed people wrote since', () => {
+test("the label put back on a blocked or failed task retries it; the note is what allowed people wrote since, not the daemon's own comments", () => {
   assert.deepEqual(issueMove(task({ status: 'blocked', question: { question: 'q', options: [] } }), issue(), { reported: 'question' }), {
     kind: 'retry',
   });
@@ -172,6 +173,7 @@ test('the label put back on a blocked or failed task retries it; the note is wha
   const comments = [
     { author: 'tom', body: 'old', created_at: '2026-11-21T09:00:00Z' },
     { author: 'eve', body: 'spam', created_at: '2026-11-21T11:00:00Z' },
+    { author: 'tom', body: signed('Task #12 needs an answer: which table?'), created_at: '2026-11-21T11:00:01Z' },
     { author: 'tom', body: 'Use the wallet table.', created_at: '2026-11-21T11:30:00Z' },
   ];
   assert.equal(issueNote(comments, '2026-11-21T10:00:00.000Z', ['tom']), 'Use the wallet table.');

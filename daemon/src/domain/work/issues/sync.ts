@@ -2,7 +2,7 @@
 import type { TaskId } from '#domain/shared/index.ts';
 import type { Task } from '#domain/work/task/task.ts';
 import { shapePrompt } from '#domain/work/task/prompt.ts';
-import { ISSUE_LABELS, type Issue, type IssueComment, type IssueReport, type TaskIssue } from '#domain/work/issues/issue.ts';
+import { ISSUE_LABELS, ISSUE_MARK, type Issue, type IssueComment, type IssueReport, type TaskIssue } from '#domain/work/issues/issue.ts';
 
 /** What to do with a labelled issue that has no task yet. */
 export type Intake =
@@ -61,7 +61,9 @@ export function issueMove(task: Pick<Task, 'status' | 'title' | 'prompt'>, issue
 }
 
 export function issueNote(comments: readonly IssueComment[], since: string | null, allowed: readonly string[]): string {
-  const said = comments.filter((c) => allowed.includes(c.author) && (since === null || c.created_at > since)).map((c) => c.body.trim());
+  const said = comments
+    .filter((c) => !c.body.includes(ISSUE_MARK) && allowed.includes(c.author) && (since === null || c.created_at > since))
+    .map((c) => c.body.trim());
   return said.filter(Boolean).join('\n\n') || 'The issue was labelled ready-for-agent again with no new comment.';
 }
 

@@ -31,7 +31,13 @@ function fakeIssues() {
     issue: async (_cwd, n) => issues.get(n) ?? null,
     comments: async (_cwd, n) => comments.get(n) ?? [],
     labelledBy: async (_cwd, n) => labelBy.get(n) ?? null,
-    comment: async (_cwd, number, body) => void written.push({ number, body }),
+    comment: async (_cwd, number, body) => {
+      written.push({ number, body });
+      comments.set(number, [
+        ...(comments.get(number) ?? []),
+        { author: 'tom', body, created_at: new Date(Date.now() + 1000).toISOString() },
+      ]);
+    },
     editLabels: async (_cwd, n, change) => {
       const i = issues.get(n);
       if (i) i.labels = [...i.labels.filter((l) => !change.remove.includes(l)), ...change.add];
@@ -58,7 +64,15 @@ function fakeIssues() {
     });
     labelBy.set(n, by);
   };
-  return { host, issues, comments, written, closed, file, said: (n: number) => written.filter((w) => w.number === n).map((w) => w.body) };
+  return {
+    host,
+    issues,
+    comments,
+    written,
+    closed,
+    file,
+    said: (n: number) => written.filter((w) => w.number === n).map((w) => w.body.replace('\n\n<!-- agentdeck -->', '')),
+  };
 }
 
 let n = 0;
@@ -123,7 +137,7 @@ test('a question goes to the issue as needs-info; the label put back retries the
   await pollIssues(db);
   assert.deepEqual(gh.issues.get(5)?.labels, ['needs-info']);
   assert.match(gh.said(5).at(-1) ?? '', /Which table holds the wallet\?/);
-  gh.comments.set(5, [{ author: 'tom', body: 'The wallets table.', created_at: new Date(Date.now() + 60_000).toISOString() }]);
+  gh.comments.get(5)?.push({ author: 'tom', body: 'The wallets table.', created_at: new Date(Date.now() + 60_000).toISOString() });
   gh.issues.get(5)?.labels.push('ready-for-agent');
   await pollIssues(db);
   assert.equal(db.getTask(id)?.status, 'queued');
