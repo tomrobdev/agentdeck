@@ -5,12 +5,12 @@ import { shapePrompt } from '#domain/work/task/prompt.ts';
 import { ISSUE_LABELS, ISSUE_MARK, type Issue, type IssueComment, type IssueReport, type TaskIssue } from '#domain/work/issues/issue.ts';
 
 /** What to do with a labelled issue that has no task yet. */
-export type Intake =
+type Intake =
   | { kind: 'add'; title: string; prompt: string; builds_on: TaskId[] }
   | { kind: 'wait'; reason: string }
   | { kind: 'refuse'; comment: string };
 
-export function issuePrompt(issue: Pick<Issue, 'body' | 'parent'>): string {
+function issuePrompt(issue: Pick<Issue, 'body' | 'parent'>): string {
   const body = issue.body.trim();
   if (!issue.parent) return body;
   const parent = issue.parent.body.trim();
@@ -47,7 +47,7 @@ export function issueIntake(
 }
 
 /** What a person's change on an issue does to its task. */
-export type IssueMove =
+type IssueMove =
   { kind: 'none' } | { kind: 'cancel'; reason: string } | { kind: 'edit'; title: string; prompt: string } | { kind: 'retry' };
 
 const ANSWERED: readonly (IssueReport | null)[] = ['question', 'stopped'];
@@ -72,10 +72,10 @@ export function issueNote(comments: readonly IssueComment[], since: string | nul
   const said = comments
     .filter((c) => !c.body.includes(ISSUE_MARK) && isAllowed(allowed, c.author) && (since === null || c.created_at > since))
     .map((c) => c.body.trim());
-  return said.filter(Boolean).join('\n\n') || 'The issue was labelled ready-for-agent again with no new comment.';
+  return said.filter(Boolean).join('\n\n') || `The issue was labelled ${ISSUE_LABELS.ready} again with no new comment.`;
 }
 
-export function issueReportFor(task: Task, opensPrs: boolean): IssueReport | null {
+function issueReportFor(task: Task, opensPrs: boolean): IssueReport | null {
   switch (task.status) {
     case 'queued':
       return 'queued';
@@ -102,7 +102,7 @@ export function issueReportFor(task: Task, opensPrs: boolean): IssueReport | nul
 }
 
 /** What to write on the issue when its task's report changes. */
-export interface IssueWrite {
+interface IssueWrite {
   add: string[];
   remove: string[];
   comment: string;
@@ -111,12 +111,13 @@ export interface IssueWrite {
 
 const prUrl = (task: Task): string | null => (task.pr && 'url' in task.pr ? task.pr.url : null);
 
-export function issueWrite(to: IssueReport, task: Task, ctx: { warnings?: readonly string[] } = {}): IssueWrite {
+function issueWrite(to: IssueReport, task: Task): IssueWrite {
   const { ready, info, running } = ISSUE_LABELS;
   const again = `Put the ${ready} label back to try again.`;
   switch (to) {
     case 'queued': {
-      const notes = ctx.warnings?.length ? `\n\nThe body should follow AgentDeck's prompt headings: ${ctx.warnings.join('; ')}.` : '';
+      const { warnings } = shapePrompt(task.prompt);
+      const notes = warnings.length ? `\n\nThe body should follow AgentDeck's prompt headings: ${warnings.join('; ')}.` : '';
       return { add: [ready], remove: [running, info], comment: `Queued as AgentDeck task #${task.id}.${notes}`, close: false };
     }
     case 'running':
@@ -160,12 +161,25 @@ export function issueWrite(to: IssueReport, task: Task, ctx: { warnings?: readon
   }
 }
 
+/** What to write on an issue now: only the labels it lacks or still has, and a close only while it is open. */
+export type DueIssueWrite = IssueWrite & { to: IssueReport };
+
+export const isFinalReport = (r: IssueReport | null): boolean => r === 'merged' || r === 'cancelled';
+
 export function dueIssueWrite(
   task: Task,
   link: Pick<TaskIssue, 'reported'>,
-  ctx: { opens_prs: boolean; warnings?: readonly string[] },
-): (IssueWrite & { to: IssueReport }) | null {
-  const to = issueReportFor(task, ctx.opens_prs);
+  issue: Pick<Issue, 'labels' | 'open'>,
+  opensPrs: boolean,
+): DueIssueWrite | null {
+  const to = issueReportFor(task, opensPrs);
   if (to === null || to === link.reported) return null;
-  return { ...issueWrite(to, task, ctx), to };
+  const write = issueWrite(to, task);
+  return {
+    to,
+    add: write.add.filter((l) => !issue.labels.includes(l)),
+    remove: write.remove.filter((l) => issue.labels.includes(l)),
+    comment: write.comment,
+    close: write.close && issue.open,
+  };
 }

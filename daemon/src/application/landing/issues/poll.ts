@@ -7,11 +7,11 @@ import {
   ISSUE_LABELS,
   dueIssueWrite,
   isAllowed,
+  isFinalReport,
   issueIntake,
   issueMove,
   issueNote,
   labelRefusal,
-  shapePrompt,
   signed,
 } from '#domain/work/index.ts';
 import { addTask, editTask } from '#application/work/tasks.ts';
@@ -27,8 +27,6 @@ const LABELS = [
   { name: ISSUE_LABELS.human, description: 'A person, not AgentDeck, does this issue', color: 'fbca04' },
   { name: ISSUE_LABELS.running, description: 'An AgentDeck run is working on this issue', color: '1d76db' },
 ];
-
-const settled = (link: TaskIssue): boolean => link.reported === 'merged' || link.reported === 'cancelled';
 
 async function allowedLogins(app: App, repo: Repo): Promise<string[]> {
   return repo.issues_allow.length ? repo.issues_allow : [await app.issues.whoami(repo.path)];
@@ -81,12 +79,10 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
     log(`task #${before.id}: retried from issue #${link.number}`);
   }
   const task = app.getTask(link.task_id);
-  const write = task && dueIssueWrite(task, link, { opens_prs: repo.pr_mode !== 'off', warnings: shapePrompt(task.prompt).warnings });
+  const write = task && dueIssueWrite(task, link, issue, repo.pr_mode !== 'off');
   if (!task || !write) return;
-  const add = write.add.filter((l) => !issue.labels.includes(l));
-  const remove = write.remove.filter((l) => issue.labels.includes(l));
-  await app.issues.editLabels(repo.path, link.number, { add, remove });
-  if (write.close && issue.open) await app.issues.close(repo.path, link.number, signed(write.comment));
+  await app.issues.editLabels(repo.path, link.number, write);
+  if (write.close) await app.issues.close(repo.path, link.number, signed(write.comment));
   else await app.issues.comment(repo.path, link.number, signed(write.comment));
   app.reportIssue(task.id, write.to, new Date(now).toISOString());
 }
@@ -95,7 +91,7 @@ async function pollRepo(app: App, repo: Repo, now: number, log: Log): Promise<vo
   await app.issues.ensureLabels(repo.path, LABELS);
   const allowed = await allowedLogins(app, repo);
   await takeIn(app, repo, allowed, log);
-  for (const link of app.issuesOfRepo(repo.id).filter((l) => !settled(l))) {
+  for (const link of app.issuesOfRepo(repo.id).filter((l) => !isFinalReport(l.reported))) {
     await follow(app, repo, link, allowed, now, log).catch((err) =>
       log(`task #${link.task_id}: issue #${link.number} not followed: ${err}`),
     );
