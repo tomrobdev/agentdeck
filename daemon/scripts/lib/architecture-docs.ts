@@ -363,7 +363,7 @@ export function generateReference(): Record<string, string> {
     ),
     'use-cases.md': file(
       'Use cases',
-      'Every export of `application/actions.ts`, the module the CLI and the API call, with its input and output and the adapters the file that declares it imports.',
+      'Every export of `application/actions.ts`, the module the CLI and the API call, with its input and output (a type over 200 characters cut short) and the adapters the file that declares it imports.',
       useCasesBody(),
     ),
     'state-machines.md': file('State machines', 'Each state machine of `domain/`, read from its rule table.', stateMachinesBody()),
