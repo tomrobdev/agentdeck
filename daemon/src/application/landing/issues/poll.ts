@@ -32,8 +32,19 @@ async function allowedLogins(app: App, repo: Repo): Promise<string[]> {
   return repo.issues_allow.length ? repo.issues_allow : [await app.issues.whoami(repo.path)];
 }
 
-async function takeIn(app: App, repo: Repo, allowed: string[], log: Log): Promise<void> {
-  for (const issue of await app.issues.openIssues(repo.path, ISSUE_LABELS.ready)) {
+async function withParent(app: App, repo: Repo, issue: Issue): Promise<Issue> {
+  if (!issue.parent || issue.parent.body) return issue;
+  const parent = await app.issues.issue(repo.path, issue.parent.number);
+  return parent ? { ...issue, parent: { number: parent.number, title: parent.title, body: parent.body } } : issue;
+}
+
+async function refuseLabel(app: App, repo: Repo, number: number, comment: string): Promise<void> {
+  await app.issues.editLabels(repo.path, number, { add: [], remove: [ISSUE_LABELS.ready] });
+  await app.issues.comment(repo.path, number, signed(comment));
+}
+
+async function takeIn(app: App, repo: Repo, labelled: Issue[], allowed: string[], log: Log): Promise<void> {
+  for (const issue of labelled) {
     if (app.taskOfIssue(repo.id, issue.number) !== undefined) continue;
     await takeInOne(app, repo, issue, allowed, log).catch((err) => log(`${repo.name} issue #${issue.number}: not taken in: ${err}`));
   }
@@ -41,11 +52,10 @@ async function takeIn(app: App, repo: Repo, allowed: string[], log: Log): Promis
 
 async function takeInOne(app: App, repo: Repo, issue: Issue, allowed: string[], log: Log): Promise<void> {
   const by = await app.issues.labelledBy(repo.path, issue.number, ISSUE_LABELS.ready);
-  const intake = issueIntake(issue, { labelledBy: by, allowed, taskOf: (n) => app.taskOfIssue(repo.id, n) });
-  if (intake.kind === 'wait') return;
+  const intake = issueIntake(await withParent(app, repo, issue), { labelledBy: by, allowed, taskOf: (n) => app.taskOfIssue(repo.id, n) });
+  if (intake.kind === 'wait') return log(`${repo.name} issue #${issue.number}: waits, ${intake.reason}`);
   if (intake.kind === 'refuse') {
-    await app.issues.editLabels(repo.path, issue.number, { add: [], remove: [ISSUE_LABELS.ready] });
-    await app.issues.comment(repo.path, issue.number, signed(intake.comment));
+    await refuseLabel(app, repo, issue.number, intake.comment);
     log(`${repo.name} issue #${issue.number}: label from ${by ?? 'nobody'} taken off`);
     return;
   }
@@ -57,10 +67,19 @@ async function takeInOne(app: App, repo: Repo, issue: Issue, allowed: string[], 
   log(`${repo.name} issue #${issue.number}: queued as task #${task.id}`);
 }
 
-async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], now: number, log: Log): Promise<void> {
+async function follow(
+  app: App,
+  repo: Repo,
+  link: TaskIssue,
+  listed: Issue | undefined,
+  allowed: string[],
+  now: number,
+  log: Log,
+): Promise<void> {
   const before = app.getTask(link.task_id);
-  const issue = before && (await app.issues.issue(repo.path, link.number));
-  if (!before || !issue) return;
+  const read = before && (listed ?? (await app.issues.issue(repo.path, link.number)));
+  if (!before || !read) return;
+  const issue = before.status === 'queued' ? await withParent(app, repo, read) : read;
   const move = issueMove(before, issue, link);
   if (move.kind === 'cancel') {
     cancelTask(app, before.id);
@@ -69,8 +88,7 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
   else if (move.kind === 'retry') {
     const by = await app.issues.labelledBy(repo.path, link.number, ISSUE_LABELS.ready);
     if (!isAllowed(allowed, by)) {
-      await app.issues.editLabels(repo.path, link.number, { add: [], remove: [ISSUE_LABELS.ready] });
-      await app.issues.comment(repo.path, link.number, signed(labelRefusal(allowed, by)));
+      await refuseLabel(app, repo, link.number, labelRefusal(allowed, by));
       log(`task #${before.id}: not retried, issue #${link.number} labelled by ${by ?? 'nobody'}`);
       return;
     }
@@ -90,9 +108,11 @@ async function follow(app: App, repo: Repo, link: TaskIssue, allowed: string[], 
 async function pollRepo(app: App, repo: Repo, now: number, log: Log): Promise<void> {
   await app.issues.ensureLabels(repo.path, LABELS);
   const allowed = await allowedLogins(app, repo);
-  await takeIn(app, repo, allowed, log);
+  const labelled = await app.issues.openIssues(repo.path, ISSUE_LABELS.ready);
+  await takeIn(app, repo, labelled, allowed, log);
+  const listed = new Map(labelled.map((i) => [i.number, i]));
   for (const link of app.issuesOfRepo(repo.id).filter((l) => !isFinalReport(l.reported))) {
-    await follow(app, repo, link, allowed, now, log).catch((err) =>
+    await follow(app, repo, link, listed.get(link.number), allowed, now, log).catch((err) =>
       log(`task #${link.task_id}: issue #${link.number} not followed: ${err}`),
     );
   }

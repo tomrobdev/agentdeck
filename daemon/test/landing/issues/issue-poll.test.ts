@@ -203,3 +203,11 @@ test('the label put back by someone not allowed does not retry the task, and is 
   assert.deepEqual(gh.issues.get(11)?.labels, ['needs-info']);
   assert.match(gh.said(11).at(-1) ?? '', /not eve/);
 });
+
+test("a sub-issue's task carries its parent's body, which gh's issue list leaves out", async () => {
+  const { db, gh, taskOf } = setup();
+  gh.file(20, { labels: [], body: 'Phase 3: the compliance fixes.' });
+  gh.file(21, { parent: { number: 20, title: 'Phase 3', body: '' } });
+  await pollIssues(db);
+  assert.match(db.getTask(taskOf(21))?.prompt ?? '', /This is part of #20, Issue 20\.\n\nPhase 3: the compliance fixes\./);
+});

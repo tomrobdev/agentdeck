@@ -15,12 +15,6 @@ const MAX_BUFFER = 16 * 1024 * 1024;
 
 const gh = (cwd: string, args: string[]): Promise<string> => run(args, { cwd, maxBuffer: MAX_BUFFER });
 
-async function withParentBody(cwd: string, issue: Issue): Promise<Issue> {
-  if (!issue.parent || issue.parent.body) return issue;
-  const parent = parseIssue(await gh(cwd, ['issue', 'view', String(issue.parent.number), '--json', 'number,title,body']));
-  return parent ? { ...issue, parent: { number: parent.number, title: parent.title, body: parent.body } } : issue;
-}
-
 export const githubIssues = {
   async whoami(cwd: string): Promise<string> {
     return (await gh(cwd, ['api', 'user', '--jq', '.login'])).trim();
@@ -33,15 +27,11 @@ export const githubIssues = {
   },
 
   async openIssues(cwd: string, label: string): Promise<Issue[]> {
-    const issues = parseIssues(
-      await gh(cwd, ['issue', 'list', '--state', 'open', '--label', label, '--limit', '200', '--json', ISSUE_FIELDS]),
-    );
-    return Promise.all(issues.map((issue) => withParentBody(cwd, issue)));
+    return parseIssues(await gh(cwd, ['issue', 'list', '--state', 'open', '--label', label, '--limit', '200', '--json', ISSUE_FIELDS]));
   },
 
   async issue(cwd: string, number: number): Promise<Issue | null> {
-    const issue = parseIssue(await gh(cwd, ['issue', 'view', String(number), '--json', ISSUE_FIELDS]));
-    return issue && withParentBody(cwd, issue);
+    return parseIssue(await gh(cwd, ['issue', 'view', String(number), '--json', ISSUE_FIELDS]));
   },
 
   async comments(cwd: string, number: number): Promise<IssueComment[]> {
