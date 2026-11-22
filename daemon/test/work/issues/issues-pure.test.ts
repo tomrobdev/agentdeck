@@ -120,7 +120,7 @@ test('agentdeck add is refused on an issue-backed repo, naming the label', () =>
 
 test('a labelled issue from an allowed login becomes a task; anyone else, or an empty body, is refused', () => {
   const add = issueIntake(issue(), { labelledBy: 'tom', allowed: ['tom'], taskOf: none });
-  assert.deepEqual(add, { kind: 'add', title: 'Fill the ticket pool', prompt: issue().body, builds_on: [] });
+  assert.deepEqual(add, { kind: 'add', title: 'Fill the ticket pool', prompt: issue().body, builds_on: [], plan_task: null });
   const refused = issueIntake(issue(), { labelledBy: 'eve', allowed: ['tom'], taskOf: none });
   assert.equal(refused.kind, 'refuse');
   assert.match(refused.kind === 'refuse' ? refused.comment : '', /only when tom adds the ready-for-agent label, not eve/);
@@ -157,6 +157,13 @@ test("a sub-issue's prompt carries its parent's title and body as context", () =
     taskOf: none,
   });
   assert.match(add.kind === 'add' ? add.prompt : '', /## Context\nThis is part of #1, Phase 3\.\n\nCompliance fixes\.$/);
+  assert.equal(add.kind === 'add' ? add.plan_task : 'none', null);
+});
+
+test("a sub-issue whose parent is a plan follows that plan's task", () => {
+  const sub = issue({ parent: { number: 1, title: 'Phase 3', body: '' } });
+  const add = issueIntake(sub, { labelledBy: 'tom', allowed: ['tom'], taskOf: none, planOf: (n) => (n === 1 ? asTaskId(40) : undefined) });
+  assert.equal(add.kind === 'add' ? add.plan_task : null, 40);
 });
 
 test('a queued task follows its issue: an edit updates it, a removed label or a close cancels it', () => {

@@ -6,6 +6,7 @@ export const ISSUE_LABELS = {
   info: 'needs-info',
   human: 'ready-for-human',
   running: 'agentdeck:running',
+  plan: 'agentdeck:plan',
 } as const;
 
 /** How an issue was closed: done, or set aside. */
@@ -39,8 +40,12 @@ export interface IssueComment {
   created_at: string;
 }
 
+export type TaskIssueReport = 'queued' | 'running' | 'question' | 'stopped' | 'pr_open' | 'merged' | 'cancelled';
+
+export type PlanIssueReport = 'plan_open' | 'plan_pr_open' | 'plan_merged' | 'plan_abandoned';
+
 /** What the daemon last told an issue about its task, so each change is reported once. */
-export type IssueReport = 'queued' | 'running' | 'question' | 'stopped' | 'pr_open' | 'merged' | 'cancelled';
+export type IssueReport = TaskIssueReport | PlanIssueReport;
 
 /** A task's link to the issue it came from. */
 export interface TaskIssue {

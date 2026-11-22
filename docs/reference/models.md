@@ -1893,13 +1893,13 @@ A finished task, and whether a person finished it.
 
 What to write on an issue now: only the labels it lacks or still has, and a close only while it is open.
 
-| Field     | Type          | Comment |
-| --------- | ------------- | ------- |
-| `add`     | `string[]`    |         |
-| `remove`  | `string[]`    |         |
-| `comment` | `string`      |         |
-| `close`   | `boolean`     |         |
-| `to`      | `IssueReport` |         |
+| Field     | Type              | Comment |
+| --------- | ----------------- | ------- |
+| `add`     | `string[]`        |         |
+| `remove`  | `string[]`        |         |
+| `comment` | `string`          |         |
+| `close`   | `boolean`         |         |
+| `to`      | `TaskIssueReport` |         |
 
 ### FailedState
 
@@ -2318,6 +2318,15 @@ A task that follows a plan, with the step ids it links (null for every step).
 | ------- | ------------------ | ------- |
 | `id`    | `number`           |         |
 | `steps` | `string[] \| null` |         |
+
+### PlanIssueWrite
+
+| Field     | Type              | Comment |
+| --------- | ----------------- | ------- |
+| `to`      | `PlanIssueReport` |         |
+| `comment` | `string`          |         |
+| `close`   | `boolean`         |         |
+| `abandon` | `boolean`         |         |
 
 ### PlanLanding
 
