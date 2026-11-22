@@ -47,7 +47,7 @@ Limits the agent must keep to, such as no new dependencies or no changes to pack
 
 ## 5. Show it, then queue
 
-Show the title, the prompt, the model, turns and links. Queue only on the person's OK:
+Show the title, the prompt, the model, turns and links, and ask "Would you like to do this on a branch now, or add to tasks?" (the `delegate` skill says what to give with it). Queue only on "tasks":
 
 ```sh
 agentdeck add "<prompt>" --repo <repo> --title "<title>" --model <sonnet|opus> [--max-turns n] [--builds-on <tasks>] [--after <tasks>]
