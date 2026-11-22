@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { openExternal } from '#platform/native.ts';
 import { markdownHtml } from '#lib/shared/render.ts';
 
@@ -7,6 +7,21 @@ const props = defineProps<{ text: string; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 
 const html = computed(() => markdownHtml(props.text, props.isPath));
+const root = ref<HTMLElement | null>(null);
+
+async function drawDiagrams(root: HTMLElement): Promise<void> {
+  const nodes = [...root.querySelectorAll<HTMLElement>('pre.mermaid:not([data-processed])')];
+  if (!nodes.length) return;
+  const lib = (await import('mermaid')).default;
+  lib.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: document.documentElement.dataset.mode === 'dark' ? 'dark' : 'neutral',
+  });
+  await lib.run({ nodes, suppressErrors: true });
+}
+
+watch([html, root], () => nextTick(() => root.value && drawDiagrams(root.value)), { immediate: true });
 
 function onClick(e: MouseEvent) {
   const a = (e.target as HTMLElement).closest('a');
@@ -18,7 +33,7 @@ function onClick(e: MouseEvent) {
 </script>
 
 <template>
-  <div class="md" @click="onClick" v-html="html" />
+  <div ref="root" class="md" @click="onClick" v-html="html" />
 </template>
 
 <style>
@@ -106,8 +121,13 @@ function onClick(e: MouseEvent) {
     color: var(--accent);
     border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
   }
-  .md img {
+  .md img,
+  .md pre.mermaid svg {
     max-width: 100%;
+  }
+  .md pre.mermaid {
+    background: none;
+    text-align: center;
   }
 }
 </style>

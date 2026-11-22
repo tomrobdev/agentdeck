@@ -104,7 +104,7 @@ if (prompt.startsWith('AgentDeck unblock run')) {
   commit('Greet everyone when no name is given');
   say('greet() now falls back to everyone, and greetAll() greets a list.');
   result(
-    '## Overview\n- `greet()` greets everyone when no name is given, and `greetAll()` greets a list.\n- Checked with `src/greet.test.ts`.\n\nSTATUS: DONE',
+    '## Overview\n- `greet()` greets everyone when no name is given, and `greetAll()` greets a list.\n- Checked with `src/greet.test.ts`.\n\n## Diagram\n```mermaid\nflowchart LR\n  greetAll --> greet\n  greet -->|no name| everyone[Hello, everyone!]\n```\n\nSTATUS: DONE',
   );
 } else if (prompt.includes('UI_QUEUE')) {
   edit(

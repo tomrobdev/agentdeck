@@ -129,11 +129,16 @@ function splitHighlighted(html: string): string[] {
   return out;
 }
 
+export const codeBlockHtml = (code: string, lang: string): string =>
+  lang === 'mermaid'
+    ? `<pre class="mermaid">${escapeHtml(code)}</pre>`
+    : `<pre class="hljs"><code>${highlight(code, hljs.getLanguage(lang) ? lang : null)}</code></pre>`;
+
 const md = new MarkdownIt({
   html: false,
   linkify: true,
   breaks: false,
-  highlight: (code, lang) => `<pre class="hljs"><code>${highlight(code, hljs.getLanguage(lang) ? lang : null)}</code></pre>`,
+  highlight: (code, lang) => codeBlockHtml(code, lang),
 });
 
 const PATH_LIKE = /^((?:[\w.@-]+\/)*[\w.@-]+\.\w+)(?::(\d+))?$/;
