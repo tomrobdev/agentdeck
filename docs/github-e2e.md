@@ -39,3 +39,12 @@ What it does, in order, checking GitHub with `gh` and the daemon's database afte
 The PR refresh runs every few minutes; the script asks for one every few seconds instead, as a merge from the CLI does.
 
 It exits 0 when every step passed, 1 when one failed, and 2 when it refused to run. Paste the output in the PR of a change that needs it.
+
+## Try a parent issue as a plan by hand
+
+The script does not cover issue-backed repos; try one on a throwaway repo, with a daemon on a scratch home as above:
+
+1. `agentdeck repo set <repo> issues on` (and `pr_mode ready`), then make a parent issue and two sub-issues: `gh issue create --title "Phase 1" --body $'Why.\n\n## First\n\n## Second'`, then `gh issue create … --label ready-for-agent` twice, and add each as a sub-issue of the parent on GitHub.
+2. Label the parent: `gh issue edit <parent> --add-label agentdeck:plan`. Within one poll (two minutes) the parent gets an "Opened as AgentDeck plan #n" comment, `agentdeck ls --status parked` shows the plan's task, and both sub-issues' tasks target `plan/<n>-phase-1` (`agentdeck show <task>`). The repo's base is unchanged.
+3. The sub-issues' PRs open into the plan branch; merge them, and each sub-issue closes. The plan PR opens into the base and the parent hears about it; once it merges (by a person, or by its landing policy) the parent closes as completed with a link to it.
+4. To check the abandon: on a fresh parent, take `agentdeck:plan` off before any of its tasks starts; the plan branch is abandoned and the sub-issues' tasks go back to the base.

@@ -2,11 +2,19 @@
 import type { TaskId } from '#domain/shared/index.ts';
 import type { Task } from '#domain/work/task/task.ts';
 import { shapePrompt } from '#domain/work/task/prompt.ts';
-import { ISSUE_LABELS, ISSUE_MARK, type Issue, type IssueComment, type IssueReport, type TaskIssue } from '#domain/work/issues/issue.ts';
+import {
+  ISSUE_LABELS,
+  ISSUE_MARK,
+  type Issue,
+  type IssueComment,
+  type IssueReport,
+  type TaskIssue,
+  type TaskIssueReport,
+} from '#domain/work/issues/issue.ts';
 
 /** What to do with a labelled issue that has no task yet. */
 type Intake =
-  | { kind: 'add'; title: string; prompt: string; builds_on: TaskId[] }
+  | { kind: 'add'; title: string; prompt: string; builds_on: TaskId[]; plan_task: TaskId | null }
   | { kind: 'wait'; reason: string }
   | { kind: 'refuse'; comment: string };
 
@@ -20,13 +28,18 @@ function issuePrompt(issue: Pick<Issue, 'body' | 'parent'>): string {
 export const isAllowed = (allowed: readonly string[], login: string | null): boolean =>
   login !== null && allowed.some((a) => a.toLowerCase() === login.toLowerCase());
 
-export function labelRefusal(allowed: readonly string[], by: string | null): string {
-  return `AgentDeck takes an issue only when ${allowed.join(' or ') || 'a listed login'} adds the ${ISSUE_LABELS.ready} label${by ? `, not ${by}` : ''}, so the label is taken off.`;
+export function labelRefusal(allowed: readonly string[], by: string | null, label: string = ISSUE_LABELS.ready): string {
+  return `AgentDeck takes an issue only when ${allowed.join(' or ') || 'a listed login'} adds the ${label} label${by ? `, not ${by}` : ''}, so the label is taken off.`;
 }
 
 export function issueIntake(
   issue: Issue,
-  ctx: { labelledBy: string | null; allowed: readonly string[]; taskOf: (number: number) => TaskId | undefined },
+  ctx: {
+    labelledBy: string | null;
+    allowed: readonly string[];
+    taskOf: (number: number) => TaskId | undefined;
+    planOf?: (number: number) => TaskId | undefined;
+  },
 ): Intake {
   if (!isAllowed(ctx.allowed, ctx.labelledBy)) return { kind: 'refuse', comment: labelRefusal(ctx.allowed, ctx.labelledBy) };
   if (!issue.body.trim())
@@ -43,6 +56,7 @@ export function issueIntake(
     title: issue.title.trim() || `Issue #${issue.number}`,
     prompt: issuePrompt(issue),
     builds_on: open.flatMap((b) => ctx.taskOf(b.number) ?? []),
+    plan_task: (issue.parent && ctx.planOf?.(issue.parent.number)) ?? null,
   };
 }
 
@@ -75,7 +89,7 @@ export function issueNote(comments: readonly IssueComment[], since: string | nul
   return said.filter(Boolean).join('\n\n') || `The issue was labelled ${ISSUE_LABELS.ready} again with no new comment.`;
 }
 
-function issueReportFor(task: Task, opensPrs: boolean): IssueReport | null {
+function issueReportFor(task: Task, opensPrs: boolean): TaskIssueReport | null {
   switch (task.status) {
     case 'queued':
       return 'queued';
@@ -111,7 +125,7 @@ interface IssueWrite {
 
 const prUrl = (task: Task): string | null => (task.pr && 'url' in task.pr ? task.pr.url : null);
 
-function issueWrite(to: IssueReport, task: Task): IssueWrite {
+function issueWrite(to: TaskIssueReport, task: Task): IssueWrite {
   const { ready, info, running } = ISSUE_LABELS;
   const again = `Put the ${ready} label back to try again.`;
   switch (to) {
@@ -162,9 +176,11 @@ function issueWrite(to: IssueReport, task: Task): IssueWrite {
 }
 
 /** What to write on an issue now: only the labels it lacks or still has, and a close only while it is open. */
-export type DueIssueWrite = IssueWrite & { to: IssueReport };
+export type DueIssueWrite = IssueWrite & { to: TaskIssueReport };
 
-export const isFinalReport = (r: IssueReport | null): boolean => r === 'merged' || r === 'cancelled';
+const FINAL_REPORTS: readonly (IssueReport | null)[] = ['merged', 'cancelled', 'plan_merged', 'plan_abandoned'];
+
+export const isFinalReport = (r: IssueReport | null): boolean => FINAL_REPORTS.includes(r);
 
 export function dueIssueWrite(
   task: Task,

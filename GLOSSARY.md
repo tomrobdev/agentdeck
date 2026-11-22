@@ -19,13 +19,13 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Wait**: a task or a merge held back until something else happens, such as a link's task landing or checks finishing. A wait is not a hold, and not a pause.
 
-**Plan**: an HTML page attached to a task that says how it will be done, step by step. Not the planner's proposals. Plans live in AgentDeck, not in the repo, and are never committed: a plan belongs to the task it was first attached to.
+**Plan**: an HTML page attached to a task that says how it will be done, step by step. Not the planner's proposals. Plans live in AgentDeck, not in the repo, and are never committed: a plan belongs to the task it was first attached to. In an issue-backed repo, a parent issue labelled `agentdeck:plan` becomes a plan: its body the page, owned by a parked task, and its sub-issues' tasks follow it.
 
 **Worktree**: the separate checkout of the repo where one task's work happens, on its own branch.
 
 **Target**: the branch a task's work starts from, syncs with and lands on: its pull request's base. A task names one, or takes its repo's base. It must exist locally or on origin, and is fixed once the task has a branch. A task can only build on one with the same target; an after link may cross targets.
 
-**Plan branch**: a branch a plan owns in a repo, which its tasks target and which lands on the base as one pull request. A plan has at most one per repo, named `plan/<id>-<slug>`: a person opens it, the daemon cuts it from the base when its first task starts and keeps it current with the base (hourly, and before each of its tasks starts; conflicts get a resolve run, and a plan branch whose resolve failed is in **conflict**, and its tasks wait), and a person may abandon it, which moves its tasks that haven't started back to the base.
+**Plan branch**: a branch a plan owns in a repo, which its tasks target and which lands on the base as one pull request. A plan has at most one per repo, named `plan/<id>-<slug>`: a person opens it (or labels a parent issue `agentdeck:plan`, and the daemon opens it from the repo's base, lands it, then closes the issue), the daemon cuts it from the base when its first task starts and keeps it current with the base (hourly, and before each of its tasks starts; conflicts get a resolve run, and a plan branch whose resolve failed is in **conflict**, and its tasks wait), and a person may abandon it, which moves its tasks that haven't started back to the base.
 _Avoid_: feature branch
 
 ## Runs

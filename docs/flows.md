@@ -123,6 +123,14 @@ In a repo with issues on, tasks come from GitHub Issues instead of `agentdeck ad
   - the label put back on a blocked or failed task retries it, with the allowed logins' new comments as the note (`issueNote`).
 - Each change to the task is told to the issue once (`dueIssueWrite`): queued, started, a question (labelled needs-info), stopped, the PR opened, and merged, which closes the issue.
 
+### A parent issue as a plan
+
+- A parent issue labelled agentdeck:plan by an allowed login becomes a plan (`planIntake`): its title is the plan's title, its body the plan's page (each Markdown heading a step), owned by a parked task linked to the issue. A plan branch `plan/<id>-<slug>` opens from the repo's base; the repo's base branch never changes.
+- Its sub-issues labelled ready-for-agent become tasks that follow the plan and target its plan branch. One already queued and not started moves onto it when the parent gets the label.
+- The plan branch is cut, kept current, reviewed and landed as any plan branch is: one plan PR into the base, with the plan review. Each sub-issue still closes when its own PR into the plan branch merges.
+- The parent hears each step once (`duePlanIssueWrite`): opened as a plan, the plan PR opened, and merged, which closes it as completed with a link to the plan PR.
+- The label taken off, or the parent closed, before the plan branch is cut abandons it (`abandonPlanBranch`), moves its tasks back to the base and cancels the parked task. A parent without the label is only context, as above.
+
 ```mermaid
 sequenceDiagram
   actor P as Person

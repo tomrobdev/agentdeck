@@ -103,7 +103,7 @@ test('a labelled issue becomes a queued task, once, and the issue is told its nu
   const task = db.getTask(taskOf(7));
   assert.deepEqual([task?.status, task?.source, task?.title], ['queued', 'issue', 'Issue 7']);
   assert.deepEqual(gh.said(7), [`Queued as AgentDeck task #${task?.id}.`]);
-  assert.deepEqual([...gh.labels].sort(), ['agentdeck:running', 'needs-info', 'ready-for-agent', 'ready-for-human']);
+  assert.deepEqual([...gh.labels].sort(), ['agentdeck:plan', 'agentdeck:running', 'needs-info', 'ready-for-agent', 'ready-for-human']);
 });
 
 test('agentdeck add is refused on an issue-backed repo', async () => {
@@ -202,6 +202,65 @@ test('the label put back by someone not allowed does not retry the task, and is 
   assert.equal(db.getTask(id)?.status, 'blocked');
   assert.deepEqual(gh.issues.get(11)?.labels, ['needs-info']);
   assert.match(gh.said(11).at(-1) ?? '', /not eve/);
+});
+
+test('a parent labelled agentdeck:plan becomes a plan: its sub-issues land on its plan branch, and its plan PR merging closes it', async () => {
+  const { db, repo, gh, taskOf } = setup();
+  const sub = { parent: { number: 30, title: 'Phase 3', body: '' } };
+  gh.file(30, { labels: [], title: 'Phase 3', body: 'The compliance fixes.\n\n## Wallets\n\n## Orders' });
+  gh.file(31, sub);
+  await pollIssues(db);
+  assert.equal(db.getTask(taskOf(31))?.target, null, 'a parent with no plan label behaves as today');
+  gh.issues.get(30)?.labels.push('agentdeck:plan');
+  gh.file(32, sub);
+  await pollIssues(db);
+  const owner = taskOf(30);
+  const branch = db.planBranchOf(owner, repo.id);
+  assert.equal(branch?.name, `plan/${owner}-phase-3`);
+  assert.equal(branch?.base, 'develop');
+  assert.equal(db.findRepo(repo.name)?.base_branch, 'develop', "the repo's base never changes");
+  assert.equal(db.getTask(owner)?.status, 'parked');
+  assert.equal(db.ownPlan(owner)?.html.match(/data-plan-step id="(\w+)"/g)?.length, 2);
+  for (const n of [31, 32]) {
+    const t = db.getTask(taskOf(n));
+    assert.deepEqual([t?.status, t?.target, t?.plan?.task], ['queued', branch?.name, owner], `#${n} follows the plan on its branch`);
+  }
+  assert.match(gh.said(30).at(-1) ?? '', new RegExp(`Opened as AgentDeck plan #${owner}`));
+
+  for (const [i, n] of [31, 32].entries()) {
+    const id = taskOf(n);
+    advance(db, id, 'running');
+    db.applyEvent(id, { type: 'finish', outcome: 'done' });
+    db.recordPr(id, { type: 'opened', url: `https://github.com/o/r/pull/${i + 1}` });
+    db.recordPr(id, { type: 'seen', state: 'merged' });
+  }
+  await pollIssues(db);
+  assert.deepEqual(gh.closed, [31, 32], 'each sub-issue closes when its own PR merges');
+  assert.ok(branch);
+  db.cutPlanBranch(branch.id, 'abc123');
+  db.openPlanBranchPr(branch.id, 'https://github.com/o/r/pull/9');
+  await pollIssues(db);
+  assert.equal(gh.said(30).at(-1), `plan/${owner}-phase-3 opened its plan PR into develop: https://github.com/o/r/pull/9`);
+  db.recordLanding(branch.id, { move: 'land', land_error: null });
+  await pollIssues(db);
+  await pollIssues(db);
+  assert.deepEqual(gh.closed, [31, 32, 30]);
+  assert.deepEqual(gh.said(30).filter((s) => s === 'Merged in https://github.com/o/r/pull/9.').length, 1);
+});
+
+test('taking agentdeck:plan off a parent before anything started abandons its plan branch and moves its tasks back', async () => {
+  const { db, repo, gh, taskOf } = setup();
+  gh.file(40, { labels: ['agentdeck:plan'], title: 'Phase 4' });
+  gh.file(41, { parent: { number: 40, title: 'Phase 4', body: '' } });
+  await pollIssues(db);
+  const owner = taskOf(40);
+  assert.equal(db.getTask(taskOf(41))?.target, `plan/${owner}-phase-4`);
+  gh.issues.get(40)?.labels.splice(0);
+  await pollIssues(db);
+  assert.equal(db.planBranchOf(owner, repo.id)?.status, 'abandoned');
+  assert.equal(db.getTask(taskOf(41))?.target, null);
+  assert.equal(db.getTask(owner)?.status, 'cancelled');
+  assert.match(gh.said(40).at(-1) ?? '', /lost the agentdeck:plan label .* abandoned/);
 });
 
 test("a sub-issue's task carries its parent's body, which gh's issue list leaves out", async () => {

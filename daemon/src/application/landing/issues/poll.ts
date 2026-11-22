@@ -16,6 +16,7 @@ import {
 } from '#domain/work/index.ts';
 import { addTask, editTask } from '#application/work/tasks.ts';
 import { cancelTask, retryTask } from '#application/landing/person-events.ts';
+import { followPlan, isPlanIssueLink, planOfIssue, takeInPlans } from '#application/landing/issues/plan-issues.ts';
 
 export const ISSUE_POLL_MS = 120_000;
 
@@ -26,6 +27,7 @@ const LABELS = [
   { name: ISSUE_LABELS.info, description: 'AgentDeck asked a question on this issue', color: 'd876e3' },
   { name: ISSUE_LABELS.human, description: 'A person, not AgentDeck, does this issue', color: 'fbca04' },
   { name: ISSUE_LABELS.running, description: 'An AgentDeck run is working on this issue', color: '1d76db' },
+  { name: ISSUE_LABELS.plan, description: "AgentDeck lands this issue's sub-issues together as one plan", color: '5319e7' },
 ];
 
 async function allowedLogins(app: App, repo: Repo): Promise<string[]> {
@@ -52,7 +54,12 @@ async function takeIn(app: App, repo: Repo, labelled: Issue[], allowed: string[]
 
 async function takeInOne(app: App, repo: Repo, issue: Issue, allowed: string[], log: Log): Promise<void> {
   const by = await app.issues.labelledBy(repo.path, issue.number, ISSUE_LABELS.ready);
-  const intake = issueIntake(await withParent(app, repo, issue), { labelledBy: by, allowed, taskOf: (n) => app.taskOfIssue(repo.id, n) });
+  const intake = issueIntake(await withParent(app, repo, issue), {
+    labelledBy: by,
+    allowed,
+    taskOf: (n) => app.taskOfIssue(repo.id, n),
+    planOf: (n) => planOfIssue(app, repo, n),
+  });
   if (intake.kind === 'wait') return log(`${repo.name} issue #${issue.number}: waits, ${intake.reason}`);
   if (intake.kind === 'refuse') {
     await refuseLabel(app, repo, issue.number, intake.comment);
@@ -61,7 +68,13 @@ async function takeInOne(app: App, repo: Repo, issue: Issue, allowed: string[], 
   }
   const task = await addTask(
     app,
-    { repo: repo.name, title: intake.title, prompt: intake.prompt, builds_on: intake.builds_on },
+    {
+      repo: repo.name,
+      title: intake.title,
+      prompt: intake.prompt,
+      builds_on: intake.builds_on,
+      ...(intake.plan_task === null ? {} : { plan_task: intake.plan_task }),
+    },
     { source: 'issue', issue: { number: issue.number, url: issue.url } },
   );
   log(`${repo.name} issue #${issue.number}: queued as task #${task.id}`);
@@ -109,12 +122,16 @@ async function pollRepo(app: App, repo: Repo, now: number, log: Log): Promise<vo
   await app.issues.ensureLabels(repo.path, LABELS);
   const allowed = await allowedLogins(app, repo);
   const labelled = await app.issues.openIssues(repo.path, ISSUE_LABELS.ready);
-  await takeIn(app, repo, labelled, allowed, log);
-  const listed = new Map(labelled.map((i) => [i.number, i]));
+  const plans = await app.issues.openIssues(repo.path, ISSUE_LABELS.plan);
+  await takeInPlans(app, repo, plans, labelled, allowed, log);
+  const tasks = labelled.filter((i) => !i.labels.includes(ISSUE_LABELS.plan));
+  await takeIn(app, repo, tasks, allowed, log);
+  const listed = new Map([...labelled, ...plans].map((i) => [i.number, i]));
   for (const link of app.issuesOfRepo(repo.id).filter((l) => !isFinalReport(l.reported))) {
-    await follow(app, repo, link, listed.get(link.number), allowed, now, log).catch((err) =>
-      log(`task #${link.task_id}: issue #${link.number} not followed: ${err}`),
-    );
+    const followed = isPlanIssueLink(app, link)
+      ? followPlan(app, repo, link, listed.get(link.number), now, log)
+      : follow(app, repo, link, listed.get(link.number), allowed, now, log);
+    await followed.catch((err) => log(`task #${link.task_id}: issue #${link.number} not followed: ${err}`));
   }
 }
 

@@ -256,3 +256,4 @@ export { ISSUE_LABELS, issueRepoAddError, signed } from '#domain/work/issues/iss
 export { ISSUE_FIELDS, labelledBy, parseIssue, parseIssueComments, parseIssues, parseLabelNames } from '#domain/work/issues/parse.ts';
 export type { Issue, IssueComment, IssueReport, TaskIssue } from '#domain/work/issues/issue.ts';
 export { dueIssueWrite, isAllowed, isFinalReport, issueIntake, issueMove, issueNote, labelRefusal } from '#domain/work/issues/sync.ts';
+export { duePlanIssueWrite, planIntake, planOwnerParkReason } from '#domain/work/issues/plan-issue.ts';
