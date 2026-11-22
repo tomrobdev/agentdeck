@@ -53,7 +53,7 @@ agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan <first task> --s
 - **Links between the tasks:** `--builds-on` when a task needs the code of an earlier one: it starts once that one is merged, on a branch that has it. `--after` when it only has to land after it: it runs at once and only its merge waits. Prefer `--after` where the code doesn't overlap, so the tasks run side by side.
 - **Turns:** a task carrying several steps needs more than the default 40: 80 for two or three, 120 for a large port.
 
-Show the person the tasks, their models and their links before queueing, and queue on their OK. The plan shows on each task's Overview at once. Workers set their steps' `data-status` as they go, and AgentDeck saves back only each task's own steps, so tasks on one plan can run side by side. To change the plan before its tasks run, edit the draft and `agentdeck attach <first task> ~/.agentdeck/drafts/<short-name>.html`.
+Show the person the tasks, their models and their links, then ask "Would you like to do this on a branch now, or add to tasks?" (the `delegate` skill says what to give with it). Queue only on "tasks"; on "a branch", work through the steps here on one branch, a commit per step, and the plan is the checklist. The plan shows on each task's Overview at once. Workers set their steps' `data-status` as they go, and AgentDeck saves back only each task's own steps, so tasks on one plan can run side by side. To change the plan before its tasks run, edit the draft and `agentdeck attach <first task> ~/.agentdeck/drafts/<short-name>.html`.
 
 Tell the person the task ids and stop.
 
@@ -66,7 +66,7 @@ Tell the person the task ids and stop.
 - **Links:** `--blocked-by <issue>` where `--builds-on` would go; there is no after link. Create the issues in order, so a blocker exists before the issue it blocks.
 - **Model and turns** can't be set from an issue; every task takes the repo's model.
 
-Show the person the parent and the sub-issues, then on their OK, from the repo's path:
+Show the person the parent and the sub-issues and ask "Would you like to do this on a branch now, or add to tasks?"; on "tasks", from the repo's path:
 
 ```sh
 gh issue create --title "<plan title>" --body-file <plan.md>
