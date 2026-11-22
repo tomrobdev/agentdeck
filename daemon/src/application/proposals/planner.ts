@@ -8,7 +8,7 @@ import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason,
 import type { Repo } from '#domain/repos/index.ts';
 import { limitReason } from '#domain/runs/index.ts';
 import { lastLine, plural } from '#domain/shared/index.ts';
-import { newTaskModel } from '#domain/work/index.ts';
+import { ISSUE_LABELS, newTaskModel } from '#domain/work/index.ts';
 import { recordRateLimit, usageRecorder } from '#application/runs/claude-run.ts';
 import { ActionError, requireRepo } from '#application/shared/input.ts';
 import { notifyLater } from '#application/operations/notifications.ts';
@@ -75,6 +75,7 @@ async function planRepo(app: App, repo: Repo, goals: string, runId: PlannerRunId
     existing.map((t) => t.title),
     s.max_tasks,
   );
+  if (repo.issues) return openIssues(app, repo, runId, accepted, skipped, out.note?.trim() || null);
   const { default_model } = app.modelSettings();
   const created = accepted.map((p) =>
     app.addTask({
@@ -98,6 +99,34 @@ async function planRepo(app: App, repo: Repo, goals: string, runId: PlannerRunId
     });
   }
   return { outcome: created.length ? 'proposed' : 'nothing', tasks: created, skipped, note };
+}
+
+async function openIssues(
+  app: App,
+  repo: Repo,
+  runId: PlannerRunId,
+  accepted: { title: string; prompt: string }[],
+  skipped: string[],
+  note: string | null,
+): Promise<ProposalResult> {
+  const labels = repo.auto_approve ? [ISSUE_LABELS.ready] : [];
+  const urls: string[] = [];
+  for (const p of accepted) {
+    const body = `${p.prompt.trim()}\n\nProposed by AgentDeck's planner from ${repo.name}'s goals.`;
+    urls.push(await app.issues.create(repo.path, { title: p.title, body, labels }));
+  }
+  if (!urls.length) {
+    app.finishPlannerRun(runId, 'nothing', 0, note);
+    return { outcome: 'nothing', tasks: [], skipped, note };
+  }
+  const said = `opened ${urls.join(', ')}; the next issue poll makes them proposals${note ? `. ${note}` : ''}`;
+  app.finishPlannerRun(runId, 'proposed', urls.length, said);
+  notifyLater(app, {
+    kind: 'proposed',
+    title: `Planner opened ${plural(urls.length, 'issue')} in ${repo.name}`,
+    body: accepted.map((p) => `• ${p.title}`).join('\n'),
+  });
+  return { outcome: 'proposed', tasks: [], skipped, note: said };
 }
 
 const proposing = new Set<RepoId>();

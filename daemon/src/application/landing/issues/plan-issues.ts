@@ -43,6 +43,11 @@ async function moveSubIssues(app: App, repo: Repo, owner: TaskId, target: string
 
 async function takeInPlan(app: App, repo: Repo, issue: Issue, labelled: Issue[], allowed: string[], log: Log): Promise<void> {
   let id = app.taskOfIssue(repo.id, issue.number);
+  if (id !== undefined && app.getTask(id)?.status === 'proposed' && !app.ownPlan(id)) {
+    rejectTask(app, id);
+    app.unlinkIssue(id);
+    id = undefined;
+  }
   if (id === undefined) {
     const by = await app.issues.labelledBy(repo.path, issue.number, ISSUE_LABELS.plan);
     const intake = planIntake(issue, { labelledBy: by, allowed });
@@ -95,7 +100,7 @@ export async function followPlan(app: App, repo: Repo, link: TaskIssue, listed: 
     rejectTask(app, link.task_id);
     log(`plan #${link.task_id}: ${branch.name} abandoned, issue #${link.number} is no longer a plan`);
   }
-  if (write.close) await app.issues.close(repo.path, link.number, signed(write.comment));
+  if (write.close) await app.issues.close(repo.path, link.number, signed(write.comment), 'completed');
   else await app.issues.comment(repo.path, link.number, signed(write.comment));
   app.reportIssue(link.task_id, write.to, new Date(now).toISOString());
 }

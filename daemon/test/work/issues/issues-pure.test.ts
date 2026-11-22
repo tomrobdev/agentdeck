@@ -12,7 +12,9 @@ import {
   issueMove,
   issueNote,
   issueRepoAddError,
+  issueTextEditError,
   labelRefusal,
+  proposalIntake,
   signed,
   labelledBy,
   parseIssue,
@@ -31,6 +33,7 @@ const issue = (o: Partial<Issue> = {}): Issue => ({
   labels: ['ready-for-agent'],
   blocked_by: [],
   parent: null,
+  sub_issues: 0,
   ...o,
 });
 
@@ -66,6 +69,7 @@ test('gh issue JSON reads into issues: labels, blockers as a list or nodes, a cl
           ],
         },
         parent: { number: 1, title: 'Phase 3' },
+        subIssuesSummary: { total: 2, completed: 0 },
       },
     ]),
   );
@@ -82,9 +86,11 @@ test('gh issue JSON reads into issues: labels, blockers as a list or nodes, a cl
       { number: 2, open: false },
     ],
     parent: { number: 1, title: 'Phase 3', body: '' },
+    sub_issues: 2,
   });
   assert.equal(parseIssue('{"number":5,"state":"OPEN","blockedBy":[{"number":1,"state":"OPEN"}]}')?.blocked_by[0]?.number, 1);
   assert.equal(parseIssue('not json'), null);
+  assert.equal(parseIssue('{"number":6,"state":"OPEN"}')?.sub_issues, 0);
 });
 
 test('a list gh did not answer with a list throws, so the poll never reads it as no issues', () => {
@@ -235,7 +241,13 @@ test('the issue is told each change once: queued, running, a question, a stop, t
   );
   assert.deepEqual([merged?.to, merged?.close, merged?.comment], ['merged', true, 'Merged in https://x/pull/9.']);
   assert.equal(dueIssueWrite(task({ status: 'cancelled' }), { reported: 'queued' }, issue(), true)?.close, false);
-  assert.equal(dueIssueWrite(task({ status: 'proposed' }), { reported: null }, issue(), true), null);
+  const mirrored = dueIssueWrite(task({ status: 'proposed' }), { reported: null }, issue({ labels: [] }), true);
+  assert.deepEqual(
+    [mirrored?.to, mirrored?.comment, mirrored?.add, mirrored?.remove],
+    ['proposed', '', [], []],
+    'a new proposal tells nothing',
+  );
+  assert.equal(dueIssueWrite(task({ status: 'proposed' }), { reported: 'proposed' }, issue({ labels: [] }), true), null);
 });
 
 test('the write names only the labels the issue lacks or still has, and closes only an open issue', () => {
@@ -252,4 +264,79 @@ test('the write names only the labels the issue lacks or still has, and closes o
 test("a done task's issue waits for its pull request; in a repo that opens none, done is the end", () => {
   assert.equal(dueIssueWrite(task({ status: 'done', pr: null }), { reported: 'running' }, issue(), true), null);
   assert.equal(dueIssueWrite(task({ status: 'done', pr: null }), { reported: 'running' }, issue(), false)?.close, true);
+});
+
+test("an open issue no one labelled is proposed, unless it is a person's, ignored, a plan, a parent, empty or closed", () => {
+  const ctx = { taskOf: none };
+  const unlabelled = issue({ labels: ['needs-triage'] });
+  assert.deepEqual(proposalIntake(unlabelled, ctx), {
+    kind: 'add',
+    title: 'Fill the ticket pool',
+    prompt: unlabelled.body,
+    builds_on: [],
+    plan_task: null,
+  });
+  for (const label of ['ready-for-agent', 'ready-for-human', 'agentdeck:ignore', 'agentdeck:plan'])
+    assert.equal(proposalIntake(issue({ labels: [label] }), ctx), null, label);
+  assert.equal(proposalIntake(issue({ labels: [], sub_issues: 3 }), ctx), null, 'a parent of sub-issues');
+  assert.equal(proposalIntake(issue({ labels: [], body: '  ' }), ctx), null, 'an empty body');
+  assert.equal(proposalIntake(issue({ labels: [], open: false, closed_as: 'completed' }), ctx), null, 'closed');
+  assert.equal(proposalIntake(issue({ labels: [], blocked_by: [{ number: 3, open: true }] }), ctx)?.kind, 'wait');
+  const linked = proposalIntake(issue({ labels: [], blocked_by: [{ number: 3, open: true }] }), { taskOf: () => asTaskId(40) });
+  assert.deepEqual(linked?.kind === 'add' && linked.builds_on, [40]);
+});
+
+test('a proposal follows its issue: an edit updates it, a close or a keep-out label drops it, the ready label approves it', () => {
+  const proposed = task({ status: 'proposed' });
+  const open = issue({ labels: [] });
+  assert.deepEqual(issueMove(proposed, open, { reported: 'proposed' }), { kind: 'none' });
+  assert.equal(issueMove(proposed, issue({ labels: [], title: 'Drain the pool' }), { reported: 'proposed' }).kind, 'edit');
+  assert.equal(issueMove(proposed, issue({ labels: [], open: false, closed_as: 'completed' }), { reported: 'proposed' }).kind, 'drop');
+  assert.equal(issueMove(proposed, issue({ labels: ['agentdeck:ignore'] }), { reported: 'proposed' }).kind, 'drop');
+  assert.equal(issueMove(proposed, issue({ labels: [], sub_issues: 1 }), { reported: 'proposed' }).kind, 'drop');
+  assert.deepEqual(issueMove(proposed, issue(), { reported: 'proposed' }), { kind: 'approve' });
+  const parked = issueMove(task({ status: 'parked' }), issue(), { reported: 'parked' });
+  assert.equal(parked.kind, 'refuse');
+  assert.match(parked.kind === 'refuse' ? parked.comment : '', /parked in AgentDeck.*Lift it there first/);
+  assert.equal(issueMove(task({ status: 'parked' }), issue({ labels: ['agentdeck:parked'] }), { reported: 'parked' }).kind, 'none');
+});
+
+test("a task approved in AgentDeck isn't cancelled before the poll labels its issue", () => {
+  assert.deepEqual(issueMove(task(), issue({ labels: [] }), { reported: 'proposed' }), { kind: 'none' });
+  assert.deepEqual(issueMove(task(), issue({ labels: [] }), { reported: 'parked' }), { kind: 'none' });
+});
+
+test('approve, park, lift and reject in AgentDeck are each told on the issue once', () => {
+  const approved = dueIssueWrite(task(), { reported: 'proposed' }, issue({ labels: [] }), true);
+  assert.deepEqual([approved?.to, approved?.add], ['queued', ['ready-for-agent']]);
+  assert.match(approved?.comment ?? '', /^Approved in AgentDeck and queued as task #12\./);
+  const parked = dueIssueWrite(
+    task({ status: 'parked', park_reason: 'after phase 3' }),
+    { reported: 'proposed' },
+    issue({ labels: [] }),
+    true,
+  );
+  assert.deepEqual([parked?.to, parked?.add], ['parked', ['agentdeck:parked']]);
+  assert.match(parked?.comment ?? '', /parked in AgentDeck: after phase 3/);
+  assert.equal(dueIssueWrite(task({ status: 'parked' }), { reported: 'parked' }, issue({ labels: ['agentdeck:parked'] }), true), null);
+  const lifted = dueIssueWrite(task({ status: 'proposed' }), { reported: 'parked' }, issue({ labels: ['agentdeck:parked'] }), true);
+  assert.deepEqual([lifted?.to, lifted?.remove], ['proposed', ['agentdeck:parked']]);
+  assert.match(lifted?.comment ?? '', /lifted in AgentDeck/);
+  const rejected = dueIssueWrite(task({ status: 'cancelled' }), { reported: 'proposed' }, issue({ labels: [] }), true);
+  assert.deepEqual([rejected?.to, rejected?.close, rejected?.close_as], ['rejected', true, 'not_planned']);
+  const fromParked = dueIssueWrite(task({ status: 'cancelled' }), { reported: 'parked' }, issue({ labels: ['agentdeck:parked'] }), true);
+  assert.deepEqual([fromParked?.to, fromParked?.remove], ['rejected', ['agentdeck:parked']]);
+  const closedByHand = dueIssueWrite(task({ status: 'cancelled' }), { reported: 'proposed' }, issue({ labels: [], open: false }), true);
+  assert.equal(closedByHand?.close, false, 'an issue closed already is only commented');
+  assert.equal(isFinalReport('rejected'), true);
+});
+
+test("an issue's task takes its title and prompt only from the issue", () => {
+  const link = { number: 7, url: 'https://github.com/o/r/issues/7' };
+  assert.match(
+    issueTextEditError(link, { prompt: 'x' }) ?? '',
+    /come from issue #7: edit the issue \(https:\/\/github.com\/o\/r\/issues\/7\)/,
+  );
+  assert.equal(issueTextEditError(link, {}), null);
+  assert.equal(issueTextEditError(undefined, { title: 'x' }), null);
 });

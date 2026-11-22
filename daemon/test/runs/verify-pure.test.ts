@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   costText,
+  dueVerifyComment,
   findingPlace,
   isTestCommand,
   latestVerify,
@@ -62,4 +63,41 @@ test('the settings file sits beside the log, and network hosts are split and ded
   assert.equal(settingsPath('/logs/task-1-attempt-1.jsonl'), '/logs/task-1-attempt-1.settings.json');
   assert.equal(settingsPath('/logs/x'), '/logs/x.settings.json');
   assert.deepEqual(normalizeNetwork('a.com, b.com a.com'), ['a.com', 'b.com']);
+});
+
+test("a verify run's findings go on the issue once, and a run with none or that failed puts nothing there", () => {
+  const findings = [
+    { claim: 'greet() takes a name', verdict: 'true', path: 'src/greet.ts', line: 2, evidence: 'It does.' },
+    {
+      claim: 'push() returns nothing',
+      verdict: 'false',
+      path: 'src/queue.ts',
+      line: 5,
+      evidence: 'It returns the length.',
+      fix: 'Say it returns the length.',
+    },
+  ];
+  const run = (id: number, over: Record<string, unknown> = {}) =>
+    ({
+      id: asRunId(id),
+      kind: 'verify',
+      outcome: 'done',
+      result_text: JSON.stringify({ findings }),
+      ended_at: 'e',
+      base_commit: 'abc1234def',
+      ...over,
+    }) as never;
+  const task = { id: asTaskId(3) };
+  const due = dueVerifyComment(task, [run(1)], null);
+  assert.equal(due?.run_id, 1);
+  assert.match(due?.comment ?? '', /^A verify run on task #3 read `abc1234` and found 2 claims: 1 true, 1 false\./);
+  assert.match(
+    due?.comment ?? '',
+    /- \*\*false\*\* `src\/queue.ts:5`: push\(\) returns nothing\n  It returns the length\.\n  Suggested fix: Say it returns the length\./,
+  );
+  assert.equal(dueVerifyComment(task, [run(1)], asRunId(1)), null, 'once');
+  assert.equal(dueVerifyComment(task, [run(1), run(2, { ended_at: null })], asRunId(1)), null, 'a run still going waits');
+  assert.equal(dueVerifyComment(task, [run(2, { outcome: 'failed', result_text: 'x' })], null), null);
+  assert.equal(dueVerifyComment(task, [run(2, { result_text: JSON.stringify({ findings: [] }) })], null), null);
+  assert.equal(dueVerifyComment(task, [{ ...(run(4) as object), kind: 'work' } as never], null), null);
 });

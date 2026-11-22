@@ -14,6 +14,7 @@ const parent = (o: Partial<Issue> = {}): Issue => ({
   labels: ['agentdeck:plan'],
   blocked_by: [],
   parent: null,
+  sub_issues: 0,
   ...o,
 });
 

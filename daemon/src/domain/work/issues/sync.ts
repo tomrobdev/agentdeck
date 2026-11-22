@@ -1,4 +1,4 @@
-// What an issue-backed repo's poll decides: which labelled issues become tasks, what a person's change on an issue does to its task, and what the issue is told back.
+// What an issue-backed repo's poll decides: which issues become tasks or proposals, what a person's change on an issue does to its task, and what the issue is told back.
 import type { TaskId } from '#domain/shared/index.ts';
 import type { Task } from '#domain/work/task/task.ts';
 import { shapePrompt } from '#domain/work/task/prompt.ts';
@@ -32,16 +32,27 @@ export function labelRefusal(allowed: readonly string[], by: string | null, labe
   return `AgentDeck takes an issue only when ${allowed.join(' or ') || 'a listed login'} adds the ${label} label${by ? `, not ${by}` : ''}, so the label is taken off.`;
 }
 
-export function issueIntake(
-  issue: Issue,
-  ctx: {
-    labelledBy: string | null;
-    allowed: readonly string[];
-    taskOf: (number: number) => TaskId | undefined;
-    planOf?: (number: number) => TaskId | undefined;
-  },
-): Intake {
+interface IntakeLookups {
+  taskOf: (number: number) => TaskId | undefined;
+  planOf?: (number: number) => TaskId | undefined;
+}
+
+export function issueIntake(issue: Issue, ctx: IntakeLookups & { labelledBy: string | null; allowed: readonly string[] }): Intake {
   if (!isAllowed(ctx.allowed, ctx.labelledBy)) return { kind: 'refuse', comment: labelRefusal(ctx.allowed, ctx.labelledBy) };
+  return intakeOf(issue, ctx);
+}
+
+const KEPT_OUT: readonly string[] = [ISSUE_LABELS.human, ISSUE_LABELS.ignore, ISSUE_LABELS.plan];
+
+const keptOutOfProposals = (issue: Pick<Issue, 'labels' | 'sub_issues'>): boolean =>
+  issue.sub_issues > 0 || issue.labels.some((l) => KEPT_OUT.includes(l));
+
+export function proposalIntake(issue: Issue, ctx: IntakeLookups): Intake | null {
+  if (!issue.open || issue.labels.includes(ISSUE_LABELS.ready) || keptOutOfProposals(issue) || !issue.body.trim()) return null;
+  return intakeOf(issue, ctx);
+}
+
+function intakeOf(issue: Issue, ctx: IntakeLookups): Intake {
   if (!issue.body.trim())
     return {
       kind: 'refuse',
@@ -60,13 +71,43 @@ export function issueIntake(
   };
 }
 
-/** What a person's change on an issue does to its task. */
+/** What a person's change on an issue does to its task. A drop cancels a proposal and tells the issue nothing. */
 type IssueMove =
-  { kind: 'none' } | { kind: 'cancel'; reason: string } | { kind: 'edit'; title: string; prompt: string } | { kind: 'retry' };
+  | { kind: 'none' }
+  | { kind: 'cancel'; reason: string }
+  | { kind: 'drop'; reason: string }
+  | { kind: 'edit'; title: string; prompt: string }
+  | { kind: 'retry' }
+  | { kind: 'approve' }
+  | { kind: 'refuse'; comment: string };
+
+function followText(task: Pick<Task, 'title' | 'prompt'>, issue: Issue): IssueMove {
+  const title = issue.title.trim() || task.title;
+  const prompt = shapePrompt(issuePrompt(issue)).prompt;
+  return title !== task.title || prompt !== task.prompt ? { kind: 'edit', title, prompt } : { kind: 'none' };
+}
+
+function proposalMove(task: Pick<Task, 'id' | 'status' | 'title' | 'prompt'>, issue: Issue): IssueMove {
+  if (!issue.open) return { kind: 'drop', reason: 'its issue was closed' };
+  if (keptOutOfProposals(issue)) return { kind: 'drop', reason: 'its issue is no longer for AgentDeck' };
+  if (issue.labels.includes(ISSUE_LABELS.ready))
+    return task.status === 'proposed'
+      ? { kind: 'approve' }
+      : {
+          kind: 'refuse',
+          comment: `Task #${task.id} is parked in AgentDeck, so the ${ISSUE_LABELS.ready} label is taken off. Lift it there first, then approve it.`,
+        };
+  return followText(task, issue);
+}
 
 const ANSWERED: readonly (IssueReport | null)[] = ['question', 'stopped'];
 
-export function issueMove(task: Pick<Task, 'status' | 'title' | 'prompt'>, issue: Issue, link: Pick<TaskIssue, 'reported'>): IssueMove {
+export function issueMove(
+  task: Pick<Task, 'id' | 'status' | 'title' | 'prompt'>,
+  issue: Issue,
+  link: Pick<TaskIssue, 'reported'>,
+): IssueMove {
+  if (task.status === 'proposed' || task.status === 'parked') return proposalMove(task, issue);
   const settled = task.status === 'done' || task.status === 'cancelled';
   if (!settled && issue.closed_as === 'not_planned') return { kind: 'cancel', reason: 'its issue was closed as not planned' };
   const ready = issue.open && issue.labels.includes(ISSUE_LABELS.ready);
@@ -74,9 +115,7 @@ export function issueMove(task: Pick<Task, 'status' | 'title' | 'prompt'>, issue
     if (!issue.open) return { kind: 'cancel', reason: 'its issue was closed' };
     const personRemoved = link.reported === null || link.reported === 'queued';
     if (!ready && personRemoved) return { kind: 'cancel', reason: `its issue lost the ${ISSUE_LABELS.ready} label` };
-    const title = issue.title.trim() || task.title;
-    const prompt = shapePrompt(issuePrompt(issue)).prompt;
-    return title !== task.title || prompt !== task.prompt ? { kind: 'edit', title, prompt } : { kind: 'none' };
+    return followText(task, issue);
   }
   if ((task.status === 'blocked' || task.status === 'failed') && ready && ANSWERED.includes(link.reported)) return { kind: 'retry' };
   return { kind: 'none' };
@@ -89,8 +128,12 @@ export function issueNote(comments: readonly IssueComment[], since: string | nul
   return said.filter(Boolean).join('\n\n') || `The issue was labelled ${ISSUE_LABELS.ready} again with no new comment.`;
 }
 
-function issueReportFor(task: Task, opensPrs: boolean): TaskIssueReport | null {
+function issueReportFor(task: Task, opensPrs: boolean, last: IssueReport | null): TaskIssueReport | null {
   switch (task.status) {
+    case 'proposed':
+      return 'proposed';
+    case 'parked':
+      return 'parked';
     case 'queued':
       return 'queued';
     case 'running':
@@ -104,10 +147,7 @@ function issueReportFor(task: Task, opensPrs: boolean): TaskIssueReport | null {
       if (!task.pr) return opensPrs ? null : 'merged';
       return task.pr.state === 'open' ? 'pr_open' : task.pr.state === 'merged' ? 'merged' : null;
     case 'cancelled':
-      return 'cancelled';
-    case 'proposed':
-    case 'parked':
-      return null;
+      return last === 'proposed' || last === 'parked' ? 'rejected' : 'cancelled';
     default: {
       const never: never = task;
       return never;
@@ -119,20 +159,47 @@ function issueReportFor(task: Task, opensPrs: boolean): TaskIssueReport | null {
 interface IssueWrite {
   add: string[];
   remove: string[];
+  /** Empty when the change is only recorded, not told. */
   comment: string;
   close: boolean;
+  close_as?: 'completed' | 'not_planned';
 }
 
 const prUrl = (task: Task): string | null => (task.pr && 'url' in task.pr ? task.pr.url : null);
 
-function issueWrite(to: TaskIssueReport, task: Task): IssueWrite {
-  const { ready, info, running } = ISSUE_LABELS;
+function issueWrite(to: TaskIssueReport, task: Task, last: IssueReport | null): IssueWrite {
+  const { ready, info, running, parked } = ISSUE_LABELS;
   const again = `Put the ${ready} label back to try again.`;
   switch (to) {
+    case 'proposed':
+      return {
+        add: [],
+        remove: [parked],
+        comment: last === 'parked' ? `Task #${task.id} was lifted in AgentDeck and is a proposal again.` : '',
+        close: false,
+      };
+    case 'parked': {
+      const reason = task.status === 'parked' && task.park_reason ? `: ${task.park_reason}` : '.';
+      return {
+        add: [parked],
+        remove: [ready],
+        comment: `Task #${task.id} was parked in AgentDeck${reason}\n\nLifting it there makes it a proposal again.`,
+        close: false,
+      };
+    }
+    case 'rejected':
+      return {
+        add: [],
+        remove: [parked, ready],
+        comment: `Task #${task.id} was rejected in AgentDeck.`,
+        close: true,
+        close_as: 'not_planned',
+      };
     case 'queued': {
       const { warnings } = shapePrompt(task.prompt);
       const notes = warnings.length ? `\n\nThe body should follow AgentDeck's prompt headings: ${warnings.join('; ')}.` : '';
-      return { add: [ready], remove: [running, info], comment: `Queued as AgentDeck task #${task.id}.${notes}`, close: false };
+      const how = last === 'proposed' ? `Approved in AgentDeck and queued as task #${task.id}.` : `Queued as AgentDeck task #${task.id}.`;
+      return { add: [ready], remove: [running, info], comment: `${how}${notes}`, close: false };
     }
     case 'running':
       return {
@@ -178,7 +245,7 @@ function issueWrite(to: TaskIssueReport, task: Task): IssueWrite {
 /** What to write on an issue now: only the labels it lacks or still has, and a close only while it is open. */
 export type DueIssueWrite = IssueWrite & { to: TaskIssueReport };
 
-const FINAL_REPORTS: readonly (IssueReport | null)[] = ['merged', 'cancelled', 'plan_merged', 'plan_abandoned'];
+const FINAL_REPORTS: readonly (IssueReport | null)[] = ['merged', 'cancelled', 'rejected', 'plan_merged', 'plan_abandoned'];
 
 export const isFinalReport = (r: IssueReport | null): boolean => FINAL_REPORTS.includes(r);
 
@@ -188,14 +255,15 @@ export function dueIssueWrite(
   issue: Pick<Issue, 'labels' | 'open'>,
   opensPrs: boolean,
 ): DueIssueWrite | null {
-  const to = issueReportFor(task, opensPrs);
+  const to = issueReportFor(task, opensPrs, link.reported);
   if (to === null || to === link.reported) return null;
-  const write = issueWrite(to, task);
+  const write = issueWrite(to, task, link.reported);
   return {
     to,
     add: write.add.filter((l) => !issue.labels.includes(l)),
     remove: write.remove.filter((l) => issue.labels.includes(l)),
     comment: write.comment,
     close: write.close && issue.open,
+    ...(write.close_as ? { close_as: write.close_as } : {}),
   };
 }

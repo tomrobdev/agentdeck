@@ -327,6 +327,7 @@ export const taskIssues = sqliteTable(
     url: text().notNull(),
     reported: text().$type<IssueReport>(),
     reported_at: text(),
+    verify_reported: integer().$type<RunId>(),
   },
   (table) => [uniqueIndex('task_issues_repo_number').on(table.repo_id, table.number)],
 );

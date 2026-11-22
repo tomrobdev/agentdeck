@@ -1699,6 +1699,15 @@ One claim the task's prompt makes about the code, and what the base says of it.
 | `evidence` | `string`                                   | What the code says, in a sentence or two.                                                               |
 | `fix`      | `string \| null`                           | For a claim that is not true, what the prompt should say instead; null when there is nothing to change. |
 
+### VerifyIssueComment
+
+A verify run's findings to put on the task's issue, once.
+
+| Field     | Type     | Comment |
+| --------- | -------- | ------- |
+| `run_id`  | `RunId`  |         |
+| `comment` | `string` |         |
+
 ### VerifyView
 
 The latest verify run of a task, as the dashboard and `agentdeck show` show it.
@@ -1893,13 +1902,14 @@ A finished task, and whether a person finished it.
 
 What to write on an issue now: only the labels it lacks or still has, and a close only while it is open.
 
-| Field     | Type              | Comment |
-| --------- | ----------------- | ------- |
-| `add`     | `string[]`        |         |
-| `remove`  | `string[]`        |         |
-| `comment` | `string`          |         |
-| `close`   | `boolean`         |         |
-| `to`      | `TaskIssueReport` |         |
+| Field       | Type                                        | Comment                                           |
+| ----------- | ------------------------------------------- | ------------------------------------------------- |
+| `add`       | `string[]`                                  |                                                   |
+| `remove`    | `string[]`                                  |                                                   |
+| `comment`   | `string`                                    | Empty when the change is only recorded, not told. |
+| `close`     | `boolean`                                   |                                                   |
+| `close_as?` | `"completed" \| "not_planned" \| undefined` |                                                   |
+| `to`        | `TaskIssueReport`                           |                                                   |
 
 ### FailedState
 
@@ -1960,6 +1970,7 @@ An issue as the poll reads it from GitHub.
 | `labels`     | `string[]`                                                 |                                                                                   |
 | `blocked_by` | `IssueBlocker[]`                                           |                                                                                   |
 | `parent`     | `{ number: number; title: string; body: string; } \| null` | The issue this one is a sub-issue of: its title and body give the worker context. |
+| `sub_issues` | `number`                                                   | How many sub-issues it has: an issue with any is a map of work, not work itself.  |
 
 ### IssueBlocker
 
@@ -2578,14 +2589,15 @@ The counters an event sets, with their new values. A counter not listed is left 
 
 A task's link to the issue it came from.
 
-| Field         | Type                  | Comment                                                               |
-| ------------- | --------------------- | --------------------------------------------------------------------- |
-| `task_id`     | `TaskId`              |                                                                       |
-| `repo_id`     | `RepoId`              |                                                                       |
-| `number`      | `number`              |                                                                       |
-| `url`         | `string`              |                                                                       |
-| `reported`    | `IssueReport \| null` | The last change reported on the issue; null before the first.         |
-| `reported_at` | `string \| null`      | When it was reported, so a person's later comments can be told apart. |
+| Field             | Type                  | Comment                                                                    |
+| ----------------- | --------------------- | -------------------------------------------------------------------------- |
+| `task_id`         | `TaskId`              |                                                                            |
+| `repo_id`         | `RepoId`              |                                                                            |
+| `number`          | `number`              |                                                                            |
+| `url`             | `string`              |                                                                            |
+| `reported`        | `IssueReport \| null` | The last change reported on the issue; null before the first.              |
+| `reported_at`     | `string \| null`      | When it was reported, so a person's later comments can be told apart.      |
+| `verify_reported` | `RunId \| null`       | The verify run whose findings were last put on the issue; null before any. |
 
 ### TaskPlan
 

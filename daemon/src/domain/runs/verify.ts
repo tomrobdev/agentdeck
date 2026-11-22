@@ -182,3 +182,32 @@ export function verifyLine(findings: Pick<VerifyFinding, 'verdict'>[]): string {
 
 export const findingPlace = (f: Pick<VerifyFinding, 'path' | 'line'>): string | null =>
   f.path ? (f.line ? `${f.path}:${f.line}` : f.path) : null;
+
+/** A verify run's findings to put on the task's issue, once. */
+export interface VerifyIssueComment {
+  run_id: RunId;
+  comment: string;
+}
+
+function findingLines(f: VerifyFinding): string {
+  const place = findingPlace(f);
+  const head = `- **${f.verdict}**${place ? ` \`${place}\`` : ''}: ${f.claim}`;
+  const evidence = `  ${f.evidence}`;
+  return f.fix && f.verdict !== 'true' ? `${head}\n${evidence}\n  Suggested fix: ${f.fix}` : `${head}\n${evidence}`;
+}
+
+export function dueVerifyComment(
+  task: Pick<Task, 'id'>,
+  runs: Pick<Run, 'id' | 'kind' | 'outcome' | 'result_text' | 'ended_at' | 'base_commit'>[],
+  reported: RunId | null,
+): VerifyIssueComment | null {
+  const run = runs.findLast((r) => r.kind === 'verify' && r.ended_at !== null);
+  if (!run || run.id === reported) return null;
+  const findings = runFindings(run);
+  if (!findings?.length) return null;
+  const read = run.base_commit ? ` read \`${run.base_commit.slice(0, 7)}\` and found` : ' found';
+  return {
+    run_id: run.id,
+    comment: `A verify run on task #${task.id}${read} ${verifyLine(findings).toLowerCase()}.\n\n${findings.map(findingLines).join('\n')}`,
+  };
+}

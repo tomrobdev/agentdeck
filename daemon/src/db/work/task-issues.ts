@@ -1,6 +1,6 @@
 // Task issues: the GitHub issue each issue-backed task came from, and what the daemon last reported on it.
 import { and, asc, eq } from 'drizzle-orm';
-import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { RepoId, RunId, TaskId } from '#domain/shared/index.ts';
 import type { IssueReport, TaskIssue } from '#domain/work/index.ts';
 import type { Orm } from '#db/orm.ts';
 import { taskIssues } from '#db/tables.ts';
@@ -22,6 +22,12 @@ export function taskIssueStore(orm: Orm) {
     },
     reportIssue(id: TaskId, reported: IssueReport, at: string): void {
       orm.update(taskIssues).set({ reported, reported_at: at }).where(eq(taskIssues.task_id, id)).run();
+    },
+    reportVerify(id: TaskId, run: RunId): void {
+      orm.update(taskIssues).set({ verify_reported: run }).where(eq(taskIssues.task_id, id)).run();
+    },
+    unlinkIssue(id: TaskId): void {
+      orm.delete(taskIssues).where(eq(taskIssues.task_id, id)).run();
     },
   };
 }

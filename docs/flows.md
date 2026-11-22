@@ -115,13 +115,21 @@ sequenceDiagram
 
 In a repo with issues on, tasks come from GitHub Issues instead of `agentdeck add`.
 
-- Every two minutes `pollIssues` reads the issues labelled ready-for-agent.
-- An issue labelled by an allowed login becomes a queued task (`issueIntake`). An issue blocked by another issue builds on that issue's task. A sub-issue's prompt carries its parent as context.
+- Every two minutes `pollIssues` reads the repo's open issues.
+- An issue labelled ready-for-agent by an allowed login becomes a queued task (`issueIntake`). An issue blocked by another issue builds on that issue's task. A sub-issue's prompt carries its parent as context.
 - On each poll after that, a person's change on the issue reaches the task (`issueMove`):
   - a removed label, or a close, cancels a queued task;
   - an edit to the issue edits the task;
   - the label put back on a blocked or failed task retries it, with the allowed logins' new comments as the note (`issueNote`).
 - Each change to the task is told to the issue once (`dueIssueWrite`): queued, started, a question (labelled needs-info), stopped, the PR opened, and merged, which closes the issue.
+
+### Open issues as proposals
+
+- Every other open issue becomes a proposed task (`proposalIntake`), except one labelled ready-for-human or agentdeck:ignore, a parent of sub-issues, a plan, or one with an empty body. Nothing is said on the issue.
+- A person approves, parks, lifts or rejects it in the dashboard as any proposal, and the issue hears it once: approved adds ready-for-agent, parked adds agentdeck:parked with the reason, lifted takes it off, and rejected closes the issue as not planned.
+- On GitHub, the ready-for-agent label from an allowed login approves the proposal; on a parked one it is taken off with a comment to lift it first.
+- An edit to the issue edits the proposal. Closing the issue, or a keep-out label, drops the proposal without a word and frees the issue, so reopened it is proposed again.
+- A verify run's findings go on the issue as a comment once it ends (`dueVerifyComment`), so the record stays on GitHub; one with no findings, or that failed, puts nothing there.
 
 ### A parent issue as a plan
 
@@ -153,7 +161,7 @@ sequenceDiagram
 
 ## A proposal
 
-When a repo's queue runs dry and its planner is due (`plannerDue`), the planner reads the repo's goals and proposes tasks (`propose`). They wait in proposed, on Attention, until a person approves them in the dashboard (`approveTask`), parks them, or rejects them.
+When a repo's queue runs dry and its planner is due (`plannerDue`), the planner reads the repo's goals and proposes tasks (`propose`). They wait in proposed, on Attention, until a person approves them in the dashboard (`approveTask`), parks them, or rejects them. In a repo with issues on, it opens each proposal as an issue instead, labelled ready-for-agent only when the repo auto-approves, and the next issue poll makes it a proposal.
 
 ```mermaid
 sequenceDiagram

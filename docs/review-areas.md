@@ -29,7 +29,7 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 
 ## issues
 
-Issue-backed repos: GitHub issues labelled ready-for-agent become tasks, and the daemon reports back on them.
+Issue-backed repos: GitHub issues labelled ready-for-agent become tasks and the other open ones proposals, and the daemon reports back on them.
 
 - daemon/src/domain/work/issues/
 - daemon/src/application/landing/issues/

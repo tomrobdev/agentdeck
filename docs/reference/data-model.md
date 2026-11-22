@@ -162,6 +162,7 @@ erDiagram
     text url
     text reported "nullable"
     text reported_at "nullable"
+    integer verify_reported "nullable"
   }
   task_links {
     integer task_id PK,FK

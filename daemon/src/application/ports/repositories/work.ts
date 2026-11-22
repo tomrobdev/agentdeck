@@ -1,5 +1,5 @@
 // Work's repositories: tasks, their history, their links and their plans.
-import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { RepoId, RunId, TaskId } from '#domain/shared/index.ts';
 import type { Draining } from '#domain/capacity/index.ts';
 import type { AutoMergeCheck, CheckCounts, MergeRequestMove, StoredChecks } from '#domain/landing/index.ts';
 import type { AttentionCandidate } from '#domain/operations/index.ts';
@@ -181,4 +181,6 @@ export interface TaskIssueRepository {
   issuesOfRepo(repo_id: RepoId): TaskIssue[];
   taskOfIssue(repo_id: RepoId, number: number): TaskId | undefined;
   reportIssue(id: TaskId, reported: IssueReport, at: string): void;
+  reportVerify(id: TaskId, run: RunId): void;
+  unlinkIssue(id: TaskId): void;
 }

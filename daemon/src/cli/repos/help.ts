@@ -27,8 +27,10 @@ export const REPOS_HELP = `  agentdeck repo add <path> [--name n] [--base main] 
   agentdeck repo set <repo> auto_review on|off    start a review run on its own when a task is done: it reads the changes
                                                   against the task's goal and plan steps; uses no attempt (default off)
   agentdeck repo set <repo> issues on|off         take tasks from GitHub Issues labelled ready-for-agent and report back on them;
-                                                  \`agentdeck add\` is refused while it is on (default off); a parent issue
-                                                  labelled agentdeck:plan becomes a plan whose sub-issues land on one plan branch
+                                                  every other open issue is a proposal, and approving, parking or rejecting it
+                                                  writes back to the issue; \`agentdeck add\` is refused while it is on (default
+                                                  off); a parent issue labelled agentdeck:plan becomes a plan whose sub-issues
+                                                  land on one plan branch
   agentdeck repo set <repo> issues_allow "<logins>"  GitHub logins whose label starts a task ("" = the login gh is signed in as)
   agentdeck repo set <repo> escalate on|off       a retry after the turn limit, failing tests, an error or no change runs one
                                                   model up: haiku to sonnet, sonnet to opus (default on)
