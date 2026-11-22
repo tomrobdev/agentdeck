@@ -11,7 +11,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('#db/index.ts');
 const { pollIssues } = await import('#application/landing/issues/poll.ts');
-const { addTask, approveTask, liftTask, parkTask, rejectTask, updateRepo } = await import('#application/actions.ts');
+const { addTask, approveTask, editTask, liftTask, parkTask, rejectTask, updateRepo } = await import('#application/actions.ts');
 const { advance, testApp } = await import('#test/fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
@@ -363,4 +363,17 @@ test("the ready label from an allowed login approves a proposal; a stranger's co
   assert.equal(db.getTask(taskOf(62))?.status, 'parked');
   assert.deepEqual(gh.issues.get(62)?.labels, ['agentdeck:parked']);
   assert.match(gh.said(62).at(-1) ?? '', /Lift it there first/);
+});
+
+test("an issue's task is edited on GitHub: its title and prompt are refused in AgentDeck, the rest changes", async () => {
+  const { db, gh, taskOf } = setup();
+  gh.file(70, { labels: [] });
+  await pollIssues(db);
+  const id = taskOf(70);
+  await assert.rejects(
+    editTask(db, id, { prompt: 'by hand' }),
+    /come from issue #70: edit the issue \(https:\/\/github.com\/o\/r\/issues\/70\)/,
+  );
+  await assert.rejects(editTask(db, id, { title: 'by hand' }), /come from issue #70/);
+  assert.equal((await editTask(db, id, { priority: 2 })).priority, 2);
 });

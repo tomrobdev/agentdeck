@@ -12,6 +12,7 @@ import {
   issueMove,
   issueNote,
   issueRepoAddError,
+  issueTextEditError,
   labelRefusal,
   proposalIntake,
   signed,
@@ -328,4 +329,14 @@ test('approve, park, lift and reject in AgentDeck are each told on the issue onc
   const closedByHand = dueIssueWrite(task({ status: 'cancelled' }), { reported: 'proposed' }, issue({ labels: [], open: false }), true);
   assert.equal(closedByHand?.close, false, 'an issue closed already is only commented');
   assert.equal(isFinalReport('rejected'), true);
+});
+
+test("an issue's task takes its title and prompt only from the issue", () => {
+  const link = { number: 7, url: 'https://github.com/o/r/issues/7' };
+  assert.match(
+    issueTextEditError(link, { prompt: 'x' }) ?? '',
+    /come from issue #7: edit the issue \(https:\/\/github.com\/o\/r\/issues\/7\)/,
+  );
+  assert.equal(issueTextEditError(link, {}), null);
+  assert.equal(issueTextEditError(undefined, { title: 'x' }), null);
 });

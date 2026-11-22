@@ -37,6 +37,10 @@ export function useEditKeys(scope: 'queue' | 'task', current: () => number | nul
       flash('A prompt is edited on one task at a time. Press Esc to clear the picks, then select a task.');
       return;
     }
+    if (kind === 'prompt' && targets.value[0]?.source === 'issue') {
+      flash(`#${targets.value[0].id}'s prompt is its GitHub issue's body: edit the issue, and the task follows it.`);
+      return;
+    }
     dialog.value = kind;
   }
   function setPriority(level: EditPriority) {

@@ -252,7 +252,7 @@ export type {
   TaskState,
   TaskSummary,
 } from '#domain/work/task/task.ts';
-export { ISSUE_LABELS, issueRepoAddError, signed } from '#domain/work/issues/issue.ts';
+export { ISSUE_LABELS, issueRepoAddError, issueTextEditError, signed } from '#domain/work/issues/issue.ts';
 export { ISSUE_FIELDS, labelledBy, parseIssue, parseIssueComments, parseIssues, parseLabelNames } from '#domain/work/issues/parse.ts';
 export type { Issue, IssueComment, IssueReport, TaskIssue } from '#domain/work/issues/issue.ts';
 export {

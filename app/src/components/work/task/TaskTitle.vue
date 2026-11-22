@@ -3,13 +3,15 @@ import { computed } from 'vue';
 import { workApi } from '#api/work.ts';
 import type { TaskDetail } from '#api/types.ts';
 import { canEdit } from '#lib/work/task-view.ts';
+import { openExternal } from '#platform/native.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import InlineEdit from '#components/ui/form/InlineEdit.vue';
 
 const props = defineProps<{ task: TaskDetail }>();
 const { run } = useActions();
 
-const editable = computed(() => canEdit(props.task));
+const issue = computed(() => props.task.issue ?? null);
+const editable = computed(() => canEdit(props.task) && !issue.value);
 
 async function save(text: string) {
   const t = text.trim();
@@ -32,5 +34,14 @@ async function save(text: string) {
       />
       <template v-else>{{ task.title }}</template>
     </h1>
+    <button
+      v-if="issue && canEdit(task)"
+      class="btn-ghost flex-none px-2 py-0 text-sm"
+      :title="`The title and prompt are issue #${issue.number}'s`"
+      data-edit-on-github
+      @click="openExternal(issue.url)"
+    >
+      Edit on GitHub ↗
+    </button>
   </div>
 </template>

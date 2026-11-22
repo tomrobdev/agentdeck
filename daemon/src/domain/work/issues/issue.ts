@@ -68,6 +68,14 @@ export const ISSUE_MARK = '<!-- agentdeck -->';
 
 export const signed = (body: string): string => `${body}\n\n${ISSUE_MARK}`;
 
+export function issueTextEditError(
+  issue: Pick<TaskIssue, 'number' | 'url'> | undefined,
+  fields: { title?: string; prompt?: string },
+): string | null {
+  if (!issue || (fields.title === undefined && fields.prompt === undefined)) return null;
+  return `its title and prompt come from issue #${issue.number}: edit the issue (${issue.url}), and the task follows it`;
+}
+
 export function issueRepoAddError(repo: { name: string; issues: boolean }): string | null {
   if (!repo.issues) return null;
   return `${repo.name} takes its tasks from GitHub Issues: open an issue and label it ${ISSUE_LABELS.ready} (gh issue create --label ${ISSUE_LABELS.ready})`;

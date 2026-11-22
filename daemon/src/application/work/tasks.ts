@@ -1,7 +1,15 @@
 // Use cases for tasks: add, edit, list them and remove their worktrees.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
-import { archivedRepoError, issueRepoAddError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '#domain/work/index.ts';
+import {
+  archivedRepoError,
+  issueRepoAddError,
+  issueTextEditError,
+  maxAttemptsError,
+  maxTurnsError,
+  modelError,
+  priorityError,
+} from '#domain/work/index.ts';
 import { missingTargetError, planOwnerOf, targetChangeError } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import { type ModelSource, newTaskModel } from '#domain/work/index.ts';
@@ -111,6 +119,7 @@ export async function editTask(
     plan_html?: string;
     plan_steps?: string[] | string | null;
   },
+  by: 'person' | 'issue' = 'person',
 ): Promise<Task> {
   const task = requireTask(app, id);
   const fields: Parameters<App['editTask']>[1] = {};
@@ -120,6 +129,7 @@ export async function editTask(
     const value = text(body, key);
     if (value !== undefined) fields[key] = value;
   }
+  if (by === 'person') refuse(issueTextEditError(app.issueOf(id), fields), undefined, 'conflict');
   if (fields.prompt) fields.prompt = shapePrompt(fields.prompt).prompt;
   refuse(modelError(fields.model));
   for (const [key, rule] of [

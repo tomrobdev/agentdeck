@@ -8,6 +8,7 @@ import { errorMessage, plural } from '#daemon/domain/shared/index.ts';
 import { proposalCheckLine } from '#daemon/domain/work/index.ts';
 import { latestVerify } from '#daemon/domain/runs/index.ts';
 import { type BulkResult, bulkMessage, summarizeBulk } from '#lib/work/queue/bulk.ts';
+import { openExternal } from '#platform/native.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import Checkbox from '#components/ui/form/Checkbox.vue';
 import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
@@ -33,6 +34,7 @@ const verifyOf = (id: number) => {
   const runs = details.value[props.rows.findIndex((r) => r.id === id)]?.data?.runs ?? [];
   return latestVerify(runs, checks.get(id)?.staleness?.base ?? null);
 };
+const issueOf = (id: number) => details.value[props.rows.findIndex((r) => r.id === id)]?.data?.issue ?? null;
 const starting = reactive(new Set<number>());
 async function startVerify(id: number) {
   starting.add(id);
@@ -147,7 +149,20 @@ async function confirm() {
           >
             {{ verifyOf(r.id) && verifyOf(r.id)!.state !== 'going' ? 'Verify again' : 'Verify' }}
           </button>
-          <button v-if="!results && saved.has(r.id) && !editing.has(r.id)" class="btn-ghost px-2 py-0 text-sm" @click="startEdit(r.id)">
+          <button
+            v-if="!results && issueOf(r.id)"
+            class="btn-ghost px-2 py-0 text-sm"
+            :title="`The prompt is issue #${issueOf(r.id)!.number}'s body`"
+            data-edit-on-github
+            @click="openExternal(issueOf(r.id)!.url)"
+          >
+            Edit on GitHub ↗
+          </button>
+          <button
+            v-else-if="!results && saved.has(r.id) && !editing.has(r.id)"
+            class="btn-ghost px-2 py-0 text-sm"
+            @click="startEdit(r.id)"
+          >
             Edit prompt
           </button>
         </span>

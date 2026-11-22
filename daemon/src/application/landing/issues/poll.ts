@@ -139,7 +139,7 @@ async function follow(
     app.unlinkIssue(before.id);
     log(`task #${before.id}: proposal dropped, ${move.reason}`);
     return;
-  } else if (move.kind === 'edit') await editTask(app, before.id, { title: move.title, prompt: move.prompt });
+  } else if (move.kind === 'edit') await editTask(app, before.id, { title: move.title, prompt: move.prompt }, 'issue');
   else if (move.kind === 'refuse') {
     await refuseLabel(app, repo, link.number, move.comment);
     log(`task #${before.id}: issue #${link.number} labelled while parked, label taken off`);
