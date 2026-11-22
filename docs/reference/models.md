@@ -2387,6 +2387,7 @@ What the dashboard and `agentdeck show` say about a proposal before it is approv
 | ------------ | -------------------------------------------------- | ------- |
 | `review`     | `ReviewVerdict \| null`                            |         |
 | `unfinished` | `string[]`                                         |         |
+| `issue?`     | `number \| null \| undefined`                      |         |
 | `id`         | `TaskId`                                           |         |
 | `title`      | `string`                                           |         |
 | `status`     | `TaskStatus`                                       |         |

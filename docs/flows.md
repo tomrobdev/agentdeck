@@ -142,7 +142,7 @@ sequenceDiagram
   S->>D: add the task (source issue), linked to the issue
   S->>H: comment: queued as task #n
   S->>D: the task runs, as in A task's run
-  S->>H: agentdeck:running, then the PR opened (Refs #n)
+  S->>H: agentdeck:running, then the PR opened (Closes #n)
   opt a question
     S->>H: needs-info and the question
     P->>H: reply, and put the label back

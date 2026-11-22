@@ -351,8 +351,8 @@ test('the PR body says in one line that a person needs to merge a branch over th
 
 test('the PR body of an issue-backed task refers to its issue, which the daemon closes itself on merge', async () => {
   const { buildPrBody } = await import('#domain/landing/pull-request/pr.ts');
-  assert.ok(buildPrBody({ id: 7 }, [], null, null, 21).includes('\nRefs #21.\n'));
-  assert.ok(!buildPrBody({ id: 7 }, []).includes('Refs #'));
+  assert.ok(buildPrBody({ id: 7 }, [], null, null, 21).includes('\nCloses #21.\n'));
+  assert.ok(!buildPrBody({ id: 7 }, []).includes('Closes #'));
 });
 
 test('autoMergeView: the tag comes from the measurement before a PR', () => {

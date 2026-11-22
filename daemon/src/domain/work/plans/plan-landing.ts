@@ -29,6 +29,7 @@ export function reviewVerdictOf(reviews: Pick<ReviewWithComments, 'kind' | 'subm
 export interface PunchLine extends PlanBranchMember {
   review: ReviewVerdict | null;
   unfinished: string[];
+  issue?: number | null;
 }
 
 const cell = (text: string): string => text.replaceAll('|', '\\|').replaceAll('\n', ' ');
@@ -49,6 +50,7 @@ export function planPrBody(branch: Pick<PlanBranch, 'name' | 'base' | 'plan_task
     '| Task | PR | Review | Unfinished plan steps |',
     '| --- | --- | --- | --- |',
     ...rows.map((r) => `| ${r} |`),
+    ...lines.flatMap((l) => (l.issue && l.status !== 'cancelled' ? ['', `Closes #${l.issue}.`] : [])),
   ].join('\n');
 }
 
