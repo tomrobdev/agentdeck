@@ -255,5 +255,14 @@ export type {
 export { ISSUE_LABELS, issueRepoAddError, signed } from '#domain/work/issues/issue.ts';
 export { ISSUE_FIELDS, labelledBy, parseIssue, parseIssueComments, parseIssues, parseLabelNames } from '#domain/work/issues/parse.ts';
 export type { Issue, IssueComment, IssueReport, TaskIssue } from '#domain/work/issues/issue.ts';
-export { dueIssueWrite, isAllowed, isFinalReport, issueIntake, issueMove, issueNote, labelRefusal } from '#domain/work/issues/sync.ts';
+export {
+  dueIssueWrite,
+  isAllowed,
+  isFinalReport,
+  issueIntake,
+  issueMove,
+  issueNote,
+  labelRefusal,
+  proposalIntake,
+} from '#domain/work/issues/sync.ts';
 export { duePlanIssueWrite, planIntake, planOwnerParkReason } from '#domain/work/issues/plan-issue.ts';

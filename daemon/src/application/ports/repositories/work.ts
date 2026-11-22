@@ -181,4 +181,5 @@ export interface TaskIssueRepository {
   issuesOfRepo(repo_id: RepoId): TaskIssue[];
   taskOfIssue(repo_id: RepoId, number: number): TaskId | undefined;
   reportIssue(id: TaskId, reported: IssueReport, at: string): void;
+  unlinkIssue(id: TaskId): void;
 }

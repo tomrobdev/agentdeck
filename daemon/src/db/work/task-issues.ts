@@ -23,5 +23,8 @@ export function taskIssueStore(orm: Orm) {
     reportIssue(id: TaskId, reported: IssueReport, at: string): void {
       orm.update(taskIssues).set({ reported, reported_at: at }).where(eq(taskIssues.task_id, id)).run();
     },
+    unlinkIssue(id: TaskId): void {
+      orm.delete(taskIssues).where(eq(taskIssues.task_id, id)).run();
+    },
   };
 }

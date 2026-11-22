@@ -1,7 +1,7 @@
 // Reading gh's JSON about issues into the domain's values, keeping only what is well formed.
 import type { Issue, IssueBlocker, IssueCloseReason, IssueComment } from '#domain/work/issues/issue.ts';
 
-export const ISSUE_FIELDS = 'number,url,title,body,state,stateReason,labels,blockedBy,parent';
+export const ISSUE_FIELDS = 'number,url,title,body,state,stateReason,labels,blockedBy,parent,subIssuesSummary';
 
 type Json = Record<string, unknown>;
 
@@ -38,6 +38,7 @@ export function issueOf(v: unknown): Issue | null {
     labels: listOf(v.labels).flatMap((l) => (isObject(l) && typeof l.name === 'string' ? [l.name] : [])),
     blocked_by: listOf(v.blockedBy).flatMap((b) => blockerOf(b) ?? []),
     parent: parent ? { number: Number(parent.number), title: str(parent.title), body: str(parent.body) } : null,
+    sub_issues: isObject(v.subIssuesSummary) && typeof v.subIssuesSummary.total === 'number' ? v.subIssuesSummary.total : 0,
   };
 }
 

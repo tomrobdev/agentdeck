@@ -1893,13 +1893,14 @@ A finished task, and whether a person finished it.
 
 What to write on an issue now: only the labels it lacks or still has, and a close only while it is open.
 
-| Field     | Type              | Comment |
-| --------- | ----------------- | ------- |
-| `add`     | `string[]`        |         |
-| `remove`  | `string[]`        |         |
-| `comment` | `string`          |         |
-| `close`   | `boolean`         |         |
-| `to`      | `TaskIssueReport` |         |
+| Field       | Type                                        | Comment                                           |
+| ----------- | ------------------------------------------- | ------------------------------------------------- |
+| `add`       | `string[]`                                  |                                                   |
+| `remove`    | `string[]`                                  |                                                   |
+| `comment`   | `string`                                    | Empty when the change is only recorded, not told. |
+| `close`     | `boolean`                                   |                                                   |
+| `close_as?` | `"completed" \| "not_planned" \| undefined` |                                                   |
+| `to`        | `TaskIssueReport`                           |                                                   |
 
 ### FailedState
 
@@ -1960,6 +1961,7 @@ An issue as the poll reads it from GitHub.
 | `labels`     | `string[]`                                                 |                                                                                   |
 | `blocked_by` | `IssueBlocker[]`                                           |                                                                                   |
 | `parent`     | `{ number: number; title: string; body: string; } \| null` | The issue this one is a sub-issue of: its title and body give the worker context. |
+| `sub_issues` | `number`                                                   | How many sub-issues it has: an issue with any is a map of work, not work itself.  |
 
 ### IssueBlocker
 

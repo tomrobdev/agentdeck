@@ -26,8 +26,8 @@ export const githubIssues = {
       await gh(cwd, ['label', 'create', l.name, '--description', l.description, '--color', l.color]);
   },
 
-  async openIssues(cwd: string, label: string): Promise<Issue[]> {
-    return parseIssues(await gh(cwd, ['issue', 'list', '--state', 'open', '--label', label, '--limit', '200', '--json', ISSUE_FIELDS]));
+  async openIssues(cwd: string): Promise<Issue[]> {
+    return parseIssues(await gh(cwd, ['issue', 'list', '--state', 'open', '--limit', '500', '--json', ISSUE_FIELDS]));
   },
 
   async issue(cwd: string, number: number): Promise<Issue | null> {
@@ -56,7 +56,7 @@ export const githubIssues = {
     await gh(cwd, ['issue', 'edit', String(number), ...args]);
   },
 
-  async close(cwd: string, number: number, comment: string): Promise<void> {
-    await gh(cwd, ['issue', 'close', String(number), '--reason', 'completed', '--comment', comment]);
+  async close(cwd: string, number: number, comment: string, as: 'completed' | 'not_planned'): Promise<void> {
+    await gh(cwd, ['issue', 'close', String(number), '--reason', as === 'not_planned' ? 'not planned' : 'completed', '--comment', comment]);
   },
 };

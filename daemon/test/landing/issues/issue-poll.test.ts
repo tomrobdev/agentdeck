@@ -1,4 +1,4 @@
-// The issue poll against a fake GitHub: a labelled issue becomes a task, the issue hears what the task does, and a person answers on the issue.
+// The issue poll against a fake GitHub: a labelled issue becomes a task and any other a proposal, the issue hears what the task does, and a person answers on the issue.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,7 +11,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('#db/index.ts');
 const { pollIssues } = await import('#application/landing/issues/poll.ts');
-const { addTask, updateRepo } = await import('#application/actions.ts');
+const { addTask, approveTask, liftTask, parkTask, rejectTask, updateRepo } = await import('#application/actions.ts');
 const { advance, testApp } = await import('#test/fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
@@ -31,7 +31,7 @@ function fakeIssues() {
     ensureLabels: async (_cwd, want) => {
       for (const l of want) labels.add(l.name);
     },
-    openIssues: async (_cwd, label) => [...issues.values()].filter((i) => i.open && i.labels.includes(label)),
+    openIssues: async () => [...issues.values()].filter((i) => i.open),
     issue: async (_cwd, n) => issues.get(n) ?? null,
     comments: async (_cwd, n) => comments.get(n) ?? [],
     labelledBy: async (_cwd, n) => labelBy.get(n) ?? null,
@@ -46,9 +46,9 @@ function fakeIssues() {
       const i = issues.get(n);
       if (i) i.labels = [...i.labels.filter((l) => !change.remove.includes(l)), ...change.add];
     },
-    close: async (_cwd, n, body) => {
+    close: async (_cwd, n, body, as) => {
       const i = issues.get(n);
-      if (i) Object.assign(i, { open: false, closed_as: 'completed' });
+      if (i) Object.assign(i, { open: false, closed_as: as });
       closed.push(n);
       written.push({ number: n, body });
     },
@@ -64,6 +64,7 @@ function fakeIssues() {
       labels: ['ready-for-agent'],
       blocked_by: [],
       parent: null,
+      sub_issues: 0,
       ...o,
     });
     labelBy.set(n, by);
@@ -103,7 +104,15 @@ test('a labelled issue becomes a queued task, once, and the issue is told its nu
   const task = db.getTask(taskOf(7));
   assert.deepEqual([task?.status, task?.source, task?.title], ['queued', 'issue', 'Issue 7']);
   assert.deepEqual(gh.said(7), [`Queued as AgentDeck task #${task?.id}.`]);
-  assert.deepEqual([...gh.labels].sort(), ['agentdeck:plan', 'agentdeck:running', 'needs-info', 'ready-for-agent', 'ready-for-human']);
+  assert.deepEqual([...gh.labels].sort(), [
+    'agentdeck:ignore',
+    'agentdeck:parked',
+    'agentdeck:plan',
+    'agentdeck:running',
+    'needs-info',
+    'ready-for-agent',
+    'ready-for-human',
+  ]);
 });
 
 test('agentdeck add is refused on an issue-backed repo', async () => {
@@ -111,11 +120,11 @@ test('agentdeck add is refused on an issue-backed repo', async () => {
   await assert.rejects(addTask(db, { repo: repo.name, prompt: 'by hand' }), /takes its tasks from GitHub Issues/);
 });
 
-test('a label someone not allowed added is taken off with a comment, and nothing is queued', async () => {
-  const { db, repo, gh } = setup();
+test('a label someone not allowed added is taken off with a comment, and the issue is only a proposal', async () => {
+  const { db, gh, taskOf } = setup();
   gh.file(8, {}, 'eve');
   await pollIssues(db);
-  assert.equal(db.taskOfIssue(repo.id, 8), undefined);
+  assert.equal(db.getTask(taskOf(8))?.status, 'proposed');
   assert.deepEqual(gh.issues.get(8)?.labels, []);
   assert.match(gh.said(8)[0] ?? '', /only when tom adds the ready-for-agent label, not eve/);
 });
@@ -207,7 +216,7 @@ test('the label put back by someone not allowed does not retry the task, and is 
 test('a parent labelled agentdeck:plan becomes a plan: its sub-issues land on its plan branch, and its plan PR merging closes it', async () => {
   const { db, repo, gh, taskOf } = setup();
   const sub = { parent: { number: 30, title: 'Phase 3', body: '' } };
-  gh.file(30, { labels: [], title: 'Phase 3', body: 'The compliance fixes.\n\n## Wallets\n\n## Orders' });
+  gh.file(30, { labels: [], title: 'Phase 3', body: 'The compliance fixes.\n\n## Wallets\n\n## Orders', sub_issues: 2 });
   gh.file(31, sub);
   await pollIssues(db);
   assert.equal(db.getTask(taskOf(31))?.target, null, 'a parent with no plan label behaves as today');
@@ -269,4 +278,89 @@ test("a sub-issue's task carries its parent's body, which gh's issue list leaves
   gh.file(21, { parent: { number: 20, title: 'Phase 3', body: '' } });
   await pollIssues(db);
   assert.match(db.getTask(taskOf(21))?.prompt ?? '', /This is part of #20, Issue 20\.\n\nPhase 3: the compliance fixes\./);
+});
+
+test('an open issue no one labelled becomes a proposal once, follows edits, and a close drops it without a word', async () => {
+  const { db, repo, gh, taskOf } = setup();
+  gh.file(40, { labels: ['needs-triage'] });
+  gh.file(41, { labels: ['ready-for-human'] });
+  gh.file(42, { labels: [], sub_issues: 2 });
+  await pollIssues(db);
+  await pollIssues(db);
+  const id = taskOf(40);
+  assert.deepEqual([db.getTask(id)?.status, db.getTask(id)?.source], ['proposed', 'issue']);
+  assert.equal(db.issueOf(id)?.reported, 'proposed');
+  assert.equal(db.taskOfIssue(repo.id, 41), undefined, "a person's issue stays out");
+  assert.equal(db.taskOfIssue(repo.id, 42), undefined, 'a parent of sub-issues stays out');
+  assert.deepEqual(gh.said(40), [], 'a proposal tells the issue nothing');
+
+  const issue = gh.issues.get(40);
+  assert.ok(issue);
+  issue.title = 'Fill the pool';
+  await pollIssues(db);
+  assert.equal(db.getTask(id)?.title, 'Fill the pool');
+
+  Object.assign(issue, { open: false, closed_as: 'completed' });
+  await pollIssues(db);
+  assert.equal(db.getTask(id)?.status, 'cancelled');
+  assert.equal(db.taskOfIssue(repo.id, 40), undefined, 'a dropped proposal lets go of its issue');
+  assert.deepEqual(gh.said(40), []);
+  Object.assign(issue, { open: true, closed_as: null });
+  await pollIssues(db);
+  assert.equal(db.getTask(taskOf(40))?.status, 'proposed', 'reopened, it is proposed again');
+});
+
+test('approve, park, lift and reject in AgentDeck write back to the issue, once each', async () => {
+  const { db, gh, taskOf } = setup();
+  gh.file(50, { labels: [] });
+  gh.file(51, { labels: [] });
+  await pollIssues(db);
+  const a = taskOf(50);
+  const b = taskOf(51);
+
+  approveTask(db, a);
+  await pollIssues(db);
+  await pollIssues(db);
+  assert.equal(db.getTask(a)?.status, 'queued', 'not cancelled for the label it had not been given yet');
+  assert.deepEqual(gh.issues.get(50)?.labels, ['ready-for-agent']);
+  assert.deepEqual(gh.said(50), [`Approved in AgentDeck and queued as task #${a}.`]);
+
+  parkTask(db, b, 'after phase 3');
+  await pollIssues(db);
+  assert.deepEqual(gh.issues.get(51)?.labels, ['agentdeck:parked']);
+  assert.match(gh.said(51).at(-1) ?? '', /parked in AgentDeck: after phase 3/);
+  liftTask(db, b);
+  await pollIssues(db);
+  assert.deepEqual(gh.issues.get(51)?.labels, []);
+  assert.match(gh.said(51).at(-1) ?? '', /lifted in AgentDeck/);
+  rejectTask(db, b);
+  await pollIssues(db);
+  await pollIssues(db);
+  assert.deepEqual([gh.issues.get(51)?.open, gh.issues.get(51)?.closed_as], [false, 'not_planned']);
+  assert.equal(gh.said(51).filter((s) => /rejected in AgentDeck/.test(s)).length, 1);
+});
+
+test("the ready label from an allowed login approves a proposal; a stranger's comes off; on a parked one it is refused", async () => {
+  const { db, gh, taskOf } = setup();
+  gh.file(60, { labels: [] });
+  gh.file(61, { labels: [] });
+  gh.file(62, { labels: [] });
+  await pollIssues(db);
+  parkTask(db, taskOf(62));
+  await pollIssues(db);
+
+  gh.issues.get(60)?.labels.push('ready-for-agent');
+  gh.issues.get(61)?.labels.push('ready-for-agent');
+  gh.labelledAgain(61, 'eve');
+  gh.issues.get(62)?.labels.push('ready-for-agent');
+  await pollIssues(db);
+
+  assert.equal(db.getTask(taskOf(60))?.status, 'queued');
+  assert.match(gh.said(60).at(-1) ?? '', /queued as task/);
+  assert.equal(db.getTask(taskOf(61))?.status, 'proposed');
+  assert.deepEqual(gh.issues.get(61)?.labels, []);
+  assert.match(gh.said(61).at(-1) ?? '', /not eve/);
+  assert.equal(db.getTask(taskOf(62))?.status, 'parked');
+  assert.deepEqual(gh.issues.get(62)?.labels, ['agentdeck:parked']);
+  assert.match(gh.said(62).at(-1) ?? '', /Lift it there first/);
 });

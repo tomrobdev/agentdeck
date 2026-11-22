@@ -7,6 +7,8 @@ export const ISSUE_LABELS = {
   human: 'ready-for-human',
   running: 'agentdeck:running',
   plan: 'agentdeck:plan',
+  parked: 'agentdeck:parked',
+  ignore: 'agentdeck:ignore',
 } as const;
 
 /** How an issue was closed: done, or set aside. */
@@ -31,6 +33,8 @@ export interface Issue {
   blocked_by: IssueBlocker[];
   /** The issue this one is a sub-issue of: its title and body give the worker context. */
   parent: { number: number; title: string; body: string } | null;
+  /** How many sub-issues it has: an issue with any is a map of work, not work itself. */
+  sub_issues: number;
 }
 
 /** A comment on an issue, by its author's login. */
@@ -40,7 +44,8 @@ export interface IssueComment {
   created_at: string;
 }
 
-export type TaskIssueReport = 'queued' | 'running' | 'question' | 'stopped' | 'pr_open' | 'merged' | 'cancelled';
+export type TaskIssueReport =
+  'proposed' | 'parked' | 'rejected' | 'queued' | 'running' | 'question' | 'stopped' | 'pr_open' | 'merged' | 'cancelled';
 
 export type PlanIssueReport = 'plan_open' | 'plan_pr_open' | 'plan_merged' | 'plan_abandoned';
 
