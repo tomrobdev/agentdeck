@@ -5,7 +5,7 @@ description: Interview the person, then write and queue one well-formed AgentDec
 
 # Add a task
 
-One task is one unit of work on one repo: one branch, one PR. This skill turns what the person wants into a task a worker can finish unattended, and queues it. Whether to delegate at all, and the sandbox limits, are in the `delegate` skill. If the work has several steps that should land separately, use `write-plan`.
+One task is one unit of work on one repo: one branch, one PR. This skill turns what the person wants into a task a worker can finish unattended, and queues it. Whether to delegate at all, and the sandbox limits, are in the `delegate` skill. If the work has several steps that should land separately, use `write-plan`. On a repo that takes its tasks from GitHub Issues (`issues` in `agentdeck repo ls`), the task is filed as an issue: see the last section.
 
 ## 1. Ask what and why
 
@@ -56,3 +56,20 @@ agentdeck add "<prompt>" --repo <repo> --title "<title>" --model <sonnet|opus> [
 If they ask to file it for later, or for someone else to approve, add `--propose`: it lands in `proposed` and waits for `agentdeck approve <id>`.
 
 Read `agentdeck add`'s output. AgentDeck stores the prompt with its sections as `## ` headings in the order above, and a `warning:` line means Current problem or Expected outcome is missing: add it with `agentdeck edit <id> --prompt "…"`. A path note means the prompt or the base branch is wrong: fix it the same way before the task starts. Then tell the person the task id and stop. Don't poll it: AgentDeck notifies the person when it needs them.
+
+## On an issue-backed repo
+
+`agentdeck repo ls` shows `issues` on a repo that takes its tasks from GitHub Issues; `agentdeck add` is refused there. The task is filed as an issue instead, and the daemon queues it from there (its title and prompt follow the issue while it waits):
+
+- **Body:** the same four sections, as `## ` headings. The issue's title is the task's title.
+- **Links:** `--blocked-by <issue>` in place of `--builds-on`: the daemon turns an open blocker into a builds-on link, and waits while the blocker has no task yet. There is no after link.
+- **Model and turns:** not settable from an issue; the task takes the repo's model. Say so when you show it.
+- **Part of a bigger piece:** `--parent <issue>` makes it a sub-issue; the parent's body goes into the prompt as context.
+
+Show it as above, then on the person's OK, from the repo's path:
+
+```sh
+gh issue create --title "<title>" --body-file <file> --label ready-for-agent [--blocked-by <issues>] [--parent <issue>]
+```
+
+The `ready-for-agent` label queues it, and only a login on the repo's `issues_allow` counts (by default the one `gh` is signed in as). To file it for later, leave the label off: an unlabelled issue is the repo's proposal. Tell the person the issue's URL and stop.

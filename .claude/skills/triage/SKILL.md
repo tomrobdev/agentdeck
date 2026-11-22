@@ -46,3 +46,13 @@ Use the `review-task` skill. If the only problem is conflicts, `agentdeck sync <
 Read the prompt against the repo's goals (`agentdeck goals <repo>`) and the code. Approve (`agentdeck approve <id>`), reject, or edit and then approve. Proposals that depend on work that hasn't landed can wait: say what they wait for.
 
 End with what changed and what is still waiting, in a few lines.
+
+## On an issue-backed repo
+
+On a repo with `issues` in `agentdeck repo ls`, GitHub is where a person answers, so act on the issue rather than the task, and the issue keeps the history:
+
+- **Proposals** are the repo's open issues with none of the daemon's labels, not tasks in `proposed`: `gh issue list --search '-label:ready-for-agent -label:needs-info -label:"agentdeck:running"'`. That list also holds issues whose task blocked, failed or was cancelled (the daemon takes its labels off, and says so in a comment): those are below. Approve one with `gh issue edit <n> --add-label ready-for-agent`; reject one by closing it as not planned (`gh issue close <n> --reason "not planned"`).
+- **Blocked with a question** (the issue has `needs-info`): reply on the issue (`gh issue comment <n>`), then put `ready-for-agent` back. The retry takes the comments since as its note.
+- **Blocked or failed otherwise:** the same, with a comment that says what to change. `agentdeck retry` works too but leaves the issue out of it.
+- **Cancel:** close the issue (`--reason "not planned"`), or take its label off while the task is still queued.
+- **Review and merge** are as on any repo; the daemon closes the issue when the PR merges.

@@ -33,6 +33,10 @@ test('repo set changes a setting and says so, tools say where the rules come fro
   assert.match((await run('repo', 'set', 'alpha', 'tools', '')).out, /alpha: tools detected from its toolchain/);
   assert.match((await run('repo', 'set', 'alpha', 'nope', 'x')).err, /usage: agentdeck repo set <repo>/);
   assert.match((await run('repo', 'ls')).out, /auto-approve/);
+  assert.doesNotMatch((await run('repo', 'ls')).out, / {2}issues/);
+  await run('repo', 'set', 'alpha', 'issues', 'on');
+  assert.match((await run('repo', 'ls')).out, / {2}issues/);
+  await run('repo', 'set', 'alpha', 'issues', 'off');
 });
 
 test('goals prints the goals file, and --file replaces it', async () => {
