@@ -40,13 +40,11 @@ export interface IssueComment {
   created_at: string;
 }
 
-/** What the daemon last told a sub-issue or plain issue about its task. */
 export type TaskIssueReport = 'queued' | 'running' | 'question' | 'stopped' | 'pr_open' | 'merged' | 'cancelled';
 
-/** What the daemon last told a parent issue about the plan it became and its plan branch. */
 export type PlanIssueReport = 'plan_open' | 'plan_pr_open' | 'plan_merged' | 'plan_abandoned';
 
-/** What the daemon last told an issue, so each change is reported once. */
+/** What the daemon last told an issue about its task, so each change is reported once. */
 export type IssueReport = TaskIssueReport | PlanIssueReport;
 
 /** A task's link to the issue it came from. */

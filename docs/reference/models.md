@@ -2321,8 +2321,6 @@ A task that follows a plan, with the step ids it links (null for every step).
 
 ### PlanIssueWrite
 
-What to write on a parent issue now, and whether its plan branch is to be abandoned first.
-
 | Field     | Type              | Comment |
 | --------- | ----------------- | ------- |
 | `to`      | `PlanIssueReport` |         |

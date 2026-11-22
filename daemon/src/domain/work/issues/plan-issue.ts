@@ -84,7 +84,6 @@ function issuePlanHtml(issue: Pick<Issue, 'number' | 'url' | 'title' | 'body'>):
   ].join('\n');
 }
 
-/** What to do with a parent issue labelled agentdeck:plan that has no task yet. */
 type PlanIntake = { kind: 'add'; title: string; prompt: string; html: string } | { kind: 'refuse'; comment: string };
 
 export function planIntake(issue: Issue, ctx: { labelledBy: string | null; allowed: readonly string[] }): PlanIntake {
@@ -97,7 +96,6 @@ export function planIntake(issue: Issue, ctx: { labelledBy: string | null; allow
 export const planOwnerParkReason = (issue: number): string =>
   `owns the plan of issue #${issue}: its sub-issues labelled ${ISSUE_LABELS.ready} are its tasks`;
 
-/** What to write on a parent issue now, and whether its plan branch is to be abandoned first. */
 export interface PlanIssueWrite {
   to: PlanIssueReport;
   comment: string;
