@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { highlightLines, languageFor } from '#app/lib/shared/render.ts';
+import { codeBlockHtml, highlightLines, languageFor } from '#app/lib/shared/render.ts';
 
 test('highlightLines gives one entry per line and escapes plain text', () => {
   assert.deepEqual(highlightLines(['a < b', 'c & d'], null), ['a &lt; b', 'c &amp; d']);
@@ -24,4 +24,10 @@ test('languageFor picks the language from the file name', () => {
   assert.equal(languageFor('src/a.ts'), 'typescript');
   assert.equal(languageFor('Dockerfile'), 'bash');
   assert.equal(languageFor('notes.txt'), null);
+});
+
+test('a mermaid code block is left as escaped text for the dashboard to draw; any other is highlighted', () => {
+  assert.equal(codeBlockHtml('a --> b<c', 'mermaid'), '<pre class="mermaid">a --&gt; b&lt;c</pre>');
+  assert.match(codeBlockHtml('const a = 1;', 'typescript'), /^<pre class="hljs"><code><span class="hljs-keyword">const/);
+  assert.equal(codeBlockHtml('a < b', 'nope'), '<pre class="hljs"><code>a &lt; b</code></pre>');
 });

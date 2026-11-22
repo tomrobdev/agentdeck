@@ -14,6 +14,14 @@ test("a task page's Overview shows the prompt, the pull request and the plan", a
   await expect(plan).toContainText('1/2');
 });
 
+test("a mermaid block in the pull request's summary is drawn as a diagram", async ({ page }) => {
+  await open(page, '#/tasks/2/overview');
+  const diagram = page.locator('.md .mermaid svg').first();
+  await expect(diagram).toBeVisible();
+  await expect(diagram).toContainText('Hello, everyone!');
+  await expect(page.getByText('flowchart LR')).toHaveCount(0);
+});
+
 test("a task page's run log shows what the run did", async ({ page }) => {
   await open(page, '#/tasks/2/runs');
   await expect(page.getByRole('tab', { name: /Runs/ })).toHaveAttribute('data-state', 'active');
