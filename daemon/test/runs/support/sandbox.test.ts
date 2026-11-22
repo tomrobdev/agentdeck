@@ -86,7 +86,7 @@ test('the worker prompt says sandbox-only test failures are no reason to block',
 test('the worker prompt asks for the summary format before the STATUS line', () => {
   const prompt = workerSystemPrompt('pnpm test');
   assert.ok(prompt.includes(PR_SUMMARY_FORMAT));
-  for (const h of ['## Overview', '## Frontend', '## Backend']) assert.ok(PR_SUMMARY_FORMAT.includes(h));
+  for (const h of ['## Overview', '## Frontend', '## Backend', '## Diagram', '```mermaid']) assert.ok(PR_SUMMARY_FORMAT.includes(h));
   assert.ok(prompt.indexOf(PR_SUMMARY_FORMAT) < prompt.indexOf('End your final message with exactly one line'));
   assert.match(prompt, /BLOCKED message is free-form/);
 });

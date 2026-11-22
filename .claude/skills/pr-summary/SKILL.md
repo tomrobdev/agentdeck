@@ -1,6 +1,6 @@
 ---
 name: pr-summary
-description: Write a pull request summary in the Overview, Frontend, Backend format AgentDeck's workers use. Use when the user asks for a PR description, a PR summary, to open a PR from this session, or to rewrite the summary of a task's PR.
+description: Write a pull request summary in the Overview, Frontend, Backend, Diagram format AgentDeck's workers use. Use when the user asks for a PR description, a PR summary, to open a PR from this session, or to rewrite the summary of a task's PR.
 ---
 
 # Write a PR summary
@@ -15,15 +15,22 @@ Bullets in these sections, in this order:
 ## Overview
 ## Frontend
 ## Backend
+## Diagram
 ```
 
-- Bullets only, one line each, at most 5 per section.
+- Bullets only, one line each, at most 5 per section, except Diagram: one ` ```mermaid ` block.
 - File names in backticks.
 - Never write "I".
 - Leave out a section with nothing in it.
 - **Overview:** what changed and why, and how it was checked. Name any test the sandbox broke, and anything not tried for real.
 - **Frontend:** what the user sees, or the dashboard code.
 - **Backend:** the daemon, data and everything else.
+- **Diagram:** only when the change does one of these, and never otherwise (a fix inside one function, copy, styling, tests, config or a rename):
+  - changes the architecture: adds, removes or moves a component, layer or boundary (`flowchart`);
+  - changes how models or systems interact: a call, relation, event or integration between them (`sequenceDiagram`, or `erDiagram` for models);
+  - adds or changes a state machine, a process or a flow of events: a status, step or transition (`stateDiagram-v2` or `flowchart`).
+
+  Draw how it works after the change, in at most 15 nodes, and mark what changed.
 
 ## Writing it
 
