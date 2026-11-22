@@ -129,6 +129,7 @@ In a repo with issues on, tasks come from GitHub Issues instead of `agentdeck ad
 - A person approves, parks, lifts or rejects it in the dashboard as any proposal, and the issue hears it once: approved adds ready-for-agent, parked adds agentdeck:parked with the reason, lifted takes it off, and rejected closes the issue as not planned.
 - On GitHub, the ready-for-agent label from an allowed login approves the proposal; on a parked one it is taken off with a comment to lift it first.
 - An edit to the issue edits the proposal. Closing the issue, or a keep-out label, drops the proposal without a word and frees the issue, so reopened it is proposed again.
+- A verify run's findings go on the issue as a comment once it ends (`dueVerifyComment`), so the record stays on GitHub; one with no findings, or that failed, puts nothing there.
 
 ### A parent issue as a plan
 

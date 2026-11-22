@@ -1,5 +1,5 @@
 // A GitHub issue a task came from, the labels the daemon reads and writes on it, and what it last reported there.
-import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { RepoId, RunId, TaskId } from '#domain/shared/index.ts';
 
 export const ISSUE_LABELS = {
   ready: 'ready-for-agent',
@@ -62,6 +62,8 @@ export interface TaskIssue {
   reported: IssueReport | null;
   /** When it was reported, so a person's later comments can be told apart. */
   reported_at: string | null;
+  /** The verify run whose findings were last put on the issue; null before any. */
+  verify_reported: RunId | null;
 }
 
 export const ISSUE_MARK = '<!-- agentdeck -->';

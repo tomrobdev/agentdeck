@@ -377,3 +377,23 @@ test("an issue's task is edited on GitHub: its title and prompt are refused in A
   await assert.rejects(editTask(db, id, { title: 'by hand' }), /come from issue #70/);
   assert.equal((await editTask(db, id, { priority: 2 })).priority, 2);
 });
+
+test("a verify run's findings are commented on the issue once; the next verify run comments its own", async () => {
+  const { db, gh, taskOf } = setup();
+  gh.file(80, { labels: [] });
+  await pollIssues(db);
+  const id = taskOf(80);
+  const findings = [{ claim: 'it is broken', verdict: 'stale', path: 'a.ts', line: 1, evidence: 'Fixed in #12.', fix: 'Drop it.' }];
+  const verify = () => {
+    const run = db.startRun(id, 0, join(home, `verify-${id}.log`), 'verify');
+    db.finishRun(run, { outcome: 'done', result_text: JSON.stringify({ findings }), ended_at: new Date().toISOString() });
+  };
+  verify();
+  await pollIssues(db);
+  await pollIssues(db);
+  assert.equal(gh.said(80).filter((s) => s.startsWith('A verify run')).length, 1);
+  assert.match(gh.said(80).at(-1) ?? '', /1 claim: 1 stale/);
+  verify();
+  await pollIssues(db);
+  assert.equal(gh.said(80).filter((s) => s.startsWith('A verify run')).length, 2);
+});

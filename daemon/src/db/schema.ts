@@ -333,6 +333,8 @@ export const MIGRATIONS: Migration[] = [
      reported_at TEXT
    );
    CREATE UNIQUE INDEX task_issues_repo_number ON task_issues(repo_id, number);`,
+  // 52: the verify run whose findings were last put on a task's issue.
+  `ALTER TABLE task_issues ADD COLUMN verify_reported INTEGER;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

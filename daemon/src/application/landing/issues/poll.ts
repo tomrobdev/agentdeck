@@ -1,6 +1,7 @@
 // The issue poll: for each issue-backed repo, labelled issues become tasks and the other open ones proposals, a person's changes on an issue reach its task, and the issue is told what its task did.
 import type { App } from '#application/ports/app.ts';
 import type { Repo } from '#domain/repos/index.ts';
+import { dueVerifyComment } from '#domain/runs/index.ts';
 import {
   type Issue,
   type TaskIssue,
@@ -155,12 +156,18 @@ async function follow(
     log(`task #${before.id}: retried from issue #${link.number}`);
   }
   const task = app.getTask(link.task_id);
-  const write = task && dueIssueWrite(task, link, issue, repo.pr_mode !== 'off');
-  if (!task || !write) return;
-  await app.issues.editLabels(repo.path, link.number, write);
-  if (write.close) await app.issues.close(repo.path, link.number, signed(write.comment), write.close_as ?? 'completed');
-  else if (write.comment) await app.issues.comment(repo.path, link.number, signed(write.comment));
-  app.reportIssue(task.id, write.to, new Date(now).toISOString());
+  if (!task) return;
+  const write = dueIssueWrite(task, link, issue, repo.pr_mode !== 'off');
+  if (write) {
+    await app.issues.editLabels(repo.path, link.number, write);
+    if (write.close) await app.issues.close(repo.path, link.number, signed(write.comment), write.close_as ?? 'completed');
+    else if (write.comment) await app.issues.comment(repo.path, link.number, signed(write.comment));
+    app.reportIssue(task.id, write.to, new Date(now).toISOString());
+  }
+  const verify = issue.open ? dueVerifyComment(task, app.runsForTask(task.id), link.verify_reported) : null;
+  if (!verify) return;
+  await app.issues.comment(repo.path, link.number, signed(verify.comment));
+  app.reportVerify(task.id, verify.run_id);
 }
 
 async function pollRepo(app: App, repo: Repo, now: number, log: Log): Promise<void> {

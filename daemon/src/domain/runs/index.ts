@@ -74,6 +74,7 @@ export {
   latestVerify,
   parseVerifyAnswer,
   runFindings,
+  dueVerifyComment,
   verifyLine,
   verifyRefusal,
   verifySchemaArgs,
