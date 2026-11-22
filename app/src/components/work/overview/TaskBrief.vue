@@ -27,14 +27,16 @@ const OUTCOME = 'Expected outcome';
     padding-left: 0.2em;
   }
   .brief-outcome ul > li {
+    position: relative;
     padding-left: 1.5em;
-    text-indent: -1.5em;
+  }
+  .brief-outcome ul > li > p {
+    margin: 0;
   }
   .brief-outcome ul > li::before {
     content: '☐';
-    display: inline-block;
-    width: 1.5em;
-    text-indent: 0;
+    position: absolute;
+    left: 0;
     color: var(--muted);
   }
 }
