@@ -127,4 +127,4 @@ The map of the code is `docs/architecture.md`.
 - **Every `claude` runs in its own process group** with its pid recorded on the run, so crash recovery can stop it. <!-- rule:claude-process-group -->
 - **Keep this checkout on `main`.** The installed daemon runs its `daemon/src/cli.ts`, so switching branches here swaps the live daemon's code. Try task branches from their worktrees. <!-- rule:main-checkout -->
 - **The router is the only navigation** in `app/src/`: nothing else reads `location.hash`, calls `history.pushState` or listens to `hashchange`. <!-- rule:dashboard-router -->
-- **Delegating to AgentDeck:** when to queue a task instead of doing it here, how to write it, and how to work in a task's worktree are in the `delegate` skill (`.claude/skills/delegate/SKILL.md`). <!-- rule:delegate-skill -->
+- **Delegating to AgentDeck:** once work is settled, ask "Would you like to do this on a branch now, or add to tasks?" and recommend one. When to queue a task instead of doing it here, how to write it, and how to work in a task's worktree are in the `delegate` skill (`.claude/skills/delegate/SKILL.md`). <!-- rule:delegate-skill -->

@@ -23,7 +23,11 @@ Suggest delegating when all of these hold:
 
 Do it in this session when it's small (a few minutes of work), exploratory, needs back-and-forth with the user, edits `.claude/` (see below), or changes the code of AgentDeck's live daemon (see "AgentDeck itself").
 
-Never queue without asking. Say why the task fits, what you'd queue (title, model, plan or not), and wait for the user's OK. Queueing spends quota and opens PRs that nobody watches.
+Once the work is settled, ask the person in these words: "Would you like to do this on a branch now, or add to tasks?" Never pick for them, and never queue without that answer: queueing spends quota and opens PRs that nobody watches. With the question, say:
+
+- which you recommend and why, from the checks above (what a worker can't do, decisions still open, whether they're waiting);
+- for a branch: where it goes. In AgentDeck's own repo that is a worktree for anything longer than a few minutes or that touches the daemon (see "AgentDeck itself");
+- for tasks: what you'd queue (titles, models, links, plan or not).
 
 ## What a worker can't do
 
