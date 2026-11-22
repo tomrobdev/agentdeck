@@ -11,4 +11,5 @@ export interface IssueHost {
   comment(cwd: string, number: number, body: string): Promise<void>;
   editLabels(cwd: string, number: number, change: { add: string[]; remove: string[] }): Promise<void>;
   close(cwd: string, number: number, comment: string, as: 'completed' | 'not_planned'): Promise<void>;
+  create(cwd: string, issue: { title: string; body: string; labels: string[] }): Promise<string>;
 }

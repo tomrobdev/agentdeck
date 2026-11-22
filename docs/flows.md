@@ -161,7 +161,7 @@ sequenceDiagram
 
 ## A proposal
 
-When a repo's queue runs dry and its planner is due (`plannerDue`), the planner reads the repo's goals and proposes tasks (`propose`). They wait in proposed, on Attention, until a person approves them in the dashboard (`approveTask`), parks them, or rejects them.
+When a repo's queue runs dry and its planner is due (`plannerDue`), the planner reads the repo's goals and proposes tasks (`propose`). They wait in proposed, on Attention, until a person approves them in the dashboard (`approveTask`), parks them, or rejects them. In a repo with issues on, it opens each proposal as an issue instead, labelled ready-for-agent only when the repo auto-approves, and the next issue poll makes it a proposal.
 
 ```mermaid
 sequenceDiagram

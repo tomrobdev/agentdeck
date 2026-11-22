@@ -1,6 +1,6 @@
 // The issue poll against a fake GitHub: a labelled issue becomes a task and any other a proposal, the issue hears what the task does, and a person answers on the issue.
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -8,10 +8,13 @@ import { test } from 'node:test';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-issue-poll-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
+const fakeClaude = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
+chmodSync(fakeClaude, 0o755);
+process.env.AGENTDECK_CLAUDE_BIN = fakeClaude;
 
 const { openDb } = await import('#db/index.ts');
 const { pollIssues } = await import('#application/landing/issues/poll.ts');
-const { addTask, approveTask, editTask, liftTask, parkTask, rejectTask, updateRepo } = await import('#application/actions.ts');
+const { addTask, approveTask, editTask, liftTask, parkTask, proposeNow, rejectTask, updateRepo } = await import('#application/actions.ts');
 const { advance, testApp } = await import('#test/fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
@@ -45,6 +48,11 @@ function fakeIssues() {
     editLabels: async (_cwd, n, change) => {
       const i = issues.get(n);
       if (i) i.labels = [...i.labels.filter((l) => !change.remove.includes(l)), ...change.add];
+    },
+    create: async (_cwd, made) => {
+      const number = Math.max(0, ...issues.keys()) + 1;
+      file(number, { title: made.title, body: made.body, labels: made.labels });
+      return `https://github.com/o/r/issues/${number}`;
     },
     close: async (_cwd, n, body, as) => {
       const i = issues.get(n);
@@ -396,4 +404,36 @@ test("a verify run's findings are commented on the issue once; the next verify r
   verify();
   await pollIssues(db);
   assert.equal(gh.said(80).filter((s) => s.startsWith('A verify run')).length, 2);
+});
+
+test('the planner opens issues on an issue-backed repo, and the next poll makes them proposals', async () => {
+  const { db, repo, gh, taskOf } = setup();
+  mkdirSync(repo.path, { recursive: true });
+  updateRepo(db, repo.name, { goals: '# Goals\n- greet people' });
+  const res = await proposeNow(db, repo.name);
+  assert.deepEqual([res.outcome, res.tasks.length], ['proposed', 0]);
+  assert.ok(gh.issues.size >= 2, 'one issue per proposal');
+  assert.equal(db.tasksForRepo(repo.id, 10).length, 0, 'no task until the poll');
+  const [first] = [...gh.issues.values()];
+  assert.match(first?.body ?? '', /Proposed by AgentDeck's planner/);
+  assert.deepEqual(first?.labels, []);
+  await pollIssues(db);
+  for (const n of gh.issues.keys()) assert.equal(db.getTask(taskOf(n))?.status, 'proposed');
+});
+
+test('an auto-approving issue-backed repo labels the issues its planner opens; a planner with nothing to propose opens none', async () => {
+  const { db, repo, gh, taskOf } = setup();
+  mkdirSync(repo.path, { recursive: true });
+  updateRepo(db, repo.name, { goals: '# Goals\n- greet people', auto_approve: true });
+  await proposeNow(db, repo.name);
+  const made = [...gh.issues.values()];
+  assert.ok(made.length && made.every((i) => i.labels.includes('ready-for-agent')));
+  await pollIssues(db);
+  assert.equal(db.getTask(taskOf(made[0]?.number ?? 0))?.status, 'queued');
+
+  const empty = setup();
+  mkdirSync(empty.repo.path, { recursive: true });
+  updateRepo(empty.db, empty.repo.name, { goals: '# Goals\n- FAKE_PLAN_EMPTY' });
+  const res = await proposeNow(empty.db, empty.repo.name);
+  assert.deepEqual([res.outcome, res.note, empty.gh.issues.size], ['nothing', 'goals already met', 0]);
 });

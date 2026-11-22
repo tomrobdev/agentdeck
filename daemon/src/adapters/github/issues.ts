@@ -56,6 +56,11 @@ export const githubIssues = {
     await gh(cwd, ['issue', 'edit', String(number), ...args]);
   },
 
+  async create(cwd: string, issue: { title: string; body: string; labels: string[] }): Promise<string> {
+    const labels = issue.labels.flatMap((l) => ['--label', l]);
+    return (await gh(cwd, ['issue', 'create', '--title', issue.title, '--body', issue.body, ...labels])).trim();
+  },
+
   async close(cwd: string, number: number, comment: string, as: 'completed' | 'not_planned'): Promise<void> {
     await gh(cwd, ['issue', 'close', String(number), '--reason', as === 'not_planned' ? 'not planned' : 'completed', '--comment', comment]);
   },
