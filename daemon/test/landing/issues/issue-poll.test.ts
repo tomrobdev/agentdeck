@@ -437,3 +437,18 @@ test('an auto-approving issue-backed repo labels the issues its planner opens; a
   const res = await proposeNow(empty.db, empty.repo.name);
   assert.deepEqual([res.outcome, res.note, empty.gh.issues.size], ['nothing', 'goals already met', 0]);
 });
+
+test('a proposal whose issue is labelled agentdeck:plan gives way to the plan, with its page', async () => {
+  const { db, repo, gh, taskOf } = setup();
+  gh.file(90, { labels: [], title: 'Phase 4', body: 'Why.\n\n## Wallets\n\n## Orders' });
+  await pollIssues(db);
+  const proposal = taskOf(90);
+  gh.issues.get(90)?.labels.push('agentdeck:plan');
+  await pollIssues(db);
+  const owner = taskOf(90);
+  assert.notEqual(owner, proposal);
+  assert.equal(db.getTask(proposal)?.status, 'cancelled');
+  assert.equal(db.getTask(owner)?.status, 'parked');
+  assert.ok(db.ownPlan(owner), 'the plan has its page');
+  assert.equal(db.planBranchOf(owner, repo.id)?.name, `plan/${owner}-phase-4`);
+});

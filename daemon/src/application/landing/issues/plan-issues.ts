@@ -43,6 +43,11 @@ async function moveSubIssues(app: App, repo: Repo, owner: TaskId, target: string
 
 async function takeInPlan(app: App, repo: Repo, issue: Issue, labelled: Issue[], allowed: string[], log: Log): Promise<void> {
   let id = app.taskOfIssue(repo.id, issue.number);
+  if (id !== undefined && app.getTask(id)?.status === 'proposed' && !app.ownPlan(id)) {
+    rejectTask(app, id);
+    app.unlinkIssue(id);
+    id = undefined;
+  }
   if (id === undefined) {
     const by = await app.issues.labelledBy(repo.path, issue.number, ISSUE_LABELS.plan);
     const intake = planIntake(issue, { labelledBy: by, allowed });

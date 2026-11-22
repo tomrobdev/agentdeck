@@ -128,7 +128,7 @@ async function follow(
 ): Promise<void> {
   const before = app.getTask(link.task_id);
   const read = before && (listed ?? (await app.issues.issue(repo.path, link.number)));
-  if (!before || !read) return;
+  if (!before || !read || (before.status === 'parked' && app.ownPlan(before.id))) return;
   const followsText = before.status === 'queued' || before.status === 'proposed' || before.status === 'parked';
   const issue = followsText ? await withParent(app, repo, read) : read;
   const move = issueMove(before, issue, link);
