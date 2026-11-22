@@ -10,6 +10,7 @@ AgentDeck runs queued tasks unattended with `claude -p`, one git worktree per ta
 - **One task:** the `add-task` skill interviews the person, writes the prompt and queues it.
 - **A plan and several linked tasks:** the `write-plan` skill.
 - **Reviewing what a task did:** the `review-task` skill.
+- **A repo that takes its tasks from GitHub Issues** (`issues` in `agentdeck repo ls`): `agentdeck add` is refused, and a task is an issue labelled `ready-for-agent`. `add-task` and `write-plan` file the issues, and `triage` answers on them.
 
 ## Delegate or do it here
 

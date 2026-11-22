@@ -5,7 +5,7 @@ description: Write an AgentDeck plan (an HTML page AgentDeck stores with a task,
 
 # Write a plan and split it into tasks
 
-A **plan** is an HTML page attached to tasks that says how the work will be done, step by step. The daemon puts each linked step's text and done criteria into the worker's prompt, and the dashboard shows the steps on the task's Overview. Not the planner's proposals: those are tasks. Whether to delegate at all, and the sandbox limits, are in the `delegate` skill.
+A **plan** is an HTML page attached to tasks that says how the work will be done, step by step. The daemon puts each linked step's text and done criteria into the worker's prompt, and the dashboard shows the steps on the task's Overview. Not the planner's proposals: those are tasks. Whether to delegate at all, and the sandbox limits, are in the `delegate` skill. On a repo that takes its tasks from GitHub Issues (`issues` in `agentdeck repo ls`), the plan is a parent issue: see the last section.
 
 ## 1. Settle it with the person
 
@@ -56,3 +56,21 @@ agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan <first task> --s
 Show the person the tasks, their models and their links before queueing, and queue on their OK. The plan shows on each task's Overview at once. Workers set their steps' `data-status` as they go, and AgentDeck saves back only each task's own steps, so tasks on one plan can run side by side. To change the plan before its tasks run, edit the draft and `agentdeck attach <first task> ~/.agentdeck/drafts/<short-name>.html`.
 
 Tell the person the task ids and stop.
+
+## On an issue-backed repo
+
+`agentdeck add` is refused on a repo with `issues` in `agentdeck repo ls`, so the plan and its tasks are issues. Settle the approach first, as in step 1; then, instead of steps 2 and 3:
+
+- **The plan is a parent issue,** in Markdown, not the HTML page: the summary, the why with file paths, then one `### <step title>` per step with its change and a list of its done checks, then Out of scope. Its body goes into every sub-issue's prompt as context, so write it for the worker. No `ready-for-agent` label on it: it is not work itself.
+- **Each group of steps is a sub-issue,** in the four sections of `add-task`, created with `--parent <parent issue>`. The steps don't reach the worker on their own here, so its Expected outcome carries its steps' done checks, not only their names.
+- **Links:** `--blocked-by <issue>` where `--builds-on` would go; there is no after link. Create the issues in order, so a blocker exists before the issue it blocks.
+- **Model and turns** can't be set from an issue; every task takes the repo's model.
+
+Show the person the parent and the sub-issues, then on their OK, from the repo's path:
+
+```sh
+gh issue create --title "<plan title>" --body-file <plan.md>
+gh issue create --title "<task title>" --body-file <task.md> --parent <plan issue> [--blocked-by <issues>] --label ready-for-agent
+```
+
+Each labelled sub-issue is queued on the daemon's next poll (every two minutes); leave the label off any that should wait. Every task targets the repo's base branch: an issue can't open a plan branch yet. Tell the person the issue URLs and stop.
