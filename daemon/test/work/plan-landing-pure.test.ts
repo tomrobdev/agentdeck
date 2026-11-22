@@ -39,14 +39,16 @@ test("a task's review verdict is its last submitted review's", () => {
 
 test("the plan PR's body is a punch list of the plan's tasks", () => {
   const body = planPrBody({ name: 'plan/7-payments', base: 'main', plan_task: asTaskId(7) }, 'Payments | phase', [
-    { id: asTaskId(8), title: 'Pay out', ...merged, review: 'clean', unfinished: [] },
+    { id: asTaskId(8), title: 'Pay out', ...merged, review: 'clean', unfinished: [], issue: 44 },
     { id: asTaskId(9), title: 'KYC', ...merged, review: null, unfinished: ['kyc', 'docs'] },
-    { id: asTaskId(10), title: 'Drop it', ...cancelled, review: 'blocking', unfinished: [] },
+    { id: asTaskId(10), title: 'Drop it', ...cancelled, review: 'blocking', unfinished: [], issue: 45 },
   ]);
   assert.match(body, /^Lands `plan\/7-payments` on `main`: the work of #7's plan, Payments \\\| phase\./);
   assert.match(body, /\| #8 Pay out \| https:\/\/x\/pull\/1 \| clean \| none \|/);
   assert.match(body, /\| #9 KYC \| https:\/\/x\/pull\/1 \| not reviewed \| kyc, docs \|/);
   assert.match(body, /\| #10 Drop it \| cancelled \| blocking \| none \|/);
+  assert.match(body, /\nCloses #44\.$/, "a merged task's issue closes with the plan PR");
+  assert.doesNotMatch(body, /#45/, "a cancelled task's issue does not");
 });
 
 test('a plan PR that merged lands the plan branch, and one closed unmerged sends it back to active', () => {

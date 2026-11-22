@@ -40,6 +40,7 @@ function punchLine(app: App, task: Task): PunchLine {
     pr: task.pr ? { state: task.pr.state, url: task.pr.url } : null,
     review: reviewVerdictOf(app.reviewsForTask(task.id)),
     unfinished: steps ? unfinishedSteps(steps).map((s) => s.id ?? s.title) : [],
+    issue: app.issueOf(task.id)?.number ?? null,
   };
 }
 

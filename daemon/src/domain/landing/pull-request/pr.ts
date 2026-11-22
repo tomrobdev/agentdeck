@@ -148,7 +148,7 @@ export function buildPrBody(
   return [
     finalMessage(runs) || '(the agent left no final message)',
     '',
-    ...(issue === null ? [] : [`Refs #${issue}.`, '']),
+    ...(issue === null ? [] : [`Closes #${issue}.`, '']),
     ...(codeComments ? [`A person needs to merge this: ${codeComments}.`, ''] : []),
     '<details><summary>Plan and runs</summary>',
     '',
