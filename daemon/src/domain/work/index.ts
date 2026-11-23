@@ -166,7 +166,9 @@ export type { BaseCommit, Overlap, ProposalCheck, Staleness } from '#domain/work
 export { describeEvent } from '#domain/work/read/event-text.ts';
 export type { PersonEventText } from '#domain/work/read/event-text.ts';
 export {
-  FILE_REFS,
+  fileRefRun,
+  isFileRef,
+  verifyFileRef,
   LOG_FORMAT,
   PATCH_LIMIT,
   TEXT_LIMIT,

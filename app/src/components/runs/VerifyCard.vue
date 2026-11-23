@@ -10,7 +10,6 @@ import { useAction } from '#composables/shared/useActions.ts';
 import VerifyFindings from '#components/runs/VerifyFindings.vue';
 
 const props = defineProps<{ task: Pick<TaskDetail, 'id' | 'status' | 'runs'> }>();
-const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 const { pending, run } = useAction();
 
 const checked = computed(() => CHECKED_STATUSES.includes(props.task.status));
@@ -35,6 +34,6 @@ const verify = () => run(() => runsApi.verify(props.task.id), { done: `Verify ru
         {{ view && !going ? 'Verify again' : 'Verify' }}
       </button>
     </header>
-    <VerifyFindings v-if="view" class="px-3.5 py-2" :view="view" @path="(p, l) => emit('path', p, l)" />
+    <VerifyFindings v-if="view" class="px-3.5 py-2" :view="view" :task-id="task.id" />
   </article>
 </template>

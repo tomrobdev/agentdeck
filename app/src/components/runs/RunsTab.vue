@@ -100,7 +100,7 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
       :key="`verify-${run.id}`"
       class="max-h-[40vh] flex-none overflow-y-auto rounded-md border border-border bg-panel px-3.5 py-2"
       :view="latestVerify([run], null)!"
-      @path="(p, l) => emit('path', p, l)"
+      :task-id="task.id"
     />
     <FinalMessage v-else-if="run?.result_text" :key="run.id" class="max-h-[40vh] flex-none overflow-y-auto" :open="run.outcome !== 'done'">
       <Markdown :text="run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />

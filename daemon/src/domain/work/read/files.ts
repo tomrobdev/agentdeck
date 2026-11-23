@@ -1,10 +1,18 @@
 // Reading a task's code from git: the shapes the API returns, path checks, size limits and the parsing of git's -z output.
-import { sqliteUtc } from '#domain/shared/index.ts';
+import { type RunId, asRunId, sqliteUtc } from '#domain/shared/index.ts';
 import type { SincePoint } from '#domain/work/read/since.ts';
 
-/** Which commit a read is at: the task's branch, or where it left the repo's base branch. */
-export type FileRef = 'head' | 'base';
-export const FILE_REFS: FileRef[] = ['head', 'base'];
+/** Which commit a read is at: the task's branch, where it left the repo's base branch, or the commit one of its verify runs read. */
+export type FileRef = 'head' | 'base' | `verify:${number}`;
+
+export const verifyFileRef = (run: RunId): FileRef => `verify:${run}`;
+
+export function fileRefRun(ref: string): RunId | null {
+  const id = /^verify:([1-9]\d{0,14})$/.exec(ref)?.[1];
+  return id ? asRunId(Number(id)) : null;
+}
+
+export const isFileRef = (ref: string): ref is FileRef => ref === 'head' || ref === 'base' || fileRefRun(ref) !== null;
 
 export type ChangeStatus = 'A' | 'M' | 'D' | 'R';
 

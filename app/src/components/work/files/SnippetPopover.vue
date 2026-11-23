@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import { fileQuery } from '#api/work.ts';
 import { useCommits } from '#composables/work/files/useChanges.ts';
 import AnchoredPanel from '#components/ui/AnchoredPanel.vue';
-import CodeView from '#components/work/files/CodeView.vue';
+import CodeView from '#components/ui/code/CodeView.vue';
 
 const props = defineProps<{ taskId: number; root: HTMLElement | null }>();
 

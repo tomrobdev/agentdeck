@@ -1696,6 +1696,7 @@ One claim the task's prompt makes about the code, and what the base says of it.
 | `verdict`  | `"true" \| "false" \| "stale" \| "partly"` |                                                                                                         |
 | `path`     | `string \| null`                           | The file that shows it, relative to the repo root; null when the run named none.                        |
 | `line`     | `number \| null`                           | The line in `path`; null when the run named none.                                                       |
+| `end_line` | `number \| null`                           | The last line it covers, when that is more than `line`; null when it is one line.                       |
 | `evidence` | `string`                                   | What the code says, in a sentence or two.                                                               |
 | `fix`      | `string \| null`                           | For a claim that is not true, what the prompt should say instead; null when there is nothing to change. |
 

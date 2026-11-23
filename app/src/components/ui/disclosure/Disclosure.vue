@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { CollapsibleRoot } from 'reka-ui';
 
-defineProps<{ as?: string }>();
-const open = defineModel<boolean>('open', { default: false });
+const props = defineProps<{ as?: string; defaultOpen?: boolean }>();
+const model = defineModel<boolean | undefined>('open', { default: undefined });
+const open = computed({ get: () => model.value ?? props.defaultOpen, set: (v) => (model.value = v) });
 </script>
 
 <template>

@@ -57,7 +57,7 @@ const when = 'ml-auto text-sm text-muted';
   <div class="flex min-w-0 flex-col gap-4.5">
     <ProposalCheckCard :task="task" />
 
-    <VerifyCard :task="task" @path="(p, l) => emit('path', p, l)" />
+    <VerifyCard :task="task" />
 
     <article class="card">
       <header class="card-head gap-1.5 px-3.5 py-2">
@@ -150,7 +150,8 @@ const when = 'ml-auto text-sm text-muted';
             v-if="it.run.kind === 'verify' && it.run.ended_at"
             class="w-full"
             :view="latestVerify([it.run], null)!"
-            @path="(p, l) => emit('path', p, l)"
+            :task-id="task.id"
+            compact
           />
           <FinalMessage v-else-if="it.run.result_text" class="w-full" :open="it.latest">
             <Markdown :text="it.run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />

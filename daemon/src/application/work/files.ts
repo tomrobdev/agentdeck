@@ -5,7 +5,6 @@ import {
   type ChangedFile,
   type Changes,
   type Commit,
-  FILE_REFS,
   type FileContent,
   type FilePatch,
   type FileRef,
@@ -13,7 +12,9 @@ import {
   type Tree,
   capText,
   checkPath,
+  fileRefRun,
   isBinary,
+  isFileRef,
   type Task,
   sincePoints,
   targetOf,
@@ -47,6 +48,12 @@ async function resolveRef(app: App, id: TaskId, ref: FileRef): Promise<{ repo: R
     const { repo, head } = await resolveHead(app, id);
     return { repo, sha: head };
   }
+  const run = fileRefRun(ref);
+  if (run !== null) {
+    const sha = app.runsForTask(id).find((r) => r.id === run && r.kind === 'verify')?.base_commit;
+    if (!sha) throw new ActionError(`#${id} has no verify run ${run} that read a commit`, undefined, 'not_found');
+    return { repo: requireTaskRepo(app, requireTask(app, id)), sha };
+  }
   const { repo, base } = await taskRefs(app, id);
   return { repo, sha: base.sha };
 }
@@ -66,8 +73,8 @@ function path(input: string | null | undefined, opts: { allowRoot?: boolean } = 
 
 export function parseFileRef(input: string | null | undefined): FileRef {
   if (input === null || input === undefined || input === '') return 'head';
-  if (!(FILE_REFS as string[]).includes(input)) throw new ActionError('ref must be head or base');
-  return input as FileRef;
+  if (!isFileRef(input)) throw new ActionError('ref must be head, base or verify:<run id>');
+  return input;
 }
 
 export function parseSince(input: string | null | undefined): string | null {

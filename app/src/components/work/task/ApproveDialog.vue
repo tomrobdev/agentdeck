@@ -192,7 +192,7 @@ async function confirm() {
             </li>
           </ul>
         </template>
-        <VerifyFindings v-if="verifyOf(r.id)" class="pl-6" :view="verifyOf(r.id)!" />
+        <VerifyFindings v-if="verifyOf(r.id)" class="pl-6" :view="verifyOf(r.id)!" :task-id="r.id" compact />
         <div v-if="saved.has(r.id) && !editing.has(r.id) && !results" class="max-h-56 overflow-y-auto pl-6 text-sm" data-approve-brief>
           <TaskBrief :prompt="saved.get(r.id) ?? ''" />
         </div>

@@ -28,3 +28,25 @@ export function verifyHeadline(v: Pick<VerifyView, 'state' | 'findings' | 'commi
   const at = v.commit ? ` at ${v.commit.slice(0, 7)}` : '';
   return `${verifyLine(v.findings)}${at}${v.stale ? ' · stale: the base has moved on since' : ''}`;
 }
+
+const CONTEXT_LINES = 4;
+
+export function snippetOf(
+  text: string,
+  range: { from: number; to: number },
+  context = CONTEXT_LINES,
+): { first: number; text: string } | null {
+  const lines = text.split('\n');
+  if (range.from > lines.length) return null;
+  const first = Math.max(1, range.from - context);
+  return { first, text: lines.slice(first - 1, range.to + context).join('\n') };
+}
+
+export const verdictCounts = (findings: Pick<VerifyFinding, 'verdict'>[]): { verdict: ClaimVerdict; count: number }[] =>
+  ORDER.map((verdict) => ({ verdict, count: findings.filter((f) => f.verdict === verdict).length })).filter((c) => c.count > 0);
+
+export function verdictsShownFirst(findings: Pick<VerifyFinding, 'verdict'>[]): ClaimVerdict[] {
+  const present = verdictCounts(findings).map((c) => c.verdict);
+  const problems = present.filter((v) => v !== 'true');
+  return problems.length ? problems : present;
+}
