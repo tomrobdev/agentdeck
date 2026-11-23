@@ -3,21 +3,18 @@ import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { CHECKED_STATUSES } from '#daemon/domain/work/index.ts';
 import { latestVerify } from '#daemon/domain/runs/index.ts';
-import { reposQuery } from '#api/repos.ts';
 import { runsApi } from '#api/runs.ts';
 import { proposalCheckQuery } from '#api/work.ts';
 import type { TaskDetail } from '#api/types.ts';
 import { fixFindingsCommand } from '#lib/runs/terminal.ts';
 import { hasFindingsToFix } from '#lib/runs/verify.ts';
-import { useTerminal } from '#composables/runs/useTerminal.ts';
-import { useAction, useActions } from '#composables/shared/useActions.ts';
+import { useClaudeSession } from '#composables/runs/useClaudeSession.ts';
+import { useAction } from '#composables/shared/useActions.ts';
 import VerifyFindings from '#components/runs/VerifyFindings.vue';
 
 const props = defineProps<{ task: Pick<TaskDetail, 'id' | 'title' | 'status' | 'runs' | 'repo_id' | 'issue'> }>();
 const { pending, run } = useAction();
-const { flash } = useActions();
-const terminal = useTerminal();
-const repos = useQuery(reposQuery());
+const session = useClaudeSession();
 
 const checked = computed(() => CHECKED_STATUSES.includes(props.task.status));
 const q = useQuery(computed(() => ({ ...proposalCheckQuery(props.task.id), enabled: checked.value })));
@@ -26,13 +23,10 @@ const going = computed(() => view.value?.state === 'going');
 
 const verify = () => run(() => runsApi.verify(props.task.id), { done: `Verify run started on #${props.task.id}` });
 
-const fixable = computed(() => terminal.available.value && !!view.value && hasFindingsToFix(view.value));
+const fixable = computed(() => session.available.value && !!view.value && hasFindingsToFix(view.value));
 
-function fix() {
-  const cwd = repos.data.value?.find((r) => r.id === props.task.repo_id)?.path;
-  if (!cwd) return flash(`Can't find the checkout for #${props.task.id}`);
-  return run(() => terminal.open(`#${props.task.id} findings: ${props.task.title}`, cwd, fixFindingsCommand(props.task)));
-}
+const fix = () =>
+  session.start({ id: props.task.id, title: props.task.title, repo_id: props.task.repo_id }, 'findings', fixFindingsCommand(props.task));
 </script>
 
 <template>
@@ -43,7 +37,6 @@ function fix() {
       <button
         v-if="fixable"
         class="ml-auto px-2 py-0 text-sm"
-        :disabled="pending"
         title="Open an interactive claude session to agree what the prompt should say"
         @click="fix"
       >

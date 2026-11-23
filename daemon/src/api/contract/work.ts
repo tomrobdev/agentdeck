@@ -7,6 +7,7 @@ import type {
   LandingPolicy,
   LandingQuestion,
   PlanBranchStatus,
+  PlanThrough,
   PlanLanding,
   PlanSource,
   PlanStepStatus,
@@ -64,10 +65,10 @@ export interface TaskIssueLink {
   parent: { number: number; title: string } | null;
 }
 
-/** The branch a task's pull request merges into. `plan` is set when that is a plan branch, with the base it lands on. */
+/** The branch a task's pull request merges into. `plan` is set when that is a plan branch that was not abandoned. */
 export interface MergesInto {
   branch: string;
-  plan: { task: TaskId; base: string; status: PlanBranchStatus; pr_url: string | null } | null;
+  plan: PlanThrough | null;
 }
 
 /** A task as returned by the list endpoint: everything except the prompt. */

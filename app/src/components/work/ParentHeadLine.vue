@@ -7,7 +7,7 @@ defineProps<{ head: ParentHead }>();
 
 <template>
   <span class="flex min-w-0 items-center gap-2.5 text-sm text-muted" data-parent-head>
-    <IssueChip v-if="head.number !== null && head.url" :issue="{ number: head.number, url: head.url }" />
+    <IssueChip :issue="head.issue" />
     <span v-if="head.total" class="flex-none tabular-nums">{{ head.done }} of {{ head.total }} done</span>
     <code v-if="head.merges" class="truncate" :title="head.merges">{{ head.merges }}</code>
   </span>

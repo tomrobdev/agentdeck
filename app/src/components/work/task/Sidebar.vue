@@ -22,7 +22,6 @@ const props = defineProps<{ task: TaskDetail }>();
 const { run, flash } = useActions();
 
 const editable = computed(() => canEdit(props.task));
-const issue = computed(() => props.task.issue ?? null);
 const { copied, copy } = useCopy();
 const terminal = useTerminal();
 const { canFixHere, fix } = useFixTask();
@@ -103,9 +102,9 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
       <div :class="name">Pull request</div>
       <PrChip :task="task" />
     </div>
-    <div v-if="issue" :class="prop">
+    <div v-if="task.issue" :class="prop">
       <div :class="name">Issue</div>
-      <IssueChip :issue="issue" data-task-issue />
+      <IssueChip :issue="task.issue" />
     </div>
     <div v-if="autoMergeShown" :class="prop">
       <div :class="name">Auto-merge</div>

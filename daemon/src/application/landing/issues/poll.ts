@@ -6,6 +6,7 @@ import {
   type Issue,
   type TaskIssue,
   ISSUE_LABELS,
+  NOT_STARTED_STATUSES,
   dueIssueWrite,
   isAllowed,
   isFinalReport,
@@ -129,7 +130,7 @@ async function follow(
   const before = app.getTask(link.task_id);
   const read = before && (listed ?? (await app.issues.issue(repo.path, link.number)));
   if (!before || !read || (before.status === 'parked' && app.ownPlan(before.id))) return;
-  const followsText = before.status === 'queued' || before.status === 'proposed' || before.status === 'parked';
+  const followsText = NOT_STARTED_STATUSES.includes(before.status);
   const issue = followsText ? await withParent(app, repo, read) : read;
   const move = issueMove(before, issue, link);
   if (move.kind === 'cancel') {

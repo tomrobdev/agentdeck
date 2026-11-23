@@ -2369,6 +2369,15 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `status` | `PlanStepStatus` |                                                                        |
 | `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
 
+### PlanThrough
+
+The plan whose branch a task merges into, and the base that branch lands on.
+
+| Field  | Type     | Comment |
+| ------ | -------- | ------- |
+| `task` | `TaskId` |         |
+| `base` | `string` |         |
+
 ### PromptBrief
 
 | Field      | Type                                | Comment |

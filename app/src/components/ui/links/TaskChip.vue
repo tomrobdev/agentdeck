@@ -9,7 +9,7 @@ import Chip from '#components/ui/Chip.vue';
 import StatusIcon from '#components/ui/status/StatusIcon.vue';
 
 const props = withDefaults(defineProps<{ id: number; kind?: 'link' | 'label' | 'self' }>(), { kind: 'link' });
-const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: props.kind !== 'self' })));
+const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: props.kind !== 'self', refetchOnMount: false })));
 const task = computed(() => tasksQ.data.value?.find((t) => t.id === props.id));
 const tip = computed(() => (task.value ? `${task.value.title} (${statusText(task.value)})` : `Task #${props.id}`));
 const { copied, copy } = useCopy();

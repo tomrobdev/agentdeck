@@ -5,8 +5,8 @@ import type { TaskId } from '#domain/shared/index.ts';
 import {
   type Issue,
   type TaskIssue,
-  type TaskStatus,
   ISSUE_LABELS,
+  NOT_STARTED_STATUSES,
   duePlanIssueWrite,
   isLivePlanBranch,
   planBranchName,
@@ -28,13 +28,11 @@ export function planOfIssue(app: App, repo: Repo, number: number): TaskId | unde
 
 export const isPlanIssueLink = (app: App, link: Pick<TaskIssue, 'task_id'>): boolean => app.planBranchesOfPlan(link.task_id).length > 0;
 
-const MOVABLE: readonly TaskStatus[] = ['queued', 'proposed', 'parked'];
-
 async function moveSubIssues(app: App, repo: Repo, owner: TaskId, target: string, subs: Issue[], log: Log): Promise<void> {
   const tasks = subs.flatMap((i) => {
     const t = app.taskOfIssue(repo.id, i.number);
     const task = t === undefined ? undefined : app.getTask(t);
-    return task && MOVABLE.includes(task.status) ? [task] : [];
+    return task && NOT_STARTED_STATUSES.includes(task.status) ? [task] : [];
   });
   const moving = tasksToTarget(tasks.map((t) => ({ id: t.id, target: t.target, started: !!t.checkout?.branch, running: false })));
   for (const id of moving) {

@@ -22,11 +22,13 @@ export const sortFindings = (findings: VerifyFinding[]): VerifyFinding[] =>
     .sort((a, b) => ORDER.indexOf(a.f.verdict) - ORDER.indexOf(b.f.verdict) || a.i - b.i)
     .map(({ f }) => f);
 
+export const verifyAt = (v: Pick<VerifyView, 'commit' | 'stale'>): string =>
+  [v.commit && `at ${v.commit.slice(0, 7)}`, v.stale && 'stale: the base has moved on since'].filter(Boolean).join(' · ');
+
 export function verifyHeadline(v: Pick<VerifyView, 'state' | 'findings' | 'commit' | 'stale' | 'reason'>): string {
   if (v.state === 'going') return 'Verify run going: checking the prompt’s claims against the base…';
   if (v.state === 'failed') return `The verify run ended with no findings${v.reason ? `: ${v.reason}` : ''}`;
-  const at = v.commit ? ` at ${v.commit.slice(0, 7)}` : '';
-  return `${verifyLine(v.findings)}${at}${v.stale ? ' · stale: the base has moved on since' : ''}`;
+  return [verifyLine(v.findings), verifyAt(v)].filter(Boolean).join(' ');
 }
 
 export const hasFindingsToFix = (v: Pick<VerifyView, 'state' | 'findings'>): boolean =>

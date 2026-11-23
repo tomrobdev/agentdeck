@@ -2,7 +2,7 @@
 import { expect, open, row, test } from '#e2e/fixtures.ts';
 
 const parent = { number: 69, title: 'Order status' };
-const merges_into = { branch: 'plan/9-order-status', plan: { task: 9, base: 'main', status: 'open', pr_url: null } };
+const merges_into = { branch: 'plan/9-order-status', plan: { task: 9, base: 'main' } };
 
 test('the list groups sub-issues under their parent and says which branch they merge into', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('agentdeck.display', JSON.stringify({ groupBy: 'parent', collapsed: [] })));

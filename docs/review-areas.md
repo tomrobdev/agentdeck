@@ -142,6 +142,7 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/domain/runs/verify.ts
 - daemon/src/application/runs/verify.ts
 - app/src/lib/runs/verify.ts
+- app/src/composables/runs/useClaudeSession.ts
 - app/src/components/runs/VerifyCard.vue
 - app/src/components/runs/VerifyFindings.vue
 - app/src/components/runs/FindingCode.vue

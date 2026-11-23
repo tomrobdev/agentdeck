@@ -4,7 +4,7 @@ import type { VerifyView } from '#api/types.ts';
 import { RouterLink } from 'vue-router';
 import { type ClaimVerdict, findingPlace } from '#daemon/domain/runs/index.ts';
 import { verifyFileRef } from '#daemon/domain/work/index.ts';
-import { VERDICT_MARKS, findingFile, sortFindings, verdictCounts, verdictsShownFirst, verifyHeadline } from '#lib/runs/verify.ts';
+import { VERDICT_MARKS, findingFile, sortFindings, verdictCounts, verdictsShownFirst, verifyAt, verifyHeadline } from '#lib/runs/verify.ts';
 import { useCopy } from '#platform/native.ts';
 import FindingCode from '#components/runs/FindingCode.vue';
 import Chip from '#components/ui/Chip.vue';
@@ -46,8 +46,7 @@ const EDGE = { done: 'border-l-done', failed: 'border-l-failed', blocked: 'borde
         >{{ VERDICT_MARKS[c.verdict].icon }} {{ c.count }} {{ VERDICT_MARKS[c.verdict].label }}</ChipToggle
       >
       <span class="ml-auto" :class="view.stale ? 'text-blocked' : 'text-muted'">
-        <template v-if="view.commit">at {{ view.commit.slice(0, 7) }}</template>
-        <template v-if="view.stale"> · stale: the base has moved on since</template>
+        {{ verifyAt(view) }}
       </span>
     </div>
     <p

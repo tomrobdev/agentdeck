@@ -303,7 +303,7 @@ test('proposed sub-issues that build on each other move onto the plan branch tog
   assert.deepEqual(view.issue, { number: 62, url: 'https://github.com/o/r/issues/62', parent: { number: 60, title: 'Phase 6' } });
   assert.deepEqual(view.merges_into, {
     branch: `plan/${owner}-phase-6`,
-    plan: { task: owner, base: 'develop', status: 'open', pr_url: null },
+    plan: { task: owner, base: 'develop' },
   });
 
   Object.assign(gh.issues.get(62) ?? {}, { parent: null });
