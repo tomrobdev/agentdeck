@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { RouterLink } from 'vue-router';
 import { fileQuery } from '#api/work.ts';
-import { findingPlace } from '#daemon/domain/runs/index.ts';
 import type { RunId } from '#daemon/domain/shared/index.ts';
 import { verifyFileRef } from '#daemon/domain/work/index.ts';
 import { snippetOf } from '#lib/runs/verify.ts';
@@ -17,53 +15,33 @@ const props = defineProps<{
   run: RunId;
   commit: string;
   path: string;
-  line: number | null;
-  endLine: number | null;
+  range: { from: number; to: number };
   compact?: boolean;
 }>();
 
 const open = ref(!props.compact);
 const at = computed(() => verifyFileRef(props.run));
-const range = computed(() => (props.line === null ? null : { from: props.line, to: props.endLine ?? props.line }));
 const fileQ = useQuery(
   computed(() => ({
     ...fileQuery(props.taskId, at.value, props.path, props.commit),
-    enabled: open.value && range.value !== null,
+    enabled: open.value,
     retry: false,
   })),
 );
 const snippet = computed(() => {
   const text = fileQ.data.value?.text;
-  return typeof text === 'string' && range.value ? snippetOf(text, range.value) : null;
+  return typeof text === 'string' ? snippetOf(text, props.range) : null;
 });
-const place = computed(() => findingPlace({ path: props.path, line: props.line, end_line: props.endLine }));
-const lineQuery = computed(() =>
-  range.value ? { L: range.value.from === range.value.to ? `${range.value.from}` : `${range.value.from}-${range.value.to}` } : {},
-);
 </script>
 
 <template>
-  <Disclosure v-model:open="open" class="min-w-0 overflow-hidden rounded-md border border-border" data-finding-code>
-    <div class="flex items-center gap-2 bg-panel-2 px-2.5 py-1 text-xs">
-      <DisclosureTrigger
-        v-if="range"
-        class="btn-ghost min-w-0 flex-1 truncate p-0 text-left font-mono text-muted hover:text-text"
-        :title="open ? 'Hide the code' : 'Show the code'"
-      >
-        {{ open ? '▾' : '▸' }} {{ place }}
-      </DisclosureTrigger>
-      <span v-else class="min-w-0 flex-1 truncate font-mono text-muted">{{ place }}</span>
-      <RouterLink
-        v-if="!compact"
-        class="btn btn-ghost flex-none p-0 text-accent"
-        :to="{ name: 'task', params: { id: taskId, tab: 'code' }, query: { ref: at, path, ...lineQuery } }"
-      >
-        Open file
-      </RouterLink>
-    </div>
-    <DisclosureContent v-if="range" class="border-t border-border">
+  <Disclosure v-model:open="open" class="min-w-0" data-finding-code>
+    <DisclosureTrigger v-if="compact" class="btn-ghost p-0 text-sm text-muted hover:text-text">
+      {{ open ? '▾ Hide code' : '▸ Show code' }}
+    </DisclosureTrigger>
+    <DisclosureContent class="border-y border-border" :class="compact && 'mt-1 border-x'">
       <CodeView v-if="snippet" class="max-h-80 py-1" :text="snippet.text" :path="path" :first="snippet.first" :range="range" />
-      <p v-else class="m-0 px-2.5 py-1.5 text-sm text-muted">
+      <p v-else class="m-0 px-3 py-1.5 text-sm text-muted">
         {{ fileQ.isPending.value ? 'Loading…' : (fileQ.error.value?.message ?? 'That line is not in the text of this file.') }}
       </p>
     </DisclosureContent>

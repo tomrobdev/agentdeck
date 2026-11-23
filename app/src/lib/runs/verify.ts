@@ -50,3 +50,23 @@ export function verdictsShownFirst(findings: Pick<VerifyFinding, 'verdict'>[]): 
   const problems = present.filter((v) => v !== 'true');
   return problems.length ? problems : present;
 }
+
+export interface FindingFile {
+  folder: string;
+  name: string;
+  range: { from: number; to: number } | null;
+  query: Record<string, string>;
+}
+
+export function findingFile(f: Pick<VerifyFinding, 'path' | 'line' | 'end_line'>): FindingFile | null {
+  if (!f.path) return null;
+  const slash = f.path.lastIndexOf('/') + 1;
+  const range = f.line === null ? null : { from: f.line, to: f.end_line ?? f.line };
+  const lines = !range ? '' : range.from === range.to ? `${range.from}` : `${range.from}-${range.to}`;
+  return {
+    folder: f.path.slice(0, slash),
+    name: `${f.path.slice(slash)}${lines && `:${lines}`}`,
+    range,
+    query: { path: f.path, ...(lines && { L: lines }) },
+  };
+}

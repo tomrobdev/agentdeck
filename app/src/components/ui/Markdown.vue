@@ -16,7 +16,9 @@ async function drawDiagrams(root: HTMLElement): Promise<void> {
   lib.initialize({
     startOnLoad: false,
     securityLevel: 'strict',
-    theme: document.documentElement.dataset.mode === 'dark' ? 'dark' : 'neutral',
+    ...(document.documentElement.dataset.mode === 'dark'
+      ? { theme: 'dark', themeVariables: { edgeLabelBackground: '#1f1f1f' } }
+      : { theme: 'neutral' }),
   });
   await lib.run({ nodes, suppressErrors: true });
 }

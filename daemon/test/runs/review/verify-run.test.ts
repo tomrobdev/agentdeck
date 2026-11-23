@@ -55,7 +55,7 @@ test("the prompt quotes the task's whole prompt, names the base and its commit, 
 test('the answer schema lists the findings with their verdicts, and goes to claude as --json-schema', () => {
   assert.deepEqual(VERIFY_ANSWER_SCHEMA.required, ['findings']);
   const item = VERIFY_ANSWER_SCHEMA.properties.findings.items;
-  assert.deepEqual(item.required, ['claim', 'verdict', 'path', 'line', 'evidence']);
+  assert.deepEqual(item.required, ['claim', 'verdict', 'evidence']);
   assert.deepEqual(item.properties.verdict.enum, ['true', 'false', 'stale', 'partly']);
   assert.deepEqual([...CLAIM_VERDICTS], item.properties.verdict.enum);
   const args = verifySchemaArgs();

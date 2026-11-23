@@ -11,6 +11,7 @@ const findings = [
     evidence: 'It is an array in memory.',
     fix: 'Say the queue is an in-memory array',
   },
+  { claim: 'There is a Queue class', verdict: 'partly', path: null, line: null, evidence: 'It is an array, with no class.', fix: null },
 ];
 
 async function withVerifyRun(page: Page) {
@@ -56,7 +57,7 @@ test('the approve dialog shows a verify run’s findings, a false one marked as 
   await expect(items.first()).toContainText('The queue is kept in Redis');
   await expect(items.first()).toContainText('Say the queue is an in-memory array');
   await list.locator('[data-verdict-filter="true"]').click();
-  await expect(items).toHaveCount(2);
+  await expect(items).toHaveCount(3);
   await expect(dialog.locator('[data-line]')).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Verify again' })).toBeVisible();
 
@@ -87,7 +88,9 @@ test("a proposal's findings show the code at the commit the verify run read, and
   await page.goto('/#/tasks/5/overview');
   const finding = page.locator('[data-verify-findings] [data-verdict="false"]').first();
   await expect(finding.locator('[data-line="3"]')).toContainText('const items');
-  await expect(finding.locator('[data-finding-code]')).toContainText('src/queue.ts:3');
+  await expect(finding.getByRole('button', { name: /false.*src\/.*queue\.ts:3/ })).toBeVisible();
+  const absent = page.locator('[data-verify-findings] [data-verdict="partly"]').first();
+  await expect(absent).toContainText('No file');
   await finding.getByRole('link', { name: 'Open file' }).click();
   await expect(page.getByText('Verified at abc1234')).toBeVisible();
   await expect(page.locator('[data-line="3"]')).toContainText('const items');

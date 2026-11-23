@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { snippetOf, verdictCounts, verdictsShownFirst } from '#app/lib/runs/verify.ts';
+import { findingFile, snippetOf, verdictCounts, verdictsShownFirst } from '#app/lib/runs/verify.ts';
 
 const TEXT = Array.from({ length: 20 }, (_, i) => `line ${i + 1}`).join('\n');
 
@@ -20,4 +20,21 @@ test('the counts lead with the problems, and only problems show first unless eve
   assert.deepEqual(verdictsShownFirst(of('true', 'partly')), ['partly']);
   assert.deepEqual(verdictsShownFirst(of('true')), ['true']);
   assert.deepEqual(verdictsShownFirst([]), []);
+});
+
+test("a finding's file keeps its name and lines apart from its folder; a finding with none has no file", () => {
+  assert.deepEqual(findingFile({ path: 'app/Services/A.php', line: 82, end_line: 89 }), {
+    folder: 'app/Services/',
+    name: 'A.php:82-89',
+    range: { from: 82, to: 89 },
+    query: { path: 'app/Services/A.php', L: '82-89' },
+  });
+  assert.equal(findingFile({ path: 'A.php', line: 3, end_line: null })?.name, 'A.php:3');
+  assert.deepEqual(findingFile({ path: 'A.php', line: null, end_line: null }), {
+    folder: '',
+    name: 'A.php',
+    range: null,
+    query: { path: 'A.php' },
+  });
+  assert.equal(findingFile({ path: null, line: null, end_line: null }), null);
 });
