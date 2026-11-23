@@ -29,6 +29,9 @@ export function verifyHeadline(v: Pick<VerifyView, 'state' | 'findings' | 'commi
   return `${verifyLine(v.findings)}${at}${v.stale ? ' · stale: the base has moved on since' : ''}`;
 }
 
+export const hasFindingsToFix = (v: Pick<VerifyView, 'state' | 'findings'>): boolean =>
+  v.state === 'done' && v.findings.some((f) => f.verdict !== 'true');
+
 const CONTEXT_LINES = 4;
 
 export function snippetOf(
