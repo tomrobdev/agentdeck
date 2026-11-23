@@ -2589,15 +2589,17 @@ The counters an event sets, with their new values. A counter not listed is left 
 
 A task's link to the issue it came from.
 
-| Field             | Type                  | Comment                                                                    |
-| ----------------- | --------------------- | -------------------------------------------------------------------------- |
-| `task_id`         | `TaskId`              |                                                                            |
-| `repo_id`         | `RepoId`              |                                                                            |
-| `number`          | `number`              |                                                                            |
-| `url`             | `string`              |                                                                            |
-| `reported`        | `IssueReport \| null` | The last change reported on the issue; null before the first.              |
-| `reported_at`     | `string \| null`      | When it was reported, so a person's later comments can be told apart.      |
-| `verify_reported` | `RunId \| null`       | The verify run whose findings were last put on the issue; null before any. |
+| Field             | Type                  | Comment                                                                          |
+| ----------------- | --------------------- | -------------------------------------------------------------------------------- |
+| `task_id`         | `TaskId`              |                                                                                  |
+| `repo_id`         | `RepoId`              |                                                                                  |
+| `number`          | `number`              |                                                                                  |
+| `url`             | `string`              |                                                                                  |
+| `reported`        | `IssueReport \| null` | The last change reported on the issue; null before the first.                    |
+| `reported_at`     | `string \| null`      | When it was reported, so a person's later comments can be told apart.            |
+| `verify_reported` | `RunId \| null`       | The verify run whose findings were last put on the issue; null before any.       |
+| `parent_number`   | `number \| null`      | The issue it is a sub-issue of, as the last poll read it; null when it has none. |
+| `parent_title`    | `string \| null`      |                                                                                  |
 
 ### TaskPlan
 

@@ -5,6 +5,7 @@ import type { TaskId } from '#domain/shared/index.ts';
 import {
   type Issue,
   type TaskIssue,
+  type TaskStatus,
   ISSUE_LABELS,
   duePlanIssueWrite,
   isLivePlanBranch,
@@ -27,11 +28,13 @@ export function planOfIssue(app: App, repo: Repo, number: number): TaskId | unde
 
 export const isPlanIssueLink = (app: App, link: Pick<TaskIssue, 'task_id'>): boolean => app.planBranchesOfPlan(link.task_id).length > 0;
 
+const MOVABLE: readonly TaskStatus[] = ['queued', 'proposed', 'parked'];
+
 async function moveSubIssues(app: App, repo: Repo, owner: TaskId, target: string, subs: Issue[], log: Log): Promise<void> {
   const tasks = subs.flatMap((i) => {
     const t = app.taskOfIssue(repo.id, i.number);
     const task = t === undefined ? undefined : app.getTask(t);
-    return task?.status === 'queued' ? [task] : [];
+    return task && MOVABLE.includes(task.status) ? [task] : [];
   });
   const moving = tasksToTarget(tasks.map((t) => ({ id: t.id, target: t.target, started: !!t.checkout?.branch, running: false })));
   for (const id of moving) {
@@ -41,7 +44,7 @@ async function moveSubIssues(app: App, repo: Repo, owner: TaskId, target: string
   }
 }
 
-async function takeInPlan(app: App, repo: Repo, issue: Issue, labelled: Issue[], allowed: string[], log: Log): Promise<void> {
+async function takeInPlan(app: App, repo: Repo, issue: Issue, open: Issue[], allowed: string[], log: Log): Promise<void> {
   let id = app.taskOfIssue(repo.id, issue.number);
   if (id !== undefined && app.getTask(id)?.status === 'proposed' && !app.ownPlan(id)) {
     rejectTask(app, id);
@@ -76,14 +79,14 @@ async function takeInPlan(app: App, repo: Repo, issue: Issue, labelled: Issue[],
     repo,
     id,
     name,
-    labelled.filter((i) => i.parent?.number === issue.number),
+    open.filter((i) => i.parent?.number === issue.number),
     log,
   );
 }
 
-export async function takeInPlans(app: App, repo: Repo, plans: Issue[], labelled: Issue[], allowed: string[], log: Log): Promise<void> {
+export async function takeInPlans(app: App, repo: Repo, plans: Issue[], open: Issue[], allowed: string[], log: Log): Promise<void> {
   for (const issue of plans) {
-    await takeInPlan(app, repo, issue, labelled, allowed, log).catch((err) =>
+    await takeInPlan(app, repo, issue, open, allowed, log).catch((err) =>
       log(`${repo.name} issue #${issue.number}: not taken in as a plan: ${err}`),
     );
   }

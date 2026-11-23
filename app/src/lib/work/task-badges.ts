@@ -52,6 +52,8 @@ type Viewed = Pick<
   | 'source'
   | 'pr_state'
   | 'plan_landing'
+  | 'issue'
+  | 'merges_into'
   | 'checks'
   | 'needs'
   | 'question'
@@ -129,6 +131,12 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const up = t.links.filter((l) => l.kind === 'builds_on' && l.state !== 'met').map((l) => l.on);
 
   const facts: Fact[] = [];
+  if (t.issue) facts.push({ label: `issue #${t.issue.number}`, title: `From GitHub issue #${t.issue.number}` });
+  if (t.merges_into?.plan && !t.plan_landing)
+    facts.push({
+      label: `→ ${t.merges_into.branch}`,
+      title: `Merges into ${t.merges_into.branch}, which lands on ${t.merges_into.plan.base}`,
+    });
   if (t.attempts > 1) facts.push({ label: `try ${t.attempts}`, title: `Attempt ${t.attempts} of ${t.max_attempts}` });
   if (t.source === 'planner') facts.push({ label: 'planner', title: 'Proposed by the planner' });
   if (checks && checks.total > 0 && checks.failing === 0 && !notRun.length) {

@@ -1,7 +1,7 @@
 // How the queue is shown: the saved display settings, the board's column order and the rows j and k walk through.
 import type { TaskSummary } from '#daemon/api/contract/work.ts';
 
-export type GroupBy = 'status' | 'repo' | 'priority' | 'none';
+export type GroupBy = 'status' | 'parent' | 'repo' | 'priority' | 'none';
 
 interface RowGroup {
   key: string;

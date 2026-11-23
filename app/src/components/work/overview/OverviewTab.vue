@@ -9,6 +9,7 @@ import Markdown from '#components/ui/Markdown.vue';
 import DependenciesCard from '#components/work/overview/DependenciesCard.vue';
 import DocumentsCard from '#components/work/overview/DocumentsCard.vue';
 import FinalMessage from '#components/runs/FinalMessage.vue';
+import ParentIssueCard from '#components/work/overview/ParentIssueCard.vue';
 import PlanCard from '#components/work/overview/PlanCard.vue';
 import ProposalCheckCard from '#components/work/overview/ProposalCheckCard.vue';
 import TaskBrief from '#components/work/overview/TaskBrief.vue';
@@ -78,6 +79,8 @@ const when = 'ml-auto text-sm text-muted';
     </article>
 
     <PullRequestCard :task="task" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
+
+    <ParentIssueCard :task="task" />
 
     <DependenciesCard :task="task" />
 

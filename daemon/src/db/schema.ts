@@ -335,6 +335,9 @@ export const MIGRATIONS: Migration[] = [
    CREATE UNIQUE INDEX task_issues_repo_number ON task_issues(repo_id, number);`,
   // 52: the verify run whose findings were last put on a task's issue.
   `ALTER TABLE task_issues ADD COLUMN verify_reported INTEGER;`,
+  // 53: the issue a task's issue is a sub-issue of.
+  `ALTER TABLE task_issues ADD COLUMN parent_number INTEGER;
+   ALTER TABLE task_issues ADD COLUMN parent_title TEXT;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

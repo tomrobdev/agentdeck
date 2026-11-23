@@ -163,6 +163,8 @@ erDiagram
     text reported "nullable"
     text reported_at "nullable"
     integer verify_reported "nullable"
+    integer parent_number "nullable"
+    text parent_title "nullable"
   }
   task_links {
     integer task_id PK,FK

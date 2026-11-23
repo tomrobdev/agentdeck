@@ -4,6 +4,7 @@ import { ago } from '#lib/shared/time.ts';
 import { mergeAllIds } from '#lib/work/queue/bulk.ts';
 import { openExternal } from '#platform/native.ts';
 import MergeButtons from '#components/landing/MergeButtons.vue';
+import ParentHeadLine from '#components/work/ParentHeadLine.vue';
 import RowMenu from '#components/work/queue/RowMenu.vue';
 import { personEvents } from '#daemon/domain/work/index.ts';
 import type { BoardMove } from '#lib/work/queue/board-move.ts';
@@ -95,6 +96,7 @@ watch(
             <span>{{ g.label }}</span>
             <span class="font-normal text-muted">{{ g.tasks.length }}</span>
           </button>
+          <ParentHeadLine v-if="g.head" :head="g.head" class="max-w-[60%]" />
           <button
             v-if="mergeAllIds(g).length"
             class="btn-mini flex-none"

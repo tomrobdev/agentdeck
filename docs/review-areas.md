@@ -37,6 +37,9 @@ Issue-backed repos: GitHub issues labelled ready-for-agent become tasks and the 
 - daemon/src/adapters/github/issues.ts
 - daemon/src/db/work/task-issues.ts
 - daemon/src/application/scheduler/periodic.ts
+- app/src/lib/work/parent-groups.ts
+- app/src/components/work/ParentHeadLine.vue
+- app/src/components/work/overview/ParentIssueCard.vue
 
 ## task-links
 
