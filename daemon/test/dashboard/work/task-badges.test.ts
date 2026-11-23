@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { TaskSummary } from '#api/contract/work.ts';
 import type { AutoMergeView } from '#api/contract/landing.ts';
-import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '#app/lib/work/task-badges.ts';
+import { AUTO_MERGE_CHIP, TONE_CHIP, prChip, statusLine, statusText, taskBadges } from '#app/lib/work/task-badges.ts';
 import { TONES, statusTone } from '#app/lib/shared/tone.ts';
 import { asRepoId, asTaskId } from '#test/fixtures/fixtures.ts';
 
@@ -271,4 +271,21 @@ test('checks: running and passed are muted facts, failing is an attention chip, 
   assert.deepEqual(labels(review({ checks: null })), []);
   assert.deepEqual(labels(review({})), []);
   assert.deepEqual(labels(review({ pr_state: 'merged', checks: sum({}) })), ['PR merged']);
+});
+
+test('a pull request chip has its number, its state and its checks; none without a pull request', () => {
+  const checks = (failing: number, pending: number) =>
+    ({ total: 3, failing, pending, failing_names: [], failing_lines: [], not_run: [] }) as unknown as TaskSummary['checks'];
+  const url = 'https://github.com/o/r/pull/91';
+  assert.equal(prChip(task()), null);
+  assert.deepEqual(prChip(task({ pr_url: url, pr_state: 'open', checks: checks(1, 1) })), {
+    url,
+    label: 'PR #91',
+    title: 'Open the pull request on GitHub (open, 1 check failing)',
+    tone: 'done',
+  });
+  assert.match(prChip(task({ pr_url: url, pr_state: 'open', checks: checks(0, 2) }))?.title ?? '', /2 checks still running/);
+  assert.match(prChip(task({ pr_url: url, pr_state: 'open', checks: checks(0, 0) }))?.title ?? '', /checks passed/);
+  assert.equal(prChip(task({ pr_url: url, pr_state: 'merged' }))?.tone, 'merged');
+  assert.deepEqual([prChip(task({ pr_url: 'https://x/1' }))?.label, prChip(task({ pr_url: 'https://x/1' }))?.tone], ['PR', 'muted']);
 });

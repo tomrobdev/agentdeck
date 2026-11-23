@@ -6,7 +6,7 @@ import { tasksQuery } from '#api/work.ts';
 import type { TaskSummary } from '#api/types.ts';
 import { parentGroupOf } from '#lib/work/parent-groups.ts';
 import ParentHeadLine from '#components/work/ParentHeadLine.vue';
-import IssueChip from '#components/ui/status/IssueChip.vue';
+import IssueChip from '#components/ui/links/IssueChip.vue';
 import StatusIcon from '#components/ui/status/StatusIcon.vue';
 import TaskBadges from '#components/ui/status/TaskBadges.vue';
 
@@ -30,7 +30,7 @@ const group = computed(() => parentGroupOf(props.task, tasksQ.data.value ?? []))
         :aria-current="t.id === task.id ? 'true' : undefined"
       >
         <StatusIcon :task="t" />
-        <IssueChip :issue="t.issue" />
+        <IssueChip :issue="t.issue" plain />
         <RouterLink class="btn btn-ghost min-w-0 flex-1 truncate text-left hover:text-accent" :to="{ name: 'task', params: { id: t.id } }">
           {{ t.title }}
         </RouterLink>

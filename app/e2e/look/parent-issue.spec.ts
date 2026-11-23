@@ -38,7 +38,7 @@ test('the list groups sub-issues under their parent and says which branch they m
   await page.goto('/#/tasks/5/overview');
   const card = page.locator('[data-parent-card]');
   await expect(card).toContainText('Order status');
-  await expect(card.locator('[data-issue-chip]')).toHaveText(['GH #84', 'GH #85']);
+  await expect(card.locator('li [data-issue-chip]')).toHaveText(['GH #84', 'GH #85']);
   await expect(card.locator('li')).toHaveCount(2);
   await expect(card.locator('[aria-current="true"]')).toContainText('Greet in French');
 });

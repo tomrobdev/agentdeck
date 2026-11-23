@@ -8,6 +8,7 @@ import type { TaskStatus } from '#api/types.ts';
 import { RouterLink } from 'vue-router';
 import { statusLabel } from '#lib/work/task-view.ts';
 import { useAction } from '#composables/shared/useActions.ts';
+import TaskChip from '#components/ui/links/TaskChip.vue';
 
 const props = defineProps<{ task: { id: number; status: TaskStatus } }>();
 const { pending, run } = useAction();
@@ -59,7 +60,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
             class="btn btn-ghost flex min-w-0 items-baseline gap-2 text-left hover:text-accent"
             :to="{ name: 'task', params: { id: o.id } }"
           >
-            <span class="font-mono text-muted">#{{ o.id }}</span>
+            <TaskChip :id="o.id" kind="label" />
             <span class="truncate">{{ o.title }}</span>
             <span class="text-sm text-muted">{{ statusLabel(o.status) }}</span>
           </RouterLink>

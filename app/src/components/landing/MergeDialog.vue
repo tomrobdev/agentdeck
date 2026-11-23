@@ -6,10 +6,10 @@ import { autoMergeLine } from '#lib/landing/landing-wording.ts';
 import { type MergeMethod, type MergeResult, MERGE_METHODS } from '#api/types.ts';
 import { errorMessage, plural } from '#daemon/domain/shared/index.ts';
 import { useActions } from '#composables/shared/useActions.ts';
-import Chip from '#components/ui/Chip.vue';
 import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
 import Delta from '#components/ui/status/Delta.vue';
 import RadioGroup from '#components/ui/form/RadioGroup.vue';
+import TaskChip from '#components/ui/links/TaskChip.vue';
 
 const props = defineProps<{ taskId: number; hasNext?: boolean }>();
 const emit = defineEmits<{ close: []; merged: [result: MergeResult, openNext: boolean]; requested: [openNext: boolean] }>();
@@ -121,8 +121,8 @@ async function merge(openNext = false) {
         <template v-if="preview.unblocks.length">
           <dt>Unblocks</dt>
           <dd>
-            <Chip v-for="t in preview.unblocks" :key="t.id" variant="tint" class="mr-1 truncate" :title="t.title"
-              >#{{ t.id }} {{ t.title }}</Chip
+            <span v-for="t in preview.unblocks" :key="t.id" class="flex min-w-0 items-center gap-1.5"
+              ><TaskChip :id="t.id" kind="label" /><span class="truncate">{{ t.title }}</span></span
             >
           </dd>
         </template>

@@ -10,6 +10,7 @@ import { useActions } from '#composables/shared/useActions.ts';
 import Combobox from '#components/ui/form/Combobox.vue';
 import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
 import StatusIcon from '#components/ui/status/StatusIcon.vue';
+import TaskChip from '#components/ui/links/TaskChip.vue';
 
 const props = defineProps<{ task: TaskDetail }>();
 const { run } = useActions();
@@ -155,8 +156,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
         <div :class="heading">{{ group.label }}</div>
         <div v-for="l in group.items" :key="l.on" :class="rowCls">
           <RouterLink :class="open" :to="{ name: 'task', params: { id: l.on } }">
-            <StatusIcon v-if="byId.get(l.on)" :task="byId.get(l.on)!" />
-            <span class="font-mono text-muted">#{{ l.on }}</span>
+            <TaskChip :id="l.on" kind="label" />
             <span class="truncate">{{ byId.get(l.on)?.title ?? '' }}</span>
             <span class="ml-auto flex-none whitespace-nowrap" :class="STATE_CLASS[l.state]">{{ linkText(l) }}</span>
           </RouterLink>
@@ -171,8 +171,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
       <div :class="heading">Waiting on this</div>
       <div v-for="d in dependents" :key="d.id" :class="rowCls">
         <RouterLink :class="open" :to="{ name: 'task', params: { id: d.id } }">
-          <StatusIcon v-if="byId.get(d.id)" :task="byId.get(d.id)!" />
-          <span class="font-mono text-muted">#{{ d.id }}</span>
+          <TaskChip :id="d.id" kind="label" />
           <span class="truncate">{{ byId.get(d.id)?.title ?? '' }}</span>
           <span class="ml-auto flex-none whitespace-nowrap text-muted">
             {{ d.kind === 'builds_on' ? 'builds on this' : 'after this' }}

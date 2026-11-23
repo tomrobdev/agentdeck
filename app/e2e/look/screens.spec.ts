@@ -5,7 +5,10 @@ const PAGES = [
   {
     name: 'task',
     hash: '#/tasks/2/overview',
-    ready: (page) => expect(page.getByText('Friendlier greetings').first()).toBeVisible(),
+    ready: async (page) => {
+      await expect(page.getByText('Friendlier greetings').first()).toBeVisible();
+      await expect(page.locator('.md .mermaid svg').first()).toBeVisible();
+    },
   },
   {
     name: 'diff',

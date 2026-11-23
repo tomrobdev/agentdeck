@@ -14,7 +14,8 @@ import Checkbox from '#components/ui/form/Checkbox.vue';
 import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
 import TaskBrief from '#components/work/overview/TaskBrief.vue';
 import VerifyFindings from '#components/runs/VerifyFindings.vue';
-import IssueChip from '#components/ui/status/IssueChip.vue';
+import IssueChip from '#components/ui/links/IssueChip.vue';
+import TaskChip from '#components/ui/links/TaskChip.vue';
 
 const props = defineProps<{
   rows: { id: number; title: string; check: ProposalCheck | null }[];
@@ -140,7 +141,7 @@ async function confirm() {
             @update:model-value="(v) => (v ? on.add(r.id) : on.delete(r.id))"
           />
           <span class="font-mono text-muted">#{{ r.id }}</span>
-          <IssueChip :issue="issueOf(r.id)" />
+          <IssueChip :issue="issueOf(r.id)" plain />
           <span class="min-w-0 flex-1 truncate">{{ r.title }}</span>
           <button
             v-if="!results"
@@ -185,7 +186,7 @@ async function confirm() {
           </ul>
           <ul v-if="checks.get(r.id)!.overlaps.length" class="m-0 list-none pl-6 text-sm">
             <li v-for="o in checks.get(r.id)!.overlaps" :key="o.id">
-              <span class="font-mono text-muted">#{{ o.id }}</span> {{ o.title }}
+              <TaskChip :id="o.id" kind="label" /> {{ o.title }}
               <span class="font-mono text-muted wrap-anywhere">({{ o.paths.join(', ') }})</span>
               <span v-if="o.linked" class="text-muted"> · linked</span>
             </li>

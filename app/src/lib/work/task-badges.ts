@@ -164,6 +164,30 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   return { attention, up, down: t.unblocks, facts };
 }
 
+const PR_TONE: Partial<Record<NonNullable<TaskSummary['pr_state']>, ChipTone>> = { open: 'done', merged: 'merged', closed: 'failed' };
+
+export function prChip(
+  t: Pick<TaskSummary, 'pr_url' | 'pr_state' | 'checks'>,
+): { url: string; label: string; title: string; tone: ChipTone } | null {
+  if (!t.pr_url) return null;
+  const number = /\/pull\/(\d+)/.exec(t.pr_url)?.[1];
+  const c = t.pr_state === 'open' ? t.checks : null;
+  const checks = !c?.total
+    ? null
+    : c.failing
+      ? `${plural(c.failing, 'check')} failing`
+      : c.pending
+        ? `${plural(c.pending, 'check')} still running`
+        : 'checks passed';
+  const said = [t.pr_state ?? 'open', checks].filter(Boolean).join(', ');
+  return {
+    url: t.pr_url,
+    label: number ? `PR #${number}` : 'PR',
+    title: `Open the pull request on GitHub (${said})`,
+    tone: (t.pr_state && PR_TONE[t.pr_state]) || 'muted',
+  };
+}
+
 export const statusText = (t: Pick<TaskSummary, 'status' | 'pr_state'> & Partial<Pick<TaskSummary, 'plan_landing'>>): string =>
   isReview(t) ? 'in review' : isWaitingToLand(t) ? 'waiting to land' : t.status === 'cancel_requested' ? 'stopping' : t.status;
 

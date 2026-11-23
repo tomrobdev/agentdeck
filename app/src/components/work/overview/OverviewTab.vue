@@ -3,7 +3,8 @@ import { computed, ref } from 'vue';
 import { type PersonEventText, describeEvent } from '#daemon/domain/work/index.ts';
 import { fmtTokens, runLabel, totalTokens } from '#lib/runs/run-wording.ts';
 import { ago, runDuration } from '#lib/shared/time.ts';
-import { TASK_SOURCE } from '#lib/work/task-view.ts';
+import { openExternal } from '#platform/native.ts';
+import { TASK_SOURCE, canEdit } from '#lib/work/task-view.ts';
 import type { Changes, Run, TaskDetail, TaskEventRow } from '#api/types.ts';
 import Markdown from '#components/ui/Markdown.vue';
 import DependenciesCard from '#components/work/overview/DependenciesCard.vue';
@@ -62,6 +63,15 @@ const when = 'ml-auto text-sm text-muted';
       <header class="card-head gap-1.5 px-3.5 py-2">
         <b>{{ TASK_SOURCE[task.source].author }}</b>
         <span class="text-muted">wrote the prompt {{ ago(task.created_at) }}</span>
+        <button
+          v-if="task.issue && canEdit(task)"
+          class="btn-ghost ml-auto flex-none text-accent"
+          :title="`The title and prompt are issue #${task.issue.number}'s`"
+          data-edit-on-github
+          @click="openExternal(task.issue.url)"
+        >
+          Edit on GitHub ↗
+        </button>
       </header>
       <div
         class="px-3.5 py-3"

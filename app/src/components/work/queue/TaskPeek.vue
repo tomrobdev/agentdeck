@@ -15,7 +15,7 @@ import TaskBrief from '#components/work/overview/TaskBrief.vue';
 import PullRequestCard from '#components/landing/PullRequestCard.vue';
 import QuestionCallout from '#components/work/overview/QuestionCallout.vue';
 import RunSummaryCard from '#components/runs/RunSummaryCard.vue';
-import IssueChip from '#components/ui/status/IssueChip.vue';
+import IssueChip from '#components/ui/links/IssueChip.vue';
 import StatusPill from '#components/ui/status/StatusPill.vue';
 import TaskBadges from '#components/ui/status/TaskBadges.vue';
 import TaskStatusLine from '#components/ui/status/TaskStatusLine.vue';

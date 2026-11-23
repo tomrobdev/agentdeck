@@ -2,7 +2,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ago } from '#lib/shared/time.ts';
 import { mergeAllIds } from '#lib/work/queue/bulk.ts';
-import { openExternal } from '#platform/native.ts';
 import MergeButtons from '#components/landing/MergeButtons.vue';
 import ParentHeadLine from '#components/work/ParentHeadLine.vue';
 import RowMenu from '#components/work/queue/RowMenu.vue';
@@ -11,8 +10,9 @@ import type { BoardMove } from '#lib/work/queue/board-move.ts';
 import type { GroupBy } from '#lib/work/queue/queue-display.ts';
 import { type Group, quickRetry, statusLabel } from '#lib/work/task-view.ts';
 import Checkbox from '#components/ui/form/Checkbox.vue';
-import IssueChip from '#components/ui/status/IssueChip.vue';
+import IssueChip from '#components/ui/links/IssueChip.vue';
 import ModelChip from '#components/ui/status/ModelChip.vue';
+import PrChip from '#components/ui/links/PrChip.vue';
 import PriorityIcon from '#components/ui/status/PriorityIcon.vue';
 import StatusIcon from '#components/ui/status/StatusIcon.vue';
 import TaskBadges from '#components/ui/status/TaskBadges.vue';
@@ -135,7 +135,9 @@ watch(
             />
             <PriorityIcon :priority="t.priority" />
             <span class="w-[34px] flex-none font-mono text-sm text-muted tabular-nums">#{{ t.id }}</span>
-            <span v-if="issueColumn" class="w-[92px] flex-none" data-issue-column><IssueChip :issue="t.issue" /></span>
+            <span v-if="issueColumn" class="flex w-[74px] flex-none items-center" data-issue-column
+              ><IssueChip :issue="t.issue" plain
+            /></span>
             <StatusIcon :task="t" />
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="truncate font-medium">{{ t.title }}</span>
@@ -149,7 +151,7 @@ watch(
               </button>
               <button v-if="quickRetry(t)" class="btn-mini" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
               <MergeButtons :task="t" sync @sync="emit('act', 'sync', $event)" @merge="emit('merge', $event)" />
-              <button v-if="t.pr_url" class="btn-mini" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
+              <PrChip :task="t" plain class="ml-1 self-center" />
             </span>
             <span
               v-if="show.time"
