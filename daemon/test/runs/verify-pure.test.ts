@@ -8,6 +8,7 @@ import {
   isTestCommand,
   latestVerify,
   normalizeNetwork,
+  parseVerifyAnswer,
   settingsPath,
   verifyLine,
   verifyRefusal,
@@ -100,4 +101,14 @@ test("a verify run's findings go on the issue once, and a run with none or that 
   assert.equal(dueVerifyComment(task, [run(2, { outcome: 'failed', result_text: 'x' })], null), null);
   assert.equal(dueVerifyComment(task, [run(2, { result_text: JSON.stringify({ findings: [] }) })], null), null);
   assert.equal(dueVerifyComment(task, [{ ...(run(4) as object), kind: 'work' } as never], null), null);
+});
+
+test('a finding may cover a range of lines; an end at or before its line is dropped', () => {
+  const end = (line: unknown, end_line: unknown) =>
+    parseVerifyAnswer({ findings: [{ claim: 'c', verdict: 'true', path: 'a.ts', line, end_line, evidence: 'e' }] })?.findings[0].end_line;
+  assert.equal(end(82, 89), 89);
+  assert.equal(end('82', '89'), 89);
+  for (const bad of [82, 10, 0, 'x', null, undefined]) assert.equal(end(82, bad), null);
+  assert.equal(end(null, 89), null);
+  assert.equal(findingPlace({ path: 'a.ts', line: 82, end_line: 89 }), 'a.ts:82-89');
 });

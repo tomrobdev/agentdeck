@@ -74,6 +74,15 @@ test('repo and search narrow the list', () => {
   assert.deepEqual(ids({ states: ['done'], search: 'nothing like this' }), []);
 });
 
+test('a bare number finds task ids and issue numbers, # only tasks, gh only issues', () => {
+  const tasks = [task(85), task(415, { issue: { number: 85 } }), task(416, { issue: { number: 86 } })];
+  const found = (search: string) => filterTasks(tasks, { states: [], search, sort: 'oldest' }).map((t) => t.id as number);
+  assert.deepEqual(found('85'), [85, 415]);
+  assert.deepEqual(found('#85'), [85]);
+  for (const search of ['gh85', 'gh #85', 'GH#85']) assert.deepEqual(found(search), [415], search);
+  assert.deepEqual(found('gh 8'), [415, 416]);
+});
+
 test('sorts', () => {
   assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
   assert.deepEqual(ids({ sort: 'priority' }).slice(0, 2), [8, 4]);

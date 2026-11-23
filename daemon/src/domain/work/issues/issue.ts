@@ -64,6 +64,9 @@ export interface TaskIssue {
   reported_at: string | null;
   /** The verify run whose findings were last put on the issue; null before any. */
   verify_reported: RunId | null;
+  /** The issue it is a sub-issue of, as the last poll read it; null when it has none. */
+  parent_number: number | null;
+  parent_title: string | null;
 }
 
 export const ISSUE_MARK = '<!-- agentdeck -->';

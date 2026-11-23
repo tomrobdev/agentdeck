@@ -6,6 +6,7 @@ import {
   type Issue,
   type TaskIssue,
   ISSUE_LABELS,
+  NOT_STARTED_STATUSES,
   dueIssueWrite,
   isAllowed,
   isFinalReport,
@@ -129,7 +130,7 @@ async function follow(
   const before = app.getTask(link.task_id);
   const read = before && (listed ?? (await app.issues.issue(repo.path, link.number)));
   if (!before || !read || (before.status === 'parked' && app.ownPlan(before.id))) return;
-  const followsText = before.status === 'queued' || before.status === 'proposed' || before.status === 'parked';
+  const followsText = NOT_STARTED_STATUSES.includes(before.status);
   const issue = followsText ? await withParent(app, repo, read) : read;
   const move = issueMove(before, issue, link);
   if (move.kind === 'cancel') {
@@ -170,13 +171,24 @@ async function follow(
   app.reportVerify(task.id, verify.run_id);
 }
 
+function recordParents(app: App, repo: Repo, listed: Map<number, Issue>): void {
+  for (const link of app.issuesOfRepo(repo.id)) {
+    const issue = listed.get(link.number);
+    if (!issue) continue;
+    const parent = issue.parent;
+    if (link.parent_number !== (parent?.number ?? null) || link.parent_title !== (parent?.title ?? null)) {
+      app.setIssueParent(link.task_id, parent);
+    }
+  }
+}
+
 async function pollRepo(app: App, repo: Repo, now: number, log: Log): Promise<void> {
   await app.issues.ensureLabels(repo.path, LABELS);
   const allowed = await allowedLogins(app, repo);
   const open = await app.issues.openIssues(repo.path);
   const labelled = open.filter((i) => i.labels.includes(ISSUE_LABELS.ready));
   const plans = open.filter((i) => i.labels.includes(ISSUE_LABELS.plan));
-  await takeInPlans(app, repo, plans, labelled, allowed, log);
+  await takeInPlans(app, repo, plans, open, allowed, log);
   const tasks = labelled.filter((i) => !i.labels.includes(ISSUE_LABELS.plan));
   await takeIn(app, repo, tasks, allowed, log);
   const listed = new Map(open.map((i) => [i.number, i]));
@@ -187,6 +199,7 @@ async function pollRepo(app: App, repo: Repo, now: number, log: Log): Promise<vo
     await followed.catch((err) => log(`task #${link.task_id}: issue #${link.number} not followed: ${err}`));
   }
   await propose(app, repo, open, new Date(now).toISOString(), log);
+  recordParents(app, repo, listed);
 }
 
 export async function pollIssues(app: App, log: Log = () => {}, now: number = Date.now()): Promise<void> {

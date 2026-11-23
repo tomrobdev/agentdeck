@@ -23,6 +23,8 @@ export interface VerifyFinding {
   path: string | null;
   /** The line in `path`; null when the run named none. */
   line: number | null;
+  /** The last line it covers, when that is more than `line`; null when it is one line. */
+  end_line: number | null;
   /** What the code says, in a sentence or two. */
   evidence: string;
   /** For a claim that is not true, what the prompt should say instead; null when there is nothing to change. */
@@ -49,12 +51,16 @@ export const VERIFY_ANSWER_SCHEMA = {
             description:
               'true: the code bears it out; false: the code says otherwise; stale: it was true once, the code moved on; partly: part of it is true',
           },
-          path: { type: 'string', description: 'The file that shows it, relative to the repo root' },
+          path: {
+            type: 'string',
+            description: 'The file that shows it, relative to the repo root; left out when the evidence is that something does not exist',
+          },
           line: { type: 'integer', minimum: 1, description: 'The line in that file' },
+          end_line: { type: 'integer', minimum: 1, description: 'The last line, when the evidence covers more than one' },
           evidence: { type: 'string', minLength: 1, description: 'What the code says, in a sentence or two' },
           fix: { type: 'string', description: 'For a claim that is not true: what the prompt should say instead' },
         },
-        required: ['claim', 'verdict', 'path', 'line', 'evidence'],
+        required: ['claim', 'verdict', 'evidence'],
       },
     },
   },
@@ -93,7 +99,7 @@ export function buildVerifyPrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, c
     '## What to answer',
     '- A finding for each claim the prompt makes about the code: that a file, function, setting or test exists, where it is, what it does, what it is called.',
     '- Its verdict: true when the code bears it out, false when the code says otherwise, stale when it was true once but the code moved on (moved, renamed, already done), partly when only part of it is true.',
-    '- The file and line that show it, and the evidence in a sentence or two.',
+    '- The file and line that show it (and the last line, when it is a range), and the evidence in a sentence or two. When the evidence is that something does not exist, leave the file and line out: never name a neighbouring file in its place.',
     '- For a claim that is not true, a suggested fix: what the prompt should say instead.',
     '- Leave out what the prompt asks to be done and anything that is not about the code. No findings when it makes no claims.',
   ].join('\n');
@@ -101,17 +107,24 @@ export function buildVerifyPrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, c
 
 const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
 
+function wholeLine(v: unknown): number | null {
+  const n = typeof v === 'string' ? Number(v) : v;
+  return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : null;
+}
+
 function parseFinding(v: unknown): VerifyFinding | null {
   if (!isRecord(v)) return null;
   const claim = text(v.claim);
   const verdict = text(v.verdict).toLowerCase() as ClaimVerdict;
   if (!claim || !CLAIM_VERDICTS.includes(verdict)) return null;
-  const line = typeof v.line === 'string' ? Number(v.line) : v.line;
+  const line = wholeLine(v.line);
+  const end = wholeLine(v.end_line);
   return {
     claim,
     verdict,
     path: text(v.path) || null,
-    line: typeof line === 'number' && Number.isInteger(line) && line > 0 ? line : null,
+    line,
+    end_line: line !== null && end !== null && end > line ? end : null,
     evidence: text(v.evidence),
     fix: text(v.fix) || null,
   };
@@ -180,8 +193,8 @@ export function verifyLine(findings: Pick<VerifyFinding, 'verdict'>[]): string {
   return `${plural(findings.length, 'claim')}: ${counts.join(', ')}`;
 }
 
-export const findingPlace = (f: Pick<VerifyFinding, 'path' | 'line'>): string | null =>
-  f.path ? (f.line ? `${f.path}:${f.line}` : f.path) : null;
+export const findingPlace = (f: Pick<VerifyFinding, 'path' | 'line'> & { end_line?: number | null }): string | null =>
+  f.path ? (f.line ? `${f.path}:${f.line}${f.end_line ? `-${f.end_line}` : ''}` : f.path) : null;
 
 /** A verify run's findings to put on the task's issue, once. */
 export interface VerifyIssueComment {

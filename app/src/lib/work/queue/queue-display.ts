@@ -1,7 +1,7 @@
 // How the queue is shown: the saved display settings, the board's column order and the rows j and k walk through.
 import type { TaskSummary } from '#daemon/api/contract/work.ts';
 
-export type GroupBy = 'status' | 'repo' | 'priority' | 'none';
+export type GroupBy = 'status' | 'parent' | 'repo' | 'priority' | 'none';
 
 interface RowGroup {
   key: string;
@@ -9,6 +9,7 @@ interface RowGroup {
 }
 
 export interface ShowProps {
+  issue: boolean;
   repo: boolean;
   pr: boolean;
   time: boolean;
@@ -30,7 +31,7 @@ export const DEFAULT_DISPLAY: Display = {
   mode: 'list',
   groupBy: 'status',
   sort: 'attention',
-  show: { repo: true, pr: true, time: true, reason: true, model: true },
+  show: { issue: true, repo: true, pr: true, time: true, reason: true, model: true },
   showEmpty: false,
   collapsed: ['cancelled', 'done'],
 };

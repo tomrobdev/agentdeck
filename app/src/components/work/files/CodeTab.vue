@@ -4,11 +4,12 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { fileSize } from '#lib/work/work-wording.ts';
 import { fileQuery, treeQuery } from '#api/work.ts';
 import { type FileRef, TEXT_LIMIT, type TaskDetail } from '#api/types.ts';
+import { fileRefRun, isFileRef } from '#daemon/domain/work/index.ts';
 import { useCommits } from '#composables/work/files/useChanges.ts';
 import { useCopy } from '#platform/native.ts';
 import { isMarkdown as isMarkdownPath } from '#lib/shared/render.ts';
 import { useRouter } from 'vue-router';
-import CodeView, { type LineRange } from '#components/work/files/CodeView.vue';
+import CodeView, { type LineRange } from '#components/ui/code/CodeView.vue';
 import type { TreeNode } from '#lib/work/files/changed-tree.ts';
 import FileTree from '#components/work/files/FileTree.vue';
 import Markdown from '#components/ui/Markdown.vue';
@@ -19,7 +20,8 @@ const props = defineProps<{ task: TaskDetail; query: Record<string, string>; cha
 
 const router = useRouter();
 const taskId = computed(() => props.task.id);
-const ref_ = computed<FileRef>(() => (props.query.ref === 'base' ? 'base' : 'head'));
+const ref_ = computed<FileRef>(() => (props.query.ref && isFileRef(props.query.ref) ? props.query.ref : 'head'));
+const verifyRun = computed(() => props.task.runs.find((r) => r.id === fileRefRun(ref_.value)));
 const path = computed(() => props.query.path ?? null);
 const range = computed<LineRange | null>(() => {
   const m = props.query.L?.match(/^(\d+)(?:-(\d+))?$/);
@@ -35,7 +37,14 @@ function setQuery(patch: Record<string, string | null>, replace = false) {
 
 const queryClient = useQueryClient();
 const { head, base } = useCommits(taskId);
-const commit = computed(() => (ref_.value === 'base' ? base.value : head.value));
+const commit = computed(() => (verifyRun.value ? (verifyRun.value.base_commit ?? null) : ref_.value === 'base' ? base.value : head.value));
+const versions = computed(() => [
+  { value: 'head' as FileRef, label: 'Task branch', title: props.task.branch ?? '' },
+  { value: 'base' as FileRef, label: 'Base', title: 'Where the branch started' },
+  ...(verifyRun.value
+    ? [{ value: ref_.value, label: `Verified at ${commit.value?.slice(0, 7)}`, title: 'The commit the verify run read' }]
+    : []),
+]);
 
 const loadTree = computed(() => {
   const id = taskId.value;
@@ -71,15 +80,12 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
     <aside class="flex min-h-0 w-70 flex-none flex-col gap-2 max-md:hidden">
       <SegmentedControl
         label="Version"
-        :options="[
-          { value: 'head', label: 'Task branch', title: task.branch ?? '' },
-          { value: 'base', label: 'Base', title: 'Where the branch started' },
-        ]"
+        :options="versions"
         :model-value="ref_"
         @update:model-value="(v) => setQuery({ ref: v, L: null })"
       />
       <FileTree
-        v-if="task.branch && commit"
+        v-if="commit"
         :load="loadTree"
         :selected="path"
         :marks="ref_ === 'head' ? changed : undefined"

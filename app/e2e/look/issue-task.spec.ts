@@ -12,6 +12,8 @@ test("an issue's proposal is edited on GitHub, from its page and from the approv
 
   await page.goto('/#/tasks/5/overview');
   await expect(page.locator('[data-edit-on-github]')).toBeVisible();
+  await expect(page.locator('[data-task-ids] [data-issue-chip]')).toHaveText('GH #9');
+  await expect(page.locator('[data-task-ids] [data-task-chip="self"]')).toHaveText('#5');
   await expect(page.getByRole('heading', { level: 1 }).getByRole('textbox')).toHaveCount(0);
 
   await open(page, '#/');
@@ -19,5 +21,6 @@ test("an issue's proposal is edited on GitHub, from its page and from the approv
   await row(page, 5).getByRole('button', { name: 'Approve', exact: true }).click();
   const dialog = page.getByRole('alertdialog', { name: /^Approve/ });
   await expect(dialog.locator('[data-edit-on-github]')).toBeVisible();
+  await expect(dialog.locator('[data-issue-chip]')).toHaveText('GH #9');
   await expect(dialog.getByRole('button', { name: 'Edit prompt' })).toHaveCount(0);
 });

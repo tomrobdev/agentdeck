@@ -3,12 +3,14 @@ import { computed, ref } from 'vue';
 import { type PersonEventText, describeEvent } from '#daemon/domain/work/index.ts';
 import { fmtTokens, runLabel, totalTokens } from '#lib/runs/run-wording.ts';
 import { ago, runDuration } from '#lib/shared/time.ts';
-import { TASK_SOURCE } from '#lib/work/task-view.ts';
+import { openExternal } from '#platform/native.ts';
+import { TASK_SOURCE, canEdit } from '#lib/work/task-view.ts';
 import type { Changes, Run, TaskDetail, TaskEventRow } from '#api/types.ts';
 import Markdown from '#components/ui/Markdown.vue';
 import DependenciesCard from '#components/work/overview/DependenciesCard.vue';
 import DocumentsCard from '#components/work/overview/DocumentsCard.vue';
 import FinalMessage from '#components/runs/FinalMessage.vue';
+import ParentIssueCard from '#components/work/overview/ParentIssueCard.vue';
 import PlanCard from '#components/work/overview/PlanCard.vue';
 import ProposalCheckCard from '#components/work/overview/ProposalCheckCard.vue';
 import TaskBrief from '#components/work/overview/TaskBrief.vue';
@@ -55,12 +57,21 @@ const when = 'ml-auto text-sm text-muted';
   <div class="flex min-w-0 flex-col gap-4.5">
     <ProposalCheckCard :task="task" />
 
-    <VerifyCard :task="task" @path="(p, l) => emit('path', p, l)" />
+    <VerifyCard :task="task" />
 
     <article class="card">
       <header class="card-head gap-1.5 px-3.5 py-2">
         <b>{{ TASK_SOURCE[task.source].author }}</b>
         <span class="text-muted">wrote the prompt {{ ago(task.created_at) }}</span>
+        <button
+          v-if="task.issue && canEdit(task)"
+          class="btn-ghost ml-auto flex-none text-accent"
+          :title="`The title and prompt are issue #${task.issue.number}'s`"
+          data-edit-on-github
+          @click="openExternal(task.issue.url)"
+        >
+          Edit on GitHub ↗
+        </button>
       </header>
       <div
         class="px-3.5 py-3"
@@ -78,6 +89,8 @@ const when = 'ml-auto text-sm text-muted';
     </article>
 
     <PullRequestCard :task="task" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
+
+    <ParentIssueCard :task="task" />
 
     <DependenciesCard :task="task" />
 
@@ -137,7 +150,8 @@ const when = 'ml-auto text-sm text-muted';
             v-if="it.run.kind === 'verify' && it.run.ended_at"
             class="w-full"
             :view="latestVerify([it.run], null)!"
-            @path="(p, l) => emit('path', p, l)"
+            :task-id="task.id"
+            compact
           />
           <FinalMessage v-else-if="it.run.result_text" class="w-full" :open="it.latest">
             <Markdown :text="it.run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />

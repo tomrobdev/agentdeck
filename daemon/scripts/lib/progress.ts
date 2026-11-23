@@ -108,7 +108,6 @@ export const UNTESTED_DOMAIN_EXPORTS: string[] = [
   'runs/reviewSystemPrompt',
   'runs/reviewable',
   'runs/buildVerifyPrompt',
-  'runs/parseVerifyAnswer',
   'runs/runFindings',
   'runs/verifySchemaArgs',
   'runs/verifySystemPrompt',

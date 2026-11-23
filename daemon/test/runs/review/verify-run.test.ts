@@ -14,7 +14,7 @@ chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('#db/index.ts');
-const { rejectTask, startVerify } = await import('#application/actions.ts');
+const { rejectTask, startVerify, taskFile } = await import('#application/actions.ts');
 const { ActionError } = await import('#application/shared/input.ts');
 const {
   CLAIM_VERDICTS,
@@ -55,7 +55,7 @@ test("the prompt quotes the task's whole prompt, names the base and its commit, 
 test('the answer schema lists the findings with their verdicts, and goes to claude as --json-schema', () => {
   assert.deepEqual(VERIFY_ANSWER_SCHEMA.required, ['findings']);
   const item = VERIFY_ANSWER_SCHEMA.properties.findings.items;
-  assert.deepEqual(item.required, ['claim', 'verdict', 'path', 'line', 'evidence']);
+  assert.deepEqual(item.required, ['claim', 'verdict', 'evidence']);
   assert.deepEqual(item.properties.verdict.enum, ['true', 'false', 'stale', 'partly']);
   assert.deepEqual([...CLAIM_VERDICTS], item.properties.verdict.enum);
   const args = verifySchemaArgs();
@@ -65,12 +65,21 @@ test('the answer schema lists the findings with their verdicts, and goes to clau
 
 const good = {
   findings: [
-    { claim: 'count() lives in src/count.ts', verdict: 'true', path: 'src/count.ts', line: 3, evidence: 'Defined there.', fix: null },
+    {
+      claim: 'count() lives in src/count.ts',
+      verdict: 'true',
+      path: 'src/count.ts',
+      line: 3,
+      end_line: null,
+      evidence: 'Defined there.',
+      fix: null,
+    },
     {
       claim: 'There is a test for count()',
       verdict: 'false',
       path: 'test/count.test.ts',
       line: null,
+      end_line: null,
       evidence: 'No such file.',
       fix: 'Ask for the test to be written.',
     },
@@ -97,9 +106,9 @@ test('parseVerifyAnswer: a partial answer keeps what it can', () => {
   });
   assert.deepEqual(answer, {
     findings: [
-      { claim: 'A file exists', verdict: 'stale', path: 'a.ts', line: 4, evidence: 'Moved.', fix: null },
-      { claim: 'No place', verdict: 'partly', path: null, line: null, evidence: '', fix: null },
-      { claim: 'Bad line', verdict: 'true', path: 'b.ts', line: null, evidence: 'x', fix: null },
+      { claim: 'A file exists', verdict: 'stale', path: 'a.ts', line: 4, end_line: null, evidence: 'Moved.', fix: null },
+      { claim: 'No place', verdict: 'partly', path: null, line: null, end_line: null, evidence: '', fix: null },
+      { claim: 'Bad line', verdict: 'true', path: 'b.ts', line: null, end_line: null, evidence: 'x', fix: null },
     ],
   });
 });
@@ -176,6 +185,7 @@ test('the dashboard: false claims first and marked failed, and the line with the
     verdict,
     path: null,
     line: null,
+    end_line: null,
     evidence: '',
     fix: null,
   });
@@ -248,6 +258,13 @@ test('a verify run stores its findings and the commit it read, uses no attempt, 
   );
   const [run] = verifyRuns(task.id);
   assert.equal(run.id, run_id);
+  writeFileSync(join(repo.path, 'README.md'), '# changed since\n');
+  sh(repo.path, 'commit', '-qam', 'the base moves on');
+  const file = await taskFile(db, task.id, `verify:${run.id}`, 'README.md');
+  assert.deepEqual([file.sha, file.text?.includes('changed since')], [head, false], "a proposal's file is read at the verify run's commit");
+  const other = db.addTask({ repo_id: repo.id, title: 'other', prompt: PROMPT, status: 'proposed' });
+  await assert.rejects(taskFile(db, other.id, `verify:${run.id}`, 'README.md'), /no verify run/, "another task's run");
+  await assert.rejects(taskFile(db, task.id, 'verify:HEAD', 'README.md'), /ref must be head, base or verify/);
   assert.equal(run.outcome, 'done');
   assert.equal(run.base_commit, head);
   assert.equal(run.attempt, 0, 'it ran beside no attempt');

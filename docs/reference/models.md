@@ -1696,6 +1696,7 @@ One claim the task's prompt makes about the code, and what the base says of it.
 | `verdict`  | `"true" \| "false" \| "stale" \| "partly"` |                                                                                                         |
 | `path`     | `string \| null`                           | The file that shows it, relative to the repo root; null when the run named none.                        |
 | `line`     | `number \| null`                           | The line in `path`; null when the run named none.                                                       |
+| `end_line` | `number \| null`                           | The last line it covers, when that is more than `line`; null when it is one line.                       |
 | `evidence` | `string`                                   | What the code says, in a sentence or two.                                                               |
 | `fix`      | `string \| null`                           | For a claim that is not true, what the prompt should say instead; null when there is nothing to change. |
 
@@ -2109,6 +2110,7 @@ A task at the end of a link: what its link states are read from.
 | `branch`      | `string \| null`                                                                                                          |         |
 | `repo?`       | `string \| null \| undefined`                                                                                             |         |
 | `unblocks?`   | `number[] \| undefined`                                                                                                   |         |
+| `issue?`      | `{ number: number; } \| null \| undefined`                                                                                |         |
 
 ### ListedTask
 
@@ -2367,6 +2369,15 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `status` | `PlanStepStatus` |                                                                        |
 | `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
 
+### PlanThrough
+
+The plan whose branch a task merges into, and the base that branch lands on.
+
+| Field  | Type     | Comment |
+| ------ | -------- | ------- |
+| `task` | `TaskId` |         |
+| `base` | `string` |         |
+
 ### PromptBrief
 
 | Field      | Type                                | Comment |
@@ -2589,15 +2600,17 @@ The counters an event sets, with their new values. A counter not listed is left 
 
 A task's link to the issue it came from.
 
-| Field             | Type                  | Comment                                                                    |
-| ----------------- | --------------------- | -------------------------------------------------------------------------- |
-| `task_id`         | `TaskId`              |                                                                            |
-| `repo_id`         | `RepoId`              |                                                                            |
-| `number`          | `number`              |                                                                            |
-| `url`             | `string`              |                                                                            |
-| `reported`        | `IssueReport \| null` | The last change reported on the issue; null before the first.              |
-| `reported_at`     | `string \| null`      | When it was reported, so a person's later comments can be told apart.      |
-| `verify_reported` | `RunId \| null`       | The verify run whose findings were last put on the issue; null before any. |
+| Field             | Type                  | Comment                                                                          |
+| ----------------- | --------------------- | -------------------------------------------------------------------------------- |
+| `task_id`         | `TaskId`              |                                                                                  |
+| `repo_id`         | `RepoId`              |                                                                                  |
+| `number`          | `number`              |                                                                                  |
+| `url`             | `string`              |                                                                                  |
+| `reported`        | `IssueReport \| null` | The last change reported on the issue; null before the first.                    |
+| `reported_at`     | `string \| null`      | When it was reported, so a person's later comments can be told apart.            |
+| `verify_reported` | `RunId \| null`       | The verify run whose findings were last put on the issue; null before any.       |
+| `parent_number`   | `number \| null`      | The issue it is a sub-issue of, as the last poll read it; null when it has none. |
+| `parent_title`    | `string \| null`      |                                                                                  |
 
 ### TaskPlan
 

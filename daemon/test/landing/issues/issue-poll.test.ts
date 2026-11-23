@@ -14,7 +14,8 @@ process.env.AGENTDECK_CLAUDE_BIN = fakeClaude;
 
 const { openDb } = await import('#db/index.ts');
 const { pollIssues } = await import('#application/landing/issues/poll.ts');
-const { addTask, approveTask, editTask, liftTask, parkTask, proposeNow, rejectTask, updateRepo } = await import('#application/actions.ts');
+const { addTask, approveTask, editTask, liftTask, parkTask, proposeNow, rejectTask, taskDetail, updateRepo } =
+  await import('#application/actions.ts');
 const { advance, testApp } = await import('#test/fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
@@ -278,6 +279,36 @@ test('taking agentdeck:plan off a parent before anything started abandons its pl
   assert.equal(db.getTask(taskOf(41))?.target, null);
   assert.equal(db.getTask(owner)?.status, 'cancelled');
   assert.match(gh.said(40).at(-1) ?? '', /lost the agentdeck:plan label .* abandoned/);
+});
+
+test('proposed sub-issues that build on each other move onto the plan branch together, still proposed, and know their parent', async () => {
+  const { db, repo, gh, taskOf } = setup();
+  const sub = { labels: [], parent: { number: 60, title: 'Phase 6', body: '' } };
+  gh.file(60, { labels: [], title: 'Phase 6', sub_issues: 2 });
+  gh.file(61, sub);
+  gh.file(62, { ...sub, blocked_by: [{ number: 61, open: true }] });
+  await pollIssues(db);
+  assert.deepEqual([db.issueOf(taskOf(62))?.parent_number, db.issueOf(taskOf(62))?.parent_title], [60, 'Phase 6']);
+  const before = (await taskDetail(db, taskOf(62))).merges_into;
+  assert.deepEqual(before, { branch: 'develop', plan: null });
+
+  gh.issues.get(60)?.labels.push('agentdeck:plan');
+  await pollIssues(db);
+  const owner = taskOf(60);
+  for (const n of [61, 62]) {
+    const t = db.getTask(taskOf(n));
+    assert.deepEqual([t?.status, t?.target, t?.plan?.task], ['proposed', db.planBranchOf(owner, repo.id)?.name, owner]);
+  }
+  const view = await taskDetail(db, taskOf(62));
+  assert.deepEqual(view.issue, { number: 62, url: 'https://github.com/o/r/issues/62', parent: { number: 60, title: 'Phase 6' } });
+  assert.deepEqual(view.merges_into, {
+    branch: `plan/${owner}-phase-6`,
+    plan: { task: owner, base: 'develop' },
+  });
+
+  Object.assign(gh.issues.get(62) ?? {}, { parent: null });
+  await pollIssues(db);
+  assert.equal(db.issueOf(taskOf(62))?.parent_number, null, 'taken out of its parent on GitHub');
 });
 
 test("a sub-issue's task carries its parent's body, which gh's issue list leaves out", async () => {

@@ -45,6 +45,17 @@ Use the `review-task` skill. If the only problem is conflicts, `agentdeck sync <
 
 Read the prompt against the repo's goals (`agentdeck goals <repo>`) and the code. Approve (`agentdeck approve <id>`), reject, or edit and then approve. Proposals that depend on work that hasn't landed can wait: say what they wait for.
 
+## Verify findings
+
+The dashboard's "Fix with Claude" on the Verify run card passes a task id. The outcome is a prompt that is right, agreed with the person; approving the task stays their call.
+
+1. `agentdeck show <id>` prints the prompt, each verify run's findings, and a line when the base has moved on since. Use the last verify run. If it is stale, check each finding against the current base before relying on it.
+2. A finding can be wrong too: read the file it names. For each claim that isn't true, say what you'd change in the prompt, or why you'd leave it. Ask the person about anything the code can't settle, such as an open decision the prompt waits on.
+3. Show the whole new text, and write it only on the person's OK:
+   - **A task with an issue:** edit the issue, never the task. Read the body with `gh issue view <n> --json body --jq .body`, and start from that: the prompt also has a "Context" section with the parent issue's body, which doesn't belong in this issue. A finding about the parent's text is fixed in the parent issue, with its own OK. Read the body again right before writing; if it changed since you read it, stop and redraft. Then `gh issue edit <n> --body-file <file>`. The task follows at the next poll.
+   - **Any other task:** `agentdeck edit <id> --prompt "…"`.
+4. Once the task shows the new prompt, offer to verify it again (`agentdeck verify <id>`).
+
 End with what changed and what is still waiting, in a few lines.
 
 ## On an issue-backed repo

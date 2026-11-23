@@ -3,7 +3,7 @@
 import type { TaskId } from '#domain/shared/index.ts';
 import type { PullRequest } from '#domain/landing/index.ts';
 import type { PrMode } from '#domain/repos/index.ts';
-import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
+import { NOT_STARTED_STATUSES, type TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 import { isReview, stageOf } from '#domain/work/task/stage.ts';
 import type { DoneState } from '#domain/work/task/task.ts';
 import { BASE_PLACE, type Place, meets, placesReachable, placesReached, placesUsed } from '#domain/work/task/target.ts';
@@ -224,8 +224,8 @@ export function linkError(task: TaskId, on: TaskId, links: Link[]): string | nul
   return null;
 }
 
-export function buildsOnError(task: TaskId, status: string, on: TaskId): string | null {
-  if (status === 'proposed' || status === 'parked' || status === 'queued') return null;
+export function buildsOnError(task: TaskId, status: TaskStatus, on: TaskId): string | null {
+  if (NOT_STARTED_STATUSES.includes(status)) return null;
   return `#${task} has started already, so it can't build on #${on}; make it an after link instead`;
 }
 

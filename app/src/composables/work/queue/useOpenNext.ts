@@ -20,7 +20,7 @@ export function useOpenNext() {
       search: '',
     };
     const board = display.mode === 'board';
-    const all = groupTasks(applyFilters(tasks.value, filters), board ? 'status' : display.groupBy, display.sort);
+    const all = groupTasks(applyFilters(tasks.value, filters), board ? 'status' : display.groupBy, display.sort, tasks.value);
     return nextInReview(rowOrder(board ? boardGroups(all) : all, display), id);
   }
   function openNext(id: number): boolean {

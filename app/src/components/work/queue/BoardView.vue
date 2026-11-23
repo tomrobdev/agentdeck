@@ -9,6 +9,7 @@ import type { Group } from '#lib/work/task-view.ts';
 import Checkbox from '#components/ui/form/Checkbox.vue';
 import MarkDoneDialog from '#components/work/task/MarkDoneDialog.vue';
 import MergeButtons from '#components/landing/MergeButtons.vue';
+import IssueChip from '#components/ui/links/IssueChip.vue';
 import ModelChip from '#components/ui/status/ModelChip.vue';
 import PriorityIcon from '#components/ui/status/PriorityIcon.vue';
 import StatusIcon from '#components/ui/status/StatusIcon.vue';
@@ -19,7 +20,7 @@ const props = defineProps<{
   groups: Group[];
   selected: number | null;
   picked?: number[];
-  show: { repo: boolean; pr: boolean; model: boolean };
+  show: { issue: boolean; repo: boolean; pr: boolean; model: boolean };
 }>();
 const emit = defineEmits<{
   open: [id: number];
@@ -136,6 +137,7 @@ const LABELS: Record<BoardMove, string> = {
               @update:model-value="emit('pick', t.id, false, columnIds(g))"
             />
             <span class="font-mono text-sm text-muted">#{{ t.id }}</span>
+            <IssueChip v-if="show.issue" :issue="t.issue" plain />
             <PriorityIcon :priority="t.priority" />
             <div class="spacer" />
             <StatusIcon :task="t" />

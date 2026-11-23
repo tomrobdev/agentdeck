@@ -10,15 +10,19 @@ import { useEditKeys } from '#composables/work/useEditKeys.ts';
 import { useHotkeys } from '#composables/shared/useHotkeys.ts';
 import { RouterLink, useRouter } from 'vue-router';
 import type { TaskTab } from '#lib/shared/app-url.ts';
+import { taskBadges } from '#lib/work/task-badges.ts';
 import { readNeeds, readTaskQuestion } from '#lib/work/task-view.ts';
 import { useActions } from '#composables/shared/useActions.ts';
 import { openPanel } from '#composables/shared/useShell.ts';
 import { useChanges } from '#composables/work/files/useChanges.ts';
 import { useReviews } from '#composables/landing/useReviews.ts';
 import SnippetPopover from '#components/work/files/SnippetPopover.vue';
+import IssueChip from '#components/ui/links/IssueChip.vue';
+import PrChip from '#components/ui/links/PrChip.vue';
 import StatusPill from '#components/ui/status/StatusPill.vue';
 import TabBar from '#components/ui/TabBar.vue';
 import TaskBadges from '#components/ui/status/TaskBadges.vue';
+import TaskChip from '#components/ui/links/TaskChip.vue';
 import TaskStatusLine from '#components/ui/status/TaskStatusLine.vue';
 import ChangesTab from '#components/work/files/ChangesTab.vue';
 import EditKeyDialog from '#components/work/task/EditKeyDialog.vue';
@@ -80,6 +84,13 @@ useHotkeys({
   ...edits.keys,
 });
 
+const linked = computed(() => {
+  const { up, down } = taskBadges(props.task);
+  return [
+    { label: 'builds on', tip: 'Starts once they are done and merged', ids: up },
+    { label: 'releases', tip: 'Merging this lets them start', ids: down },
+  ].filter((l) => l.ids.length);
+});
 const base = computed(() => changes.value?.base_ref ?? props.task.target ?? 'base');
 const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel))] px-1.5 py-px';
 </script>
@@ -93,7 +104,22 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       <div class="min-w-0 flex-1">
         <TaskTitle :task="task" />
         <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-          <StatusPill :task="task" />
+          <span class="inline-flex flex-wrap items-center gap-1.5" data-task-ids>
+            <StatusPill :task="task" />
+            <TaskChip :id="task.id" kind="self" />
+            <IssueChip :issue="task.issue" note="The title and prompt are edited there" />
+            <PrChip :task="task" />
+          </span>
+          <span
+            v-for="l in linked"
+            :key="l.label"
+            class="inline-flex flex-wrap items-center gap-1.5"
+            :title="l.tip"
+            :data-task-links="l.label"
+          >
+            {{ l.label }}
+            <TaskChip v-for="id in l.ids" :id="id" :key="id" />
+          </span>
           <span
             v-if="task.branch"
             class="inline-flex max-w-full min-w-0 items-center gap-1 whitespace-nowrap"
@@ -106,7 +132,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           </span>
           <span class="whitespace-nowrap">{{ plural(task.runs.length, 'run') }}</span>
           <span class="whitespace-nowrap">{{ task.source === 'planner' ? 'proposed' : 'created' }} {{ ago(task.created_at) }}</span>
-          <TaskBadges :task="task" />
+          <TaskBadges :task="task" no-links />
         </div>
         <TaskStatusLine :task="task" fit="full" cancel class="mt-1.5" />
       </div>
@@ -144,7 +170,9 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       </template>
     </div>
     <div v-else-if="s === 'proposed'" class="callout s-proposed">
-      The planner suggested this task. Read the prompt, then approve it to queue it or reject it.
+      <template v-if="task.issue">This task comes from GitHub issue #{{ task.issue.number }}.</template>
+      <template v-else-if="task.source === 'planner'">The planner suggested this task.</template>
+      Read the prompt, then approve it to queue it or reject it.
     </div>
     <div v-else-if="task.status === 'parked'" class="callout s-parked">
       <strong>Parked for later.</strong> {{ task.park_reason ?? 'No reason given.' }} Lift it to proposed before approving it.

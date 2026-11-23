@@ -4,6 +4,7 @@ import { asTaskId } from '#domain/shared/index.ts';
 import {
   type PlanBranchStatus,
   isWaitingToLand,
+  landsThrough,
   planLandingOf,
   planLandingText,
   planPrBody,
@@ -27,6 +28,13 @@ test('a plan branch is ready to land once every task on it is merged or cancelle
   assert.equal(readyToLand(active, []), false);
   for (const status of ['open', 'conflict', 'landing', 'landed', 'abandoned'] as PlanBranchStatus[])
     assert.equal(readyToLand({ status }, [merged]), false, `a plan branch that is ${status}`);
+});
+
+test('a task lands through the plan branch it targets, unless that one was abandoned', () => {
+  const branch = { plan_task: asTaskId(9), base: 'develop' };
+  assert.deepEqual(landsThrough({ ...branch, status: 'landed' }), { task: 9, base: 'develop' });
+  assert.equal(landsThrough({ ...branch, status: 'abandoned' }), null);
+  assert.equal(landsThrough(undefined), null);
 });
 
 test("a task's review verdict is its last submitted review's", () => {

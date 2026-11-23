@@ -19,14 +19,14 @@ import {
   stuckOn,
   unlandedAfter,
 } from '#domain/work/links/link.ts';
-import { transition } from '#domain/work/lifecycle/lifecycle.ts';
+import { type TaskStatus, transition } from '#domain/work/lifecycle/lifecycle.ts';
 
 const done: Dependency = { status: 'done', pr: null, pr_mode: 'off', done_by: null };
 const t1 = asTaskId(1);
 const builds = { on: asTaskId(5), kind: 'builds_on' } as const;
 const after = { on: asTaskId(5), kind: 'after' } as const;
 const linkErr = (task: number, on: number, links: Link[]) => linkError(asTaskId(task), asTaskId(on), links);
-const buildsErr = (id: number, status: string, on: number) => buildsOnError(asTaskId(id), status, asTaskId(on));
+const buildsErr = (id: number, status: TaskStatus, on: number) => buildsOnError(asTaskId(id), status, asTaskId(on));
 
 test('linkState: every row of the rules table, for builds on', () => {
   const stuck = (reason: string) => ({ kind: 'stuck', on: 5, reason });
@@ -208,7 +208,7 @@ test('buildsOnRepoError refuses a builds-on link into a repo with pr_mode off; p
 test('buildsOnError refuses a builds-on link once a task has started, pointing at an after link', () => {
   assert.equal(buildsErr(2, 'proposed', 1), null);
   assert.equal(buildsErr(2, 'queued', 1), null);
-  for (const status of ['running', 'done', 'blocked', 'failed', 'cancelled'])
+  for (const status of ['running', 'done', 'blocked', 'failed', 'cancelled'] as const)
     assert.match(buildsErr(2, status, 1)!, /started.*after link instead$/);
 });
 

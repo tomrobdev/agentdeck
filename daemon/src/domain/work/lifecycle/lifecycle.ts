@@ -17,6 +17,8 @@ export type TaskStatus =
   | 'cancel_requested'
   | 'cancelled';
 
+export const NOT_STARTED_STATUSES: readonly TaskStatus[] = ['proposed', 'parked', 'queued'];
+
 export const TASK_STATUSES: TaskStatus[] = [
   'proposed',
   'parked',

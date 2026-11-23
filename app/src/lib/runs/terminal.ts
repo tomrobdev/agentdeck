@@ -25,6 +25,11 @@ export function fixTaskCommand(task: { id: number; status: TaskStatus; pr_state:
   return `claude ${shellQuote(`/${skill} ${task.id}${reason ? ` ${reason}` : ''}`)}`;
 }
 
+export function fixFindingsCommand(task: { id: number; issue?: { number: number } | null }): string {
+  const issue = task.issue ? `, whose body is GitHub issue #${task.issue.number}` : '';
+  return `claude ${shellQuote(`/triage ${task.id} Fix its prompt${issue}, from its latest verify findings.`)}`;
+}
+
 export function terminalTemplate(): string {
   return loadSetting('terminal', CMUX_TEMPLATE) || CMUX_TEMPLATE;
 }

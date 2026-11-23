@@ -1,7 +1,8 @@
 // The command that opens an interactive claude session for a task that needs a person.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fixTaskCommand } from '#app/lib/runs/terminal.ts';
+import { fixFindingsCommand, fixTaskCommand } from '#app/lib/runs/terminal.ts';
+import { hasFindingsToFix } from '#app/lib/runs/verify.ts';
 import { canFix } from '#app/lib/work/task-view.ts';
 import { fixReason } from '#app/lib/work/task-badges.ts';
 
@@ -27,6 +28,22 @@ test('a quote in the reason is escaped for the shell and a newline becomes a spa
 
 test('with no reason only the id follows the skill', () => {
   assert.equal(fixTaskCommand({ id: 5, status: 'failed', pr_state: null }, '  '), "claude '/triage 5'");
+});
+
+test('verify findings open /triage with the issue of a task that has one', () => {
+  assert.equal(
+    fixFindingsCommand({ id: 417, issue: { number: 87 } }),
+    "claude '/triage 417 Fix its prompt, whose body is GitHub issue #87, from its latest verify findings.'",
+  );
+  assert.equal(fixFindingsCommand({ id: 5, issue: null }), "claude '/triage 5 Fix its prompt, from its latest verify findings.'");
+});
+
+test('only a finished verify run with a claim that is not true has findings to fix', () => {
+  const [ok, bad] = (['true', 'partly'] as const).map((verdict) => ({ verdict }) as never);
+  assert.ok(hasFindingsToFix({ state: 'done', findings: [ok, bad] }));
+  assert.ok(!hasFindingsToFix({ state: 'done', findings: [ok] }));
+  assert.ok(!hasFindingsToFix({ state: 'done', findings: [] }));
+  assert.ok(!hasFindingsToFix({ state: 'going', findings: [bad] }));
 });
 
 test('only a task that needs a person can be fixed', () => {

@@ -9,6 +9,7 @@ import Popover from '#components/ui/Popover.vue';
 const display = defineModel<Display>({ required: true });
 const set = (patch: Partial<Display>) => (display.value = { ...display.value, ...patch });
 const PROPS: { key: keyof ShowProps; label: string }[] = [
+  { key: 'issue', label: 'Issue' },
   { key: 'repo', label: 'Repo' },
   { key: 'model', label: 'Model' },
   { key: 'pr', label: 'Pull request' },

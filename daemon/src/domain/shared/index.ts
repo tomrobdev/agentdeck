@@ -1,5 +1,5 @@
 // The shared context's interface: what other contexts and the layers above import.
-export { asRepoId, asTaskId, parseId } from '#domain/shared/id.ts';
+export { asRepoId, asRunId, asTaskId, parseId } from '#domain/shared/id.ts';
 export type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '#domain/shared/id.ts';
 export {
   STATUS_TAIL,

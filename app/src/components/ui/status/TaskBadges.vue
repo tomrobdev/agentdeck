@@ -5,20 +5,20 @@ import { RouterLink } from 'vue-router';
 import { TONE_CHIP, taskBadges } from '#lib/work/task-badges.ts';
 import Chip from '#components/ui/Chip.vue';
 
-const props = defineProps<{ task: TaskSummary; repo?: boolean; pr?: boolean; nowrap?: boolean }>();
+const props = defineProps<{ task: TaskSummary; repo?: boolean; pr?: boolean; nowrap?: boolean; noLinks?: boolean }>();
 const b = computed(() => taskBadges(props.task, { repo: props.repo, pr: props.pr }));
 const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
 </script>
 
 <template>
   <span
-    v-if="b.attention.length || b.up.length || b.down.length || b.facts.length"
+    v-if="b.attention.length || (!noLinks && (b.up.length || b.down.length)) || b.facts.length"
     class="inline-flex min-w-0 items-center gap-x-2 gap-y-1 text-sm"
     :class="nowrap ? 'flex-nowrap' : 'flex-wrap'"
   >
     <Chip v-for="a in b.attention" :key="a.label" :tone="TONE_CHIP[a.tone]" :title="a.title">{{ a.label }}</Chip>
     <span
-      v-if="b.up.length"
+      v-if="!noLinks && b.up.length"
       class="inline-flex gap-1 font-mono whitespace-nowrap text-muted"
       :title="`Builds on ${tags(b.up)}: starts once they are done and merged`"
       data-links-up
@@ -34,7 +34,7 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
       </RouterLink>
     </span>
     <span
-      v-if="b.down.length"
+      v-if="!noLinks && b.down.length"
       class="inline-flex gap-1 font-mono whitespace-nowrap text-accent"
       :title="`Merging this releases ${tags(b.down)}`"
       data-links-down

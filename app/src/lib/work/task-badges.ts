@@ -52,6 +52,7 @@ type Viewed = Pick<
   | 'source'
   | 'pr_state'
   | 'plan_landing'
+  | 'merges_into'
   | 'checks'
   | 'needs'
   | 'question'
@@ -129,6 +130,11 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const up = t.links.filter((l) => l.kind === 'builds_on' && l.state !== 'met').map((l) => l.on);
 
   const facts: Fact[] = [];
+  if (t.merges_into?.plan && !t.plan_landing)
+    facts.push({
+      label: `→ ${t.merges_into.branch}`,
+      title: `Merges into ${t.merges_into.branch}, which lands on ${t.merges_into.plan.base}`,
+    });
   if (t.attempts > 1) facts.push({ label: `try ${t.attempts}`, title: `Attempt ${t.attempts} of ${t.max_attempts}` });
   if (t.source === 'planner') facts.push({ label: 'planner', title: 'Proposed by the planner' });
   if (checks && checks.total > 0 && checks.failing === 0 && !notRun.length) {
@@ -156,6 +162,30 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   if (opts.repo && t.repo) facts.push({ label: t.repo, title: `Repo ${t.repo}` });
 
   return { attention, up, down: t.unblocks, facts };
+}
+
+const PR_TONE: Partial<Record<NonNullable<TaskSummary['pr_state']>, ChipTone>> = { open: 'done', merged: 'merged', closed: 'failed' };
+
+export function prChip(
+  t: Pick<TaskSummary, 'pr_url' | 'pr_state' | 'checks'>,
+): { url: string; label: string; title: string; tone: ChipTone } | null {
+  if (!t.pr_url) return null;
+  const number = /\/pull\/(\d+)/.exec(t.pr_url)?.[1];
+  const c = t.pr_state === 'open' ? t.checks : null;
+  const checks = !c?.total
+    ? null
+    : c.failing
+      ? `${plural(c.failing, 'check')} failing`
+      : c.pending
+        ? `${plural(c.pending, 'check')} still running`
+        : 'checks passed';
+  const said = [t.pr_state ?? 'open', checks].filter(Boolean).join(', ');
+  return {
+    url: t.pr_url,
+    label: number ? `PR #${number}` : 'PR',
+    title: `Open the pull request on GitHub (${said})`,
+    tone: (t.pr_state && PR_TONE[t.pr_state]) || 'muted',
+  };
 }
 
 export const statusText = (t: Pick<TaskSummary, 'status' | 'pr_state'> & Partial<Pick<TaskSummary, 'plan_landing'>>): string =>

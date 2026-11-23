@@ -33,7 +33,14 @@ export {
 export type { TaskChanges } from '#domain/work/lifecycle/task-writes.ts';
 export { followUpsOf, followUpsOfRow } from '#domain/work/lifecycle/follow-ups.ts';
 export type { FollowUp } from '#domain/work/lifecycle/follow-ups.ts';
-export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, personEvents, transition } from '#domain/work/lifecycle/lifecycle.ts';
+export {
+  MAX_RESTARTS,
+  NOT_STARTED_STATUSES,
+  TASK_STATUSES,
+  fromStatuses,
+  personEvents,
+  transition,
+} from '#domain/work/lifecycle/lifecycle.ts';
 export type { DomainEvent, PersonEvent, TaskEvent, TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 export {
   buildsOnError,
@@ -144,7 +151,9 @@ export {
 } from '#domain/work/plans/plan-review.ts';
 export type { PlanReviewMove, PlanReviewState } from '#domain/work/plans/plan-review.ts';
 export {
+  type PlanThrough,
   isWaitingToLand,
+  landsThrough,
   planLandingOf,
   planLandingText,
   planPrBody,
@@ -166,7 +175,9 @@ export type { BaseCommit, Overlap, ProposalCheck, Staleness } from '#domain/work
 export { describeEvent } from '#domain/work/read/event-text.ts';
 export type { PersonEventText } from '#domain/work/read/event-text.ts';
 export {
-  FILE_REFS,
+  fileRefRun,
+  isFileRef,
+  verifyFileRef,
   LOG_FORMAT,
   PATCH_LIMIT,
   TEXT_LIMIT,

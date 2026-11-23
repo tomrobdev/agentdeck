@@ -2,9 +2,10 @@
 import { onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { fileQuery } from '#api/work.ts';
+import { snippetOf } from '#lib/runs/verify.ts';
 import { useCommits } from '#composables/work/files/useChanges.ts';
 import AnchoredPanel from '#components/ui/AnchoredPanel.vue';
-import CodeView from '#components/work/files/CodeView.vue';
+import CodeView from '#components/ui/code/CodeView.vue';
 
 const props = defineProps<{ taskId: number; root: HTMLElement | null }>();
 
@@ -34,9 +35,8 @@ function onOver(e: MouseEvent) {
     const line = Number(a.dataset.line);
     const text = await fileText(path);
     if (text === null || mine !== generation || !a.isConnected) return;
-    const lines = text.split('\n');
-    const first = Math.max(1, line - CONTEXT);
-    shown.value = { path, line, first, text: lines.slice(first - 1, line + CONTEXT).join('\n'), link: a };
+    const snippet = snippetOf(text, { from: line, to: line }, CONTEXT);
+    if (snippet) shown.value = { path, line, ...snippet, link: a };
   }, 250);
 }
 function close() {

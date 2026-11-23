@@ -15,6 +15,7 @@ import TaskBrief from '#components/work/overview/TaskBrief.vue';
 import PullRequestCard from '#components/landing/PullRequestCard.vue';
 import QuestionCallout from '#components/work/overview/QuestionCallout.vue';
 import RunSummaryCard from '#components/runs/RunSummaryCard.vue';
+import IssueChip from '#components/ui/links/IssueChip.vue';
 import StatusPill from '#components/ui/status/StatusPill.vue';
 import TaskBadges from '#components/ui/status/TaskBadges.vue';
 import TaskStatusLine from '#components/ui/status/TaskStatusLine.vue';
@@ -65,6 +66,7 @@ function act(kind: (typeof actions.value)[number]) {
           <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <StatusPill :task="task" />
             <span class="text-muted">#{{ task.id }} · {{ task.repo }}</span>
+            <IssueChip :issue="task.issue" />
             <TaskBadges :task="task" />
           </div>
           <TaskStatusLine :task="task" fit="full" class="mt-1.5" />

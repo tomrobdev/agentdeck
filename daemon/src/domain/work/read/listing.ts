@@ -23,6 +23,7 @@ export type Listable = Pick<
   branch: string | null;
   repo?: string | null;
   unblocks?: number[];
+  issue?: { number: number } | null;
 };
 
 export const listable = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout | null }>(t: T) => ({
@@ -113,8 +114,11 @@ function stateTest(name: string): Test {
 function matchesSearch(t: Listable, text: string): boolean {
   const q = text.trim().toLowerCase();
   if (!q) return true;
+  const issue = /^gh\s*#?\s*(\d+)$/.exec(q)?.[1];
+  const issueStarts = (digits: string) => !!t.issue && String(t.issue.number).startsWith(digits);
+  if (issue) return issueStarts(issue) || t.title.toLowerCase().includes(q);
   const id = q.replace(/^#/, '');
-  if (/^\d+$/.test(id)) return String(t.id).startsWith(id) || t.title.toLowerCase().includes(q);
+  if (/^\d+$/.test(id)) return String(t.id).startsWith(id) || (id === q && issueStarts(id)) || t.title.toLowerCase().includes(q);
   return [t.title, t.repo, t.branch, t.model, t.stop_reason, t.park_reason].some((s) => s?.toLowerCase().includes(q));
 }
 

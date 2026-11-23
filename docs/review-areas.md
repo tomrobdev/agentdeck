@@ -37,6 +37,10 @@ Issue-backed repos: GitHub issues labelled ready-for-agent become tasks and the 
 - daemon/src/adapters/github/issues.ts
 - daemon/src/db/work/task-issues.ts
 - daemon/src/application/scheduler/periodic.ts
+- app/src/lib/work/parent-groups.ts
+- app/src/components/work/ParentHeadLine.vue
+- app/src/components/ui/links/
+- app/src/components/work/overview/ParentIssueCard.vue
 
 ## task-links
 
@@ -138,8 +142,10 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/domain/runs/verify.ts
 - daemon/src/application/runs/verify.ts
 - app/src/lib/runs/verify.ts
+- app/src/composables/runs/useClaudeSession.ts
 - app/src/components/runs/VerifyCard.vue
 - app/src/components/runs/VerifyFindings.vue
+- app/src/components/runs/FindingCode.vue
 - daemon/src/application/runs/install-needs.ts
 - daemon/src/application/runs/live-runs.ts
 - app/src/components/runs/RunningView.vue

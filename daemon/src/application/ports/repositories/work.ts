@@ -182,5 +182,6 @@ export interface TaskIssueRepository {
   taskOfIssue(repo_id: RepoId, number: number): TaskId | undefined;
   reportIssue(id: TaskId, reported: IssueReport, at: string): void;
   reportVerify(id: TaskId, run: RunId): void;
+  setIssueParent(id: TaskId, parent: { number: number; title: string } | null): void;
   unlinkIssue(id: TaskId): void;
 }

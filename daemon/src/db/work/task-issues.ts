@@ -26,6 +26,13 @@ export function taskIssueStore(orm: Orm) {
     reportVerify(id: TaskId, run: RunId): void {
       orm.update(taskIssues).set({ verify_reported: run }).where(eq(taskIssues.task_id, id)).run();
     },
+    setIssueParent(id: TaskId, parent: { number: number; title: string } | null): void {
+      orm
+        .update(taskIssues)
+        .set({ parent_number: parent?.number ?? null, parent_title: parent?.title ?? null })
+        .where(eq(taskIssues.task_id, id))
+        .run();
+    },
     unlinkIssue(id: TaskId): void {
       orm.delete(taskIssues).where(eq(taskIssues.task_id, id)).run();
     },

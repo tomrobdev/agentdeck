@@ -6,6 +6,7 @@ import { STATUS_GROUPS, isReview, statusGroup } from '#daemon/domain/work/index.
 import { EDITABLE_STATUSES } from '#daemon/domain/work/index.ts';
 import { parseTextList } from '#daemon/domain/shared/index.ts';
 import type { GroupBy } from '#lib/work/queue/queue-display.ts';
+import { type ParentHead, parentGroups } from '#lib/work/parent-groups.ts';
 import { needsOf, questionOf } from '#lib/shared/wire.ts';
 
 export const openingTab = (t: TaskSummary): 'overview' | 'changes' | 'runs' =>
@@ -35,6 +36,7 @@ export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons
 
 export const GROUP_BYS: { key: GroupBy; label: string }[] = [
   { key: 'status', label: 'Status' },
+  { key: 'parent', label: 'Parent issue' },
   { key: 'repo', label: 'Repo' },
   { key: 'priority', label: 'Priority' },
   { key: 'none', label: 'No grouping' },
@@ -60,9 +62,10 @@ export interface Group {
   key: string;
   label: string;
   tasks: TaskSummary[];
+  head?: ParentHead;
 }
 
-export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Group[] {
+export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string, all: TaskSummary[] = tasks): Group[] {
   const compare = (SORT_OPTIONS.find((s) => s.key === sort) ?? SORT_OPTIONS[0]).compare;
   const sorted = [...tasks].sort(compare);
   const bucket = (defs: { key: string; label: string }[], keyOf: (t: TaskSummary) => string): Group[] =>
@@ -70,6 +73,8 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
   switch (by) {
     case 'status':
       return bucket([...STATUS_GROUPS], statusGroup);
+    case 'parent':
+      return parentGroups(tasks, all);
     case 'priority':
       return bucket([...PRIORITY_LEVELS], (t) => priorityLevel(t.priority));
     case 'repo': {

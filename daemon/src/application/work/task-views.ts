@@ -8,7 +8,17 @@ import { isMergeLocked, isSyncLocked } from '#application/work/checkout-locks.ts
 import { type LiveView, type SyncView, liveView, syncView } from '#domain/runs/index.ts';
 import { type Run, type RunSummary, runSummary } from '#domain/runs/index.ts';
 import { type PrRetry, openPrUrl } from '#domain/landing/index.ts';
-import { type PlanLanding, isLivePlanBranch, planLandingOf, prRetryFor, targetOf } from '#domain/work/index.ts';
+import {
+  type PlanBranch,
+  type PlanLanding,
+  type PlanThrough,
+  type TaskIssue,
+  isLivePlanBranch,
+  landsThrough,
+  planLandingOf,
+  prRetryFor,
+  targetOf,
+} from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import type { StartWait, Waiting } from '#domain/work/index.ts';
 import { measureBranch } from '#application/work/files.ts';
@@ -38,6 +48,19 @@ export interface TaskView {
   checks: ChecksSummary | null;
   pr_retry: PrRetry | null;
   plan_landing: PlanLanding | null;
+  issue: IssueLinkView | null;
+  merges_into: MergesIntoView | null;
+}
+
+interface IssueLinkView {
+  number: number;
+  url: string;
+  parent: { number: number; title: string } | null;
+}
+
+interface MergesIntoView {
+  branch: string;
+  plan: PlanThrough | null;
 }
 
 type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'auto_merge' | 'source' | 'pr' | 'target'>;
@@ -49,9 +72,13 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
   const runModels = app.latestRunModels();
   const liveRuns = app.liveRuns('work');
   const resolves = app.liveRuns('resolve');
+  const issueRepos = new Set(tasks.filter((t) => t.source === 'issue').map((t) => t.repo_id));
+  const issues = new Map([...issueRepos].flatMap((id) => app.issuesOfRepo(id)).map((l) => [l.task_id, l]));
+  const planBranchAt = planBranchLookup(app);
   const now = Date.now();
   return tasks.map((t) => {
     const repo = repos.get(t.repo_id);
+    const planBranch = planBranchAt(t);
     const dependency = startState(t, links.linksOf(t.id), links.target);
     return {
       ...t,
@@ -70,14 +97,23 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
       run_model: runModels.get(t.id) ?? null,
       wait: waitOf(t, dependency),
       pr_retry: prRetryView(app, t, repo, now),
-      plan_landing: planLandingView(app, t),
+      plan_landing: planLandingOf(t, planBranch),
+      issue: issueLinkView(issues.get(t.id)),
+      merges_into: repo ? { branch: targetOf(t, repo), plan: landsThrough(planBranch) } : null,
     };
   });
 }
 
-function planLandingView(app: App, t: Viewed): PlanLanding | null {
-  if (t.target === null || t.pr?.state !== 'merged') return null;
-  return planLandingOf(t, app.planBranchNamed(t.repo_id, t.target));
+type PlanBranchLookup = (t: Viewed) => PlanBranch | undefined;
+
+function planBranchLookup(app: App): PlanBranchLookup {
+  const read = new Map<string, PlanBranch | undefined>();
+  return (t) => {
+    if (t.target === null) return undefined;
+    const key = `${t.repo_id}:${t.target}`;
+    if (!read.has(key)) read.set(key, app.planBranchNamed(t.repo_id, t.target));
+    return read.get(key);
+  };
 }
 
 function prRetryView(app: App, t: Viewed, repo: Repo | undefined, now: number): PrRetry | null {
@@ -108,13 +144,13 @@ export async function taskDetail(app: App, id: TaskId) {
     events: app.eventsForTask(id),
     plans: plansShown(app, task),
     plan_branch: await planBranchView(app, task, repo),
-    issue: issueLinkOf(app, id),
   };
 }
 
-function issueLinkOf(app: App, id: TaskId): { number: number; url: string } | null {
-  const link = app.issueOf(id);
-  return link ? { number: link.number, url: link.url } : null;
+function issueLinkView(link: TaskIssue | undefined): IssueLinkView | null {
+  if (!link) return null;
+  const parent = link.parent_number === null ? null : { number: link.parent_number, title: link.parent_title ?? '' };
+  return { number: link.number, url: link.url, parent };
 }
 
 async function planBranchView(app: App, task: Task, repo: Repo | undefined) {

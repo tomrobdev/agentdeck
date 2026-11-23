@@ -41,7 +41,7 @@ export function useQueueDisplay(tasks: () => TaskSummary[]) {
   const shown = computed(() => applyFilters(tasks(), filters.value));
   const groups = computed(() => {
     const board = display.value.mode === 'board';
-    const all = groupTasks(shown.value, board ? 'status' : display.value.groupBy, display.value.sort);
+    const all = groupTasks(shown.value, board ? 'status' : display.value.groupBy, display.value.sort, tasks());
     return board ? boardGroups(all) : all;
   });
   const order = computed(() => rowOrder(groups.value, display.value));

@@ -70,6 +70,16 @@ export function planLandingOf(
   return { name: branch.name, base: branch.base, state };
 }
 
+/** The plan whose branch a task merges into, and the base that branch lands on. */
+export interface PlanThrough {
+  task: TaskId;
+  base: string;
+}
+
+export function landsThrough(branch: Pick<PlanBranch, 'plan_task' | 'base' | 'status'> | undefined): PlanThrough | null {
+  return branch && branch.status !== 'abandoned' ? { task: branch.plan_task, base: branch.base } : null;
+}
+
 export const isWaitingToLand = (t: { plan_landing?: PlanLanding | null }): boolean => t.plan_landing?.state === 'waiting';
 
 export function planLandingText(landing: PlanLanding): string {

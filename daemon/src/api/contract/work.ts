@@ -7,6 +7,7 @@ import type {
   LandingPolicy,
   LandingQuestion,
   PlanBranchStatus,
+  PlanThrough,
   PlanLanding,
   PlanSource,
   PlanStepStatus,
@@ -55,6 +56,19 @@ export interface TaskLink {
 export interface NewLink {
   on: TaskId;
   kind: LinkKind;
+}
+
+/** A task's GitHub issue, and the issue that one is a sub-issue of. */
+export interface TaskIssueLink {
+  number: number;
+  url: string;
+  parent: { number: number; title: string } | null;
+}
+
+/** The branch a task's pull request merges into. `plan` is set when that is a plan branch that was not abandoned. */
+export interface MergesInto {
+  branch: string;
+  plan: PlanThrough | null;
 }
 
 /** A task as returned by the list endpoint: everything except the prompt. */
@@ -131,6 +145,10 @@ export interface TaskSummary {
   pr_retry: PrRetry | null;
   /** For a done task whose PR merged into a plan branch: that plan branch, and whether it has landed on its base yet. */
   plan_landing: PlanLanding | null;
+  /** The GitHub issue an issue-backed task came from; null for any other task. Missing from a daemon that predates it. */
+  issue?: TaskIssueLink | null;
+  /** Where its pull request merges; null when the repo is gone. Missing from a daemon that predates it. */
+  merges_into?: MergesInto | null;
   created_at: string;
   updated_at: string;
 }
@@ -252,8 +270,6 @@ export interface TaskDetail extends Task {
   events: TaskEventRow[];
   plans: TaskPlan[];
   plan_branch: PlanBranchView | null;
-  /** The GitHub issue an issue-backed task came from; null for any other task. Missing from a daemon that predates it. */
-  issue?: { number: number; url: string } | null;
 }
 
 /** A plan branch on a task's page, with how far it is ahead of and behind its base; each null once it has landed, or when git could not say. */
