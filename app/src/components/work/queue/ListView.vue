@@ -11,6 +11,7 @@ import type { BoardMove } from '#lib/work/queue/board-move.ts';
 import type { GroupBy } from '#lib/work/queue/queue-display.ts';
 import { type Group, quickRetry, statusLabel } from '#lib/work/task-view.ts';
 import Checkbox from '#components/ui/form/Checkbox.vue';
+import IssueChip from '#components/ui/status/IssueChip.vue';
 import ModelChip from '#components/ui/status/ModelChip.vue';
 import PriorityIcon from '#components/ui/status/PriorityIcon.vue';
 import StatusIcon from '#components/ui/status/StatusIcon.vue';
@@ -37,6 +38,8 @@ const emit = defineEmits<{
   merge: [id: number];
   mergeAll: [ids: number[]];
 }>();
+
+const issueColumn = computed(() => props.show.issue && props.groups.some((g) => g.tasks.some((t) => t.issue)));
 
 const menu = ref<{ id: number; x: number; y: number } | null>(null);
 const menuTask = computed(() => props.groups.flatMap((g) => g.tasks).find((t) => t.id === menu.value?.id));
@@ -132,6 +135,7 @@ watch(
             />
             <PriorityIcon :priority="t.priority" />
             <span class="w-[34px] flex-none font-mono text-sm text-muted tabular-nums">#{{ t.id }}</span>
+            <span v-if="issueColumn" class="w-[92px] flex-none" data-issue-column><IssueChip :issue="t.issue" /></span>
             <StatusIcon :task="t" />
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="truncate font-medium">{{ t.title }}</span>

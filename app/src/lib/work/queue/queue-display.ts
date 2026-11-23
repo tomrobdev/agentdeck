@@ -9,6 +9,7 @@ interface RowGroup {
 }
 
 export interface ShowProps {
+  issue: boolean;
   repo: boolean;
   pr: boolean;
   time: boolean;
@@ -30,7 +31,7 @@ export const DEFAULT_DISPLAY: Display = {
   mode: 'list',
   groupBy: 'status',
   sort: 'attention',
-  show: { repo: true, pr: true, time: true, reason: true, model: true },
+  show: { issue: true, repo: true, pr: true, time: true, reason: true, model: true },
   showEmpty: false,
   collapsed: ['cancelled', 'done'],
 };

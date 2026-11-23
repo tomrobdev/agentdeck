@@ -118,7 +118,7 @@ Grouped by the daemon's contexts. Each layer has a folder per context, the share
 | -------------- | ---------------- | ------ | ---- | ---- | ------- | ----- | ---------- | -------- |
 | `lib/`         | pure helpers     | 11     | 18   | 10   | 1       | 1     | 2          | 1        |
 | `composables/` | `useX` functions | 8      | 17   | 1    | 2       | –     | 2          | –        |
-| `components/`  | Vue components   | 48     | 38   | 11   | 7       | 4     | 11         | 2        |
+| `components/`  | Vue components   | 49     | 38   | 11   | 7       | 4     | 11         | 2        |
 
 Beside the layers:
 

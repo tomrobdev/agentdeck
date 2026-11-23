@@ -103,7 +103,7 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
     </div>
     <div v-if="issue" :class="prop">
       <div :class="name">Issue</div>
-      <button :class="[rowButton, 'text-accent']" data-task-issue @click="openExternal(issue.url)">#{{ issue.number }} ↗</button>
+      <button :class="[rowButton, 'text-accent']" data-task-issue @click="openExternal(issue.url)">GH #{{ issue.number }} ↗</button>
     </div>
     <div v-if="autoMergeShown" :class="prop">
       <div :class="name">Auto-merge</div>

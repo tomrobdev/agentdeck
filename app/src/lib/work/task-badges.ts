@@ -52,7 +52,6 @@ type Viewed = Pick<
   | 'source'
   | 'pr_state'
   | 'plan_landing'
-  | 'issue'
   | 'merges_into'
   | 'checks'
   | 'needs'
@@ -131,7 +130,6 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const up = t.links.filter((l) => l.kind === 'builds_on' && l.state !== 'met').map((l) => l.on);
 
   const facts: Fact[] = [];
-  if (t.issue) facts.push({ label: `issue #${t.issue.number}`, title: `From GitHub issue #${t.issue.number}` });
   if (t.merges_into?.plan && !t.plan_landing)
     facts.push({
       label: `→ ${t.merges_into.branch}`,

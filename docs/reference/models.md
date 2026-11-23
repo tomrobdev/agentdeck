@@ -2109,6 +2109,7 @@ A task at the end of a link: what its link states are read from.
 | `branch`      | `string \| null`                                                                                                          |         |
 | `repo?`       | `string \| null \| undefined`                                                                                             |         |
 | `unblocks?`   | `number[] \| undefined`                                                                                                   |         |
+| `issue?`      | `{ number: number; } \| null \| undefined`                                                                                |         |
 
 ### ListedTask
 

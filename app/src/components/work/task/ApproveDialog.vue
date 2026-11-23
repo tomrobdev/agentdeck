@@ -14,6 +14,7 @@ import Checkbox from '#components/ui/form/Checkbox.vue';
 import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
 import TaskBrief from '#components/work/overview/TaskBrief.vue';
 import VerifyFindings from '#components/runs/VerifyFindings.vue';
+import IssueChip from '#components/ui/status/IssueChip.vue';
 
 const props = defineProps<{
   rows: { id: number; title: string; check: ProposalCheck | null }[];
@@ -139,6 +140,7 @@ async function confirm() {
             @update:model-value="(v) => (v ? on.add(r.id) : on.delete(r.id))"
           />
           <span class="font-mono text-muted">#{{ r.id }}</span>
+          <IssueChip :issue="issueOf(r.id)" />
           <span class="min-w-0 flex-1 truncate">{{ r.title }}</span>
           <button
             v-if="!results"
